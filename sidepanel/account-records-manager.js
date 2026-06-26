@@ -1119,6 +1119,34 @@
       return true;
     }
 
+    function getNotRedeemableFreeUpiCredentialMembershipReason(row = {}) {
+      const status = String(row.status || '').trim().toLowerCase();
+      const redeemStatus = String(row.redeemStatus || '').trim().toLowerCase();
+      const reason = String(row.redeemReason || row.reason || '').trim();
+      if (!row?.email) {
+        return '账号邮箱为空，无法补兑';
+      }
+      if (row.enabled === false) {
+        return '账号已停用';
+      }
+      if (status !== 'free') {
+        return status === 'paid' ? '当前已有会员' : '当前不是无会员状态';
+      }
+      if (['running', 'submitted', 'pending', 'processing', 'accepted'].includes(redeemStatus)) {
+        return reason || '卡密已提交，等待远端状态刷新';
+      }
+      if (redeemStatus === 'blocked' || isPreSubmitUpiCredentialMembershipBlockedRow(row)) {
+        return reason || '登录或读取 ChatGPT session 未完成，尚未提交卡密';
+      }
+      if (['success', 'skipped'].includes(redeemStatus)) {
+        return '已有兑换成功记录';
+      }
+      if (normalizeRetryCount(row.redeemFailureCount) >= 3) {
+        return '账号兑换失败已达 3 次';
+      }
+      return '当前不可补兑';
+    }
+
     function isTrialEligibilityCheckableFreeUpiCredentialMembershipRow(row = {}) {
       const status = String(row.status || '').trim().toLowerCase();
       const trialStatus = normalizeTrialEligibilityStatus(row.trialEligibilityStatus);
@@ -2586,15 +2614,7 @@
         return;
       }
       if (!isRedeemableFreeUpiCredentialMembershipRow(row)) {
-        const status = String(row.status || '').trim().toLowerCase();
-        const redeemStatus = String(row.redeemStatus || '').trim().toLowerCase();
-        const reason = status !== 'free'
-          ? '当前不是无会员状态'
-          : ['success', 'skipped'].includes(redeemStatus)
-            ? '已有兑换成功记录'
-            : normalizeRetryCount(row.redeemFailureCount) >= 3
-              ? '账号兑换失败已达 3 次'
-              : '当前不可补兑';
+        const reason = getNotRedeemableFreeUpiCredentialMembershipReason(row);
         helpers.showToast?.(`${normalizedEmail} ${reason}。`, 'warn', 2200);
         return;
       }
