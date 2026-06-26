@@ -1,0 +1,135 @@
+{
+  "manifest_version": 3,
+  "name": "UPI Redeem Only",
+  "version": "0.2.0",
+  "version_name": "UPI Redeem Only V0.2.0",
+  "description": "UPI 卡密兑换专用版，保留注册、设置密码、2FA、会员核验与补兑能力",
+  "permissions": [
+    "sidePanel",
+    "alarms",
+    "tabs",
+    "webNavigation",
+    "webRequest",
+    "webRequestAuthProvider",
+    "proxy",
+    "declarativeNetRequest",
+    "debugger",
+    "browsingData",
+    "cookies",
+    "storage",
+    "scripting",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "https://chong.nerver.cc/*",
+    "https://*.icloud.com/*",
+    "https://*.icloud.com.cn/*",
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "declarative_net_request": {
+    "rule_resources": [
+      {
+        "id": "icloud_headers",
+        "enabled": true,
+        "path": "rules.json"
+      }
+    ]
+  },
+  "side_panel": {
+    "default_path": "sidepanel/sidepanel.html"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://auth0.openai.com/*",
+        "https://auth.openai.com/*",
+        "https://accounts.openai.com/*"
+      ],
+      "js": [
+        "content/activation-utils.js",
+        "shared/source-registry.js",
+        "content/utils.js",
+        "content/operation-delay.js",
+        "content/auth-page-recovery.js",
+        "content/phone-country-utils.js",
+        "content/phone-auth.js",
+        "content/signup-page.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://mail.qq.com/*",
+        "https://wx.mail.qq.com/*"
+      ],
+      "js": [
+        "content/activation-utils.js",
+        "shared/source-registry.js",
+        "content/utils.js",
+        "content/qq-mail.js"
+      ],
+      "all_frames": true,
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://mail.163.com/*",
+        "https://*.mail.163.com/*",
+        "https://webmail.vip.163.com/*",
+        "https://mail.126.com/*",
+        "https://*.mail.126.com/*"
+      ],
+      "js": [
+        "content/activation-utils.js",
+        "shared/source-registry.js",
+        "content/utils.js",
+        "content/mail-163.js"
+      ],
+      "all_frames": true,
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://www.icloud.com/*",
+        "https://www.icloud.com.cn/*"
+      ],
+      "js": [
+        "content/activation-utils.js",
+        "shared/source-registry.js",
+        "content/utils.js",
+        "content/icloud-mail.js"
+      ],
+      "all_frames": true,
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://duckduckgo.com/email/settings/autofill*"
+      ],
+      "js": [
+        "content/activation-utils.js",
+        "shared/source-registry.js",
+        "content/utils.js",
+        "content/operation-delay.js",
+        "content/duck-mail.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAgfY12Y7ZCIo4w39yVrnSqHSnD0kcslFtY0DP6mmBLWNNUZ2ZfRGeO4uRf0iaI0KIFaVG9CbmaHa+K/BnsQZXTs9U6AWMq5Gw2w/K7RbbDczZ8FkappkQus5fHYY9mDD5aeHfXzO6tVG9P72iww5viw7w99QiOslbTHysK4Qa2RQFHp1VTGW1jC/Y6BkA5i4Vgs7F3ht3/QfHkj5jzSShj5XprxO3fDjVoMxxZPquE1z8R6KAOwkQlUY7mT2q6s4+DJdaJs0gwzEReJiYk7VIo+T385jlnS8lBx4Sw5rg6pAa2y19RV7miIQCFDit/YS7EfynpQoiD7YGwKrraZ0+wQIDAQAB"
+}

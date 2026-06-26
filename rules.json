@@ -1,0 +1,73 @@
+[
+  {
+    "id": 1,
+    "priority": 1,
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        {
+          "header": "Origin",
+          "operation": "set",
+          "value": "https://www.icloud.com"
+        },
+        {
+          "header": "Referer",
+          "operation": "set",
+          "value": "https://www.icloud.com/"
+        }
+      ]
+    },
+    "condition": {
+      "urlFilter": "|https://*.icloud.com/*",
+      "resourceTypes": ["xmlhttprequest"],
+      "excludedInitiatorDomains": ["apple.com", "icloud.com"]
+    }
+  },
+  {
+    "id": 2,
+    "priority": 1,
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        {
+          "header": "Origin",
+          "operation": "set",
+          "value": "https://www.icloud.com.cn"
+        },
+        {
+          "header": "Referer",
+          "operation": "set",
+          "value": "https://www.icloud.com.cn/"
+        }
+      ]
+    },
+    "condition": {
+      "urlFilter": "|https://*.icloud.com.cn/*",
+      "resourceTypes": ["xmlhttprequest"],
+      "excludedInitiatorDomains": ["apple.com.cn", "icloud.com.cn"]
+    }
+  },
+  {
+    "id": 3,
+    "priority": 2,
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        {
+          "header": "Origin",
+          "operation": "set",
+          "value": "https://chong.nerver.cc"
+        },
+        {
+          "header": "Referer",
+          "operation": "set",
+          "value": "https://chong.nerver.cc/"
+        }
+      ]
+    },
+    "condition": {
+      "urlFilter": "|https://chong.nerver.cc/api/external/",
+      "resourceTypes": ["xmlhttprequest"]
+    }
+  }
+]

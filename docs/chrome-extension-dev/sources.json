@@ -1,0 +1,190 @@
+{
+  "fetchedAt": "2026-06-26T05:25:33.621Z",
+  "source": "https://developer.chrome.com/docs/extensions",
+  "pages": [
+    {
+      "slug": "chrome-extensions-overview",
+      "label": "Chrome Extensions overview",
+      "title": "Chrome Extensions",
+      "url": "https://developer.chrome.com/docs/extensions",
+      "file": "pages/chrome-extensions-overview.md",
+      "status": "ok"
+    },
+    {
+      "slug": "get-started",
+      "label": "Get started",
+      "title": "Extensions / Get started",
+      "url": "https://developer.chrome.com/docs/extensions/get-started",
+      "file": "pages/get-started.md",
+      "status": "ok"
+    },
+    {
+      "slug": "hello-world",
+      "label": "Hello World tutorial",
+      "title": "Hello World extension",
+      "url": "https://developer.chrome.com/docs/extensions/get-started/tutorial/hello-world",
+      "file": "pages/hello-world.md",
+      "status": "ok"
+    },
+    {
+      "slug": "develop-overview",
+      "label": "Develop extensions",
+      "title": "Extensions / Develop",
+      "url": "https://developer.chrome.com/docs/extensions/develop",
+      "file": "pages/develop-overview.md",
+      "status": "ok"
+    },
+    {
+      "slug": "how-to",
+      "label": "How-to guides",
+      "title": "Extensions / How to",
+      "url": "https://developer.chrome.com/docs/extensions/how-to",
+      "file": "pages/how-to.md",
+      "status": "ok"
+    },
+    {
+      "slug": "api-reference",
+      "label": "Chrome Extension API reference",
+      "title": "Extensions / Reference",
+      "url": "https://developer.chrome.com/docs/extensions/reference",
+      "file": "pages/api-reference.md",
+      "status": "ok"
+    },
+    {
+      "slug": "manifest-reference",
+      "label": "Manifest reference",
+      "title": "Manifest file format",
+      "url": "https://developer.chrome.com/docs/extensions/reference/manifest",
+      "file": "pages/manifest-reference.md",
+      "status": "ok"
+    },
+    {
+      "slug": "manifest-v3",
+      "label": "Manifest V3",
+      "title": "Extensions / Manifest V3",
+      "url": "https://developer.chrome.com/docs/extensions/develop/migrate/what-is-mv3",
+      "file": "pages/manifest-v3.md",
+      "status": "ok"
+    },
+    {
+      "slug": "service-workers",
+      "label": "Extension service workers",
+      "title": "About extension service workers",
+      "url": "https://developer.chrome.com/docs/extensions/develop/concepts/service-workers",
+      "file": "pages/service-workers.md",
+      "status": "ok"
+    },
+    {
+      "slug": "content-scripts",
+      "label": "Content scripts",
+      "title": "Content scripts",
+      "url": "https://developer.chrome.com/docs/extensions/develop/concepts/content-scripts",
+      "file": "pages/content-scripts.md",
+      "status": "ok"
+    },
+    {
+      "slug": "messaging",
+      "label": "Message passing",
+      "title": "Message passing",
+      "url": "https://developer.chrome.com/docs/extensions/develop/concepts/messaging",
+      "file": "pages/messaging.md",
+      "status": "ok"
+    },
+    {
+      "slug": "storage-and-cookies",
+      "label": "Storage and cookies",
+      "title": "Storage and cookies",
+      "url": "https://developer.chrome.com/docs/extensions/develop/concepts/storage-and-cookies",
+      "file": "pages/storage-and-cookies.md",
+      "status": "ok"
+    },
+    {
+      "slug": "declare-permissions",
+      "label": "Declare permissions",
+      "title": "Declare permissions",
+      "url": "https://developer.chrome.com/docs/extensions/develop/concepts/declare-permissions",
+      "file": "pages/declare-permissions.md",
+      "status": "ok"
+    },
+    {
+      "slug": "match-patterns",
+      "label": "Match patterns",
+      "title": "Match patterns",
+      "url": "https://developer.chrome.com/docs/extensions/develop/concepts/match-patterns",
+      "file": "pages/match-patterns.md",
+      "status": "ok"
+    },
+    {
+      "slug": "side-panel-ui",
+      "label": "Create a side panel",
+      "title": "Create a side panel",
+      "url": "https://developer.chrome.com/docs/extensions/develop/ui/create-a-side-panel",
+      "file": "pages/side-panel-ui.md",
+      "status": "ok"
+    },
+    {
+      "slug": "options-page-ui",
+      "label": "Options page UI",
+      "title": "Give users options",
+      "url": "https://developer.chrome.com/docs/extensions/develop/ui/options-page",
+      "file": "pages/options-page-ui.md",
+      "status": "ok"
+    },
+    {
+      "slug": "toolbar-ui",
+      "label": "Implement an action",
+      "title": "Implement an action",
+      "url": "https://developer.chrome.com/docs/extensions/develop/ui/implement-action",
+      "file": "pages/toolbar-ui.md",
+      "status": "ok"
+    },
+    {
+      "slug": "runtime-api",
+      "label": "chrome.runtime API",
+      "title": "chrome.runtime",
+      "url": "https://developer.chrome.com/docs/extensions/reference/api/runtime",
+      "file": "pages/runtime-api.md",
+      "status": "ok"
+    },
+    {
+      "slug": "storage-api",
+      "label": "chrome.storage API",
+      "title": "chrome.storage",
+      "url": "https://developer.chrome.com/docs/extensions/reference/api/storage",
+      "file": "pages/storage-api.md",
+      "status": "ok"
+    },
+    {
+      "slug": "tabs-api",
+      "label": "chrome.tabs API",
+      "title": "chrome.tabs",
+      "url": "https://developer.chrome.com/docs/extensions/reference/api/tabs",
+      "file": "pages/tabs-api.md",
+      "status": "ok"
+    },
+    {
+      "slug": "scripting-api",
+      "label": "chrome.scripting API",
+      "title": "chrome.scripting",
+      "url": "https://developer.chrome.com/docs/extensions/reference/api/scripting",
+      "file": "pages/scripting-api.md",
+      "status": "ok"
+    },
+    {
+      "slug": "cookies-api",
+      "label": "chrome.cookies API",
+      "title": "chrome.cookies",
+      "url": "https://developer.chrome.com/docs/extensions/reference/api/cookies",
+      "file": "pages/cookies-api.md",
+      "status": "ok"
+    },
+    {
+      "slug": "side-panel-api",
+      "label": "chrome.sidePanel API",
+      "title": "chrome.sidePanel",
+      "url": "https://developer.chrome.com/docs/extensions/reference/api/sidePanel",
+      "file": "pages/side-panel-api.md",
+      "status": "ok"
+    }
+  ]
+}

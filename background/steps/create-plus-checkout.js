@@ -1,0 +1,6950 @@
+(function attachBackgroundPlusCheckoutCreate(root, factory) {
+  root.MultiPageBackgroundPlusCheckoutCreate = factory();
+})(typeof self !== 'undefined' ? self : globalThis, function createBackgroundPlusCheckoutCreateModule() {
+  const PLUS_CHECKOUT_SOURCE = 'plus-checkout';
+  const PAYPAL_SOURCE = 'paypal-flow';
+  const PLUS_CHECKOUT_ENTRY_URL = 'https://chatgpt.com/';
+  const PLUS_CHECKOUT_INJECT_FILES = ['content/utils.js', 'content/operation-delay.js', 'content/plus-checkout.js'];
+  const PAYPAL_INJECT_FILES = ['content/utils.js', 'content/operation-delay.js', 'content/paypal-flow.js'];
+  const PLUS_PAYMENT_METHOD_PAYPAL = 'paypal';
+  const PLUS_PAYMENT_METHOD_GOPAY = 'gopay';
+  const PLUS_PAYMENT_METHOD_GPC_HELPER = 'gpc-helper';
+  const PLUS_CHECKOUT_MODE_US_PP = 'us_pp';
+  const PLUS_CHECKOUT_MODE_JP_PP = 'jp_pp';
+  const DEFAULT_PLUS_CHECKOUT_MODE = PLUS_CHECKOUT_MODE_US_PP;
+  const PLUS_CHECKOUT_MODE_LABELS = Object.freeze({
+    [PLUS_CHECKOUT_MODE_US_PP]: '美区PP Plus Checkout',
+    [PLUS_CHECKOUT_MODE_JP_PP]: '日区PP Plus Checkout',
+  });
+  const PLUS_ACCOUNT_ACCESS_STRATEGY_SMS_OAUTH = 'sms_oauth';
+  const DEFAULT_GPC_HELPER_API_URL = 'https://your-gpc-helper-domain.example';
+  const BUILTIN_PLUS_CHECKOUT_CLOUD_CONVERSION_API_URL = 'https://gujumpgate.zg.fyi/api/checkout';
+  const BUILTIN_PLUS_CHECKOUT_CLOUD_CONVERSION_API_KEY = '';
+  const PPBOOM_BASE_URL = 'http://127.0.0.1:8787';
+  const PPBOOM_JOB_POLL_INTERVAL_MS = 800;
+  const PPBOOM_REQUEST_TIMEOUT_MS = 10000;
+  const PPBOOM_HELPER_LOG_PREFIX = '步骤 6 [PPBoom]：';
+  const PPBOOM_PLUS_CHECKOUT_SOURCE = 'ppboom-paypal-redirect';
+  const GPC_HELPER_PHONE_MODE_AUTO = 'auto';
+  const GPC_HELPER_PHONE_MODE_MANUAL = 'manual';
+  const CHECKOUT_READY_URL_PATTERN = /^https:\/\/(?:chatgpt\.com\/checkout|pay\.openai\.com\/c\/pay|checkout\.stripe\.com\/c\/pay)(?:\/|$)/i;
+  const CHECKOUT_REDIRECT_WAIT_TIMEOUT_MS = 15000;
+  const HOSTED_CHECKOUT_ADDRESS_ENDPOINT = 'https://www.meiguodizhi.com/api/v1/dz';
+  const HOSTED_CHECKOUT_VERIFICATION_CODE_ENDPOINT = 'https://mail.test.com/api/text-relay/eca_tr_xxxxxxxxx';
+  const HOSTED_CHECKOUT_TRANSITION_TIMEOUT_MS = 120000;
+  const HOSTED_CHECKOUT_SUCCESS_WAIT_TIMEOUT_MS = 180000;
+  const HOSTED_CHECKOUT_PENDING_RETURN_SESSION_SETTLE_MS = 8000;
+  const HOSTED_CHECKOUT_PAYPAL_LOOP_TIMEOUT_MS = 3 * 60 * 1000;
+  const HOSTED_CHECKOUT_CUSTOM_FRAME_READY_DELAY_MS = 500;
+  const HOSTED_CHECKOUT_CUSTOM_FRAME_WAIT_TIMEOUT_MS = 30000;
+  const HOSTED_CHECKOUT_CUSTOM_SUBMIT_MAX_ATTEMPTS = 3;
+  const HOSTED_CHECKOUT_CUSTOM_PAYPAL_REDIRECT_TIMEOUT_MS = 20000;
+  const HOSTED_CHECKOUT_OPENAI_ADDRESS_RETRY_MAX_ATTEMPTS = 3;
+  const HOSTED_CHECKOUT_CARD_ERROR_RETRY_MAX_ATTEMPTS = 3;
+  const HOSTED_CHECKOUT_VERIFICATION_POLL_ATTEMPTS_DEFAULT = 6;
+  const HOSTED_CHECKOUT_VERIFICATION_POLL_ATTEMPTS_LIMIT = 60;
+  const HOSTED_CHECKOUT_VERIFICATION_POLL_INTERVAL_DEFAULT_SECONDS = 5;
+  const HOSTED_CHECKOUT_VERIFICATION_POLL_INTERVAL_LIMIT_SECONDS = 60;
+  const HOSTED_CHECKOUT_VERIFICATION_INVALID_RESEND_DELAY_MS = 3000;
+  const HOSTED_CHECKOUT_VERIFICATION_RESULT_SETTLE_MS = 8000;
+  const HOSTED_CHECKOUT_FIRST_DIRECT_RESEND_DELAY_MS = 1000;
+  const PAYPAL_GENERIC_ERROR_SESSION_SETTLE_WAIT_MS = 5000;
+  const PAYPAL_GENERIC_ERROR_RECOVERY_MAX_ATTEMPTS = 2;
+  const PAYPAL_APPROVAL_BRANCH_RECOVERY_MAX_ATTEMPTS = 2;
+  const PPBOOM_CHECKOUT_REBUILD_MAX_ATTEMPTS_DEFAULT = 3;
+  const PPBOOM_CHECKOUT_REBUILD_MAX_ATTEMPTS_LIMIT = 10;
+  const HOSTED_HERMES_STALL_OBSERVATION_LIMIT = 8;
+  const CLOUD_CHECKOUT_ACCESS_TOKEN_MAX_ATTEMPTS = 2;
+  const CLOUD_CHECKOUT_REQUEST_MAX_RETRIES = 3;
+  const CLOUD_CHECKOUT_RETRY_DELAYS_MS = [1000, 2000, 4000];
+  const PAYPAL_SESSION_COOKIE_CLEAR_DOMAINS = [
+    'paypal.com',
+    'd.paypal.com',
+    'paypalobjects.com',
+    'recaptcha.net',
+  ];
+  const PAYPAL_SESSION_COOKIE_CLEAR_ORIGINS = [
+    'https://www.paypal.com',
+    'https://d.paypal.com',
+    'https://www.paypalobjects.com',
+    'https://www.recaptcha.net',
+  ];
+  const HOSTED_CHECKOUT_SMS_POOL_DISABLE_THRESHOLD = 2;
+  const HOSTED_CHECKOUT_RESEND_WAIT_MIN_SECONDS = 0;
+  const HOSTED_CHECKOUT_RESEND_WAIT_MAX_SECONDS = 300;
+  const HOSTED_CHECKOUT_FIRST_RESEND_WAIT_DEFAULT_SECONDS = 20;
+  const HOSTED_CHECKOUT_SUBSEQUENT_RESEND_WAIT_DEFAULT_SECONDS = 25;
+  const HOSTED_CHECKOUT_PAYPAL_DEFAULT_PHONE = '1234567890';
+  const HOSTED_CHECKOUT_SUCCESS_URL_PATTERN = /^https:\/\/(?:chatgpt\.com|www\.chatgpt\.com|chat\.openai\.com)\/(?:backend-api\/)?payments\/success(?:[/?#]|$)/i;
+  const HOSTED_CHECKOUT_SMS_POOL_SEPARATOR = '----';
+  const HOSTED_CHECKOUT_SAMPLE_PHONE = '1234567890';
+  const HOSTED_CHECKOUT_SAMPLE_VERIFICATION_URL = 'https://mail.test.com/api/text-relay/eca_tr_xxxxxxxxx';
+  const HOSTED_CHECKOUT_PAYPAL_BLOCKED_ERROR_PREFIX = 'HOSTED_CHECKOUT_PAYPAL_BLOCKED::';
+  const HOSTED_CHECKOUT_GENERIC_ERROR_PREFIX = 'HOSTED_CHECKOUT_GENERIC_ERROR::';
+  const HOSTED_CHECKOUT_CARD_FALLBACK_ERROR_PREFIX = 'HOSTED_CHECKOUT_CARD_FALLBACK::';
+  const HOSTED_CHECKOUT_CARD_DECLINED_ERROR_PREFIX = 'HOSTED_CHECKOUT_CARD_DECLINED::';
+  const HOSTED_CHECKOUT_VERIFICATION_RESEND_LIMIT_PREFIX = 'HOSTED_CHECKOUT_VERIFICATION_RESEND_LIMIT::';
+  const PLUS_CHECKOUT_START_NEW_FLOW_ERROR_PREFIX = 'PLUS_CHECKOUT_START_NEW_FLOW::';
+  const HOSTED_CHECKOUT_VERIFICATION_RESEND_MAX_ATTEMPTS_DEFAULT = 1;
+  const HOSTED_CHECKOUT_VERIFICATION_RESEND_MAX_ATTEMPTS_LIMIT = 10;
+  const PLUS_CHECKOUT_PROFILE_SETTING_KEYS = Object.freeze([
+    'hostedCheckoutVerificationUrl',
+    'hostedCheckoutPhoneNumber',
+    'hostedCheckoutSmsPoolText',
+    'hostedCheckoutSmsPoolUsage',
+    'hostedCheckoutCardDeclinedRetryEnabled',
+    'hostedCheckoutSmsPoolAutoDisableEnabled',
+    'hostedCheckoutFirstDirectResendEnabled',
+    'hostedCheckoutFirstResendWaitSeconds',
+    'hostedCheckoutSubsequentResendWaitSeconds',
+    'hostedCheckoutVerificationResendMaxAttempts',
+    'hostedCheckoutVerificationPollAttempts',
+    'hostedCheckoutVerificationPollIntervalSeconds',
+  ]);
+  const CHECKOUT_CONVERSION_PROXY_SETTINGS_SCOPE = 'regular';
+  const CHECKOUT_CONVERSION_PROXY_BYPASS_LIST = ['<local>', 'localhost', '127.0.0.1'];
+  const CHECKOUT_CONVERSION_PROXY_TARGET_HOST_PATTERNS = [
+    'chatgpt.com',
+    '*.chatgpt.com',
+    'openai.com',
+    '*.openai.com',
+    'oaistatic.com',
+    '*.oaistatic.com',
+    'stripe.com',
+    '*.stripe.com',
+  ];
+  const CHECKOUT_CONVERSION_PROXY_TEST_PROBE_ENDPOINTS = [
+    'http://ip-api.com/json?lang=en',
+    'https://ipinfo.io/json',
+    'https://chatgpt.com/cdn-cgi/trace',
+  ];
+  const CHECKOUT_CONVERSION_PROXY_TEST_TARGET_ENDPOINTS = [
+    'https://chatgpt.com/',
+  ];
+  const CHECKOUT_CONVERSION_PROXY_TEST_TARGET_HOST_PATTERNS = [
+    ...CHECKOUT_CONVERSION_PROXY_TARGET_HOST_PATTERNS,
+    'ip-api.com',
+    '*.ip-api.com',
+    'ipinfo.io',
+    '*.ipinfo.io',
+  ];
+  const CLOUD_CHECKOUT_ALREADY_PAID_SOURCE = 'cloud-checkout-already-paid';
+  const PLUS_CHECKOUT_PAYMENT_NODE_IDS = [
+    'plus-checkout-billing',
+    'paypal-approve',
+    'plus-checkout-return',
+    'gopay-subscription-confirm',
+  ];
+
+  function createPlusCheckoutCreateExecutor(deps = {}) {
+    const {
+      addLog: rawAddLog = async () => {},
+      applyCheckoutScopedProxyFromUrl = null,
+      broadcastDataUpdate = null,
+      chrome,
+      completeNodeFromBackground,
+      createAutomationTab = null,
+      enableHostedCheckoutAutomation = false,
+      ensureContentScriptReadyOnTabUntilStopped,
+      failNodeFromBackground = null,
+      fetch: fetchImpl = null,
+      getStepIdByKeyForState = null,
+      getState = null,
+      requestStop = null,
+      registerTab,
+      restoreCheckoutScopedProxySnapshot = null,
+      sendTabMessageUntilStopped,
+      setNodeStatus = null,
+      setState,
+      sleepWithStop,
+      startOAuthFlowTimeoutWindow = null,
+      waitForTabCompleteUntilStopped,
+      waitForTabUrlMatchUntilStopped = null,
+      throwIfStopped = () => {},
+    } = deps;
+    let activeVisibleStep = 6;
+
+    function addLog(message, level = 'info', options = {}) {
+      return rawAddLog(message, level, {
+        step: activeVisibleStep,
+        stepKey: 'plus-checkout-create',
+        ...(options && typeof options === 'object' ? options : {}),
+      });
+    }
+
+    function normalizePlusPaymentMethod(value = '') {
+      const rootScope = typeof self !== 'undefined' ? self : globalThis;
+      if (rootScope.GoPayUtils?.normalizePlusPaymentMethod) {
+        return rootScope.GoPayUtils.normalizePlusPaymentMethod(value);
+      }
+      const normalized = String(value || '').trim().toLowerCase();
+      if (normalized === PLUS_PAYMENT_METHOD_GPC_HELPER) {
+        return PLUS_PAYMENT_METHOD_GPC_HELPER;
+      }
+      return normalized === PLUS_PAYMENT_METHOD_GOPAY ? PLUS_PAYMENT_METHOD_GOPAY : PLUS_PAYMENT_METHOD_PAYPAL;
+    }
+
+    function normalizePlusCheckoutMode(value = '') {
+      const normalized = String(value || '').trim().toLowerCase();
+      return normalized === PLUS_CHECKOUT_MODE_JP_PP
+        ? PLUS_CHECKOUT_MODE_JP_PP
+        : DEFAULT_PLUS_CHECKOUT_MODE;
+    }
+
+    function normalizePpBoomMaxAttempts(value, fallback = 10) {
+      const numeric = Number.parseInt(String(value ?? '').trim(), 10);
+      if (!Number.isFinite(numeric)) {
+        return Math.max(1, Math.min(20, Number(fallback) || 10));
+      }
+      return Math.max(1, Math.min(20, numeric));
+    }
+
+    function normalizePpBoomPaymentLocale(value = '') {
+      const normalized = String(value || '').trim();
+      const allowed = new Set(['en', 'zh-CN', 'zh-TW', 'ja', 'ko', 'de', 'fr', 'es', 'id', 'pt-BR']);
+      return allowed.has(normalized) ? normalized : 'en';
+    }
+
+    function normalizePpBoomBrowserBackend(value = '') {
+      const normalized = String(value || '').trim().toLowerCase();
+      if (normalized === 'adspower') return 'adspower';
+      if (normalized === 'roxybrowser') return 'roxybrowser';
+      return 'local';
+    }
+
+    function normalizePpBoomCheckoutRebuildMaxAttempts(value, fallback = PPBOOM_CHECKOUT_REBUILD_MAX_ATTEMPTS_DEFAULT) {
+      const numeric = Number.parseInt(String(value ?? '').trim(), 10);
+      if (!Number.isFinite(numeric)) {
+        return Math.max(1, Math.min(
+          PPBOOM_CHECKOUT_REBUILD_MAX_ATTEMPTS_LIMIT,
+          Number(fallback) || PPBOOM_CHECKOUT_REBUILD_MAX_ATTEMPTS_DEFAULT,
+        ));
+      }
+      return Math.max(1, Math.min(PPBOOM_CHECKOUT_REBUILD_MAX_ATTEMPTS_LIMIT, numeric));
+    }
+
+    function isPpBoomEnabled(state = {}, paymentMethod = PLUS_PAYMENT_METHOD_PAYPAL) {
+      return normalizePlusPaymentMethod(paymentMethod) === PLUS_PAYMENT_METHOD_PAYPAL
+        && Boolean(state?.ppBoomEnabled);
+    }
+
+    function isPpBoomAdsPowerBackendEnabled(state = {}) {
+      return Boolean(state?.ppBoomEnabled)
+        && normalizePpBoomBrowserBackend(state?.ppBoomBrowserBackend) !== 'local';
+    }
+
+    function getPpBoomBrowserBackendLabel(value = '') {
+      const normalized = normalizePpBoomBrowserBackend(value);
+      if (normalized === 'adspower') return 'AdsPower';
+      if (normalized === 'roxybrowser') return 'RoxyBrowser';
+      return '当前浏览器';
+    }
+
+    function getPpBoomBrowserBackendConfig(state = {}) {
+      const backend = normalizePpBoomBrowserBackend(state?.ppBoomBrowserBackend);
+      const adsPowerProfileId = String(state?.ppBoomAdsPowerProfileId || '').trim();
+      const roxyBrowserProfileId = String(state?.ppBoomRoxyBrowserProfileId || '').trim() || adsPowerProfileId;
+      if (backend === 'roxybrowser') {
+        return {
+          backend,
+          label: getPpBoomBrowserBackendLabel(backend),
+          apiBase: String(state?.ppBoomRoxyBrowserApiBase || '').trim() || 'http://127.0.0.1:50000',
+          apiKey: String(state?.ppBoomRoxyBrowserApiKey || '').trim(),
+          profileId: roxyBrowserProfileId,
+        };
+      }
+      return {
+        backend,
+        label: getPpBoomBrowserBackendLabel(backend),
+        apiBase: String(state?.ppBoomAdsPowerApiBase || '').trim() || 'http://127.0.0.1:50325',
+        apiKey: String(state?.ppBoomAdsPowerApiKey || '').trim(),
+        profileId: adsPowerProfileId,
+      };
+    }
+
+    function buildPpBoomRuntimePatch(overrides = {}) {
+      return {
+        ppBoomJobId: '',
+        ppBoomJobStatus: '',
+        ppBoomCurrentAttempt: 0,
+        ppBoomPauseRequested: false,
+        ppBoomLastLogIndex: 0,
+        ppBoomStripeRedirectUrl: '',
+        ppBoomProviderRedirectUrl: '',
+        ppBoomStripeHostedUrl: '',
+        ppBoomPaymentMethodId: '',
+        ppBoomAttemptsUsed: 0,
+        ppBoomProviderError: '',
+        ppBoomBillingCountry: '',
+        ppBoomCurrency: '',
+        ...(overrides && typeof overrides === 'object' ? overrides : {}),
+      };
+    }
+
+    async function setPpBoomRuntimeState(overrides = {}) {
+      const patch = buildPpBoomRuntimePatch(overrides);
+      await setState(patch);
+      if (typeof broadcastDataUpdate === 'function') {
+        broadcastDataUpdate(patch);
+      }
+      return patch;
+    }
+
+    async function clearPpBoomRuntimeState() {
+      return setPpBoomRuntimeState();
+    }
+
+    function buildPpBoomApiUrl(path = '/') {
+      return new URL(String(path || '/'), `${PPBOOM_BASE_URL}/`).toString();
+    }
+
+    function formatPpBoomRequestError(url, error) {
+      const rawMessage = String(error?.message || error || '').trim();
+      const lowerMessage = rawMessage.toLowerCase();
+      const looksLikeConnectionFailure = !rawMessage
+        || lowerMessage === 'failed to fetch'
+        || lowerMessage.includes('load failed')
+        || lowerMessage.includes('networkerror')
+        || lowerMessage.includes('connection refused')
+        || lowerMessage.includes('err_connection_refused')
+        || lowerMessage.includes('err_failed');
+      if (looksLikeConnectionFailure) {
+        return [
+          `无法连接 PPBoom 本地助手（${url}）。`,
+          `请先运行 Windows 的 start-ppboom.bat 或 macOS 的 start-ppboom.command，并确认健康检查地址 ${buildPpBoomApiUrl('/health')} 可访问。`,
+          '如果助手已启动，请检查端口是否被占用、防火墙/安全软件是否拦截本机 127.0.0.1 请求。',
+          rawMessage ? `原始错误：${rawMessage}` : '',
+        ].filter(Boolean).join(' ');
+      }
+      return `PPBoom 本地助手请求失败（${url}）：${rawMessage || '未知网络错误'}`;
+    }
+
+    function normalizePlusHostedCheckoutOauthDelaySeconds(value, fallback = 10) {
+      const numeric = Number.parseInt(String(value ?? '').trim(), 10);
+      if (!Number.isFinite(numeric)) {
+        return Math.max(0, Math.min(3600, Number(fallback) || 10));
+      }
+      return Math.max(0, Math.min(3600, numeric));
+    }
+
+    function getPlusCheckoutModeLabel(value = '') {
+      return PLUS_CHECKOUT_MODE_LABELS[normalizePlusCheckoutMode(value)]
+        || PLUS_CHECKOUT_MODE_LABELS[DEFAULT_PLUS_CHECKOUT_MODE];
+    }
+
+    function buildDefaultPlusCheckoutProfile() {
+      return {
+        hostedCheckoutVerificationUrl: '',
+        hostedCheckoutPhoneNumber: '',
+        hostedCheckoutSmsPoolText: '',
+        hostedCheckoutSmsPoolUsage: {},
+        hostedCheckoutCardDeclinedRetryEnabled: true,
+        hostedCheckoutSmsPoolAutoDisableEnabled: false,
+        hostedCheckoutFirstDirectResendEnabled: false,
+        hostedCheckoutFirstResendWaitSeconds: HOSTED_CHECKOUT_FIRST_RESEND_WAIT_DEFAULT_SECONDS,
+        hostedCheckoutSubsequentResendWaitSeconds: HOSTED_CHECKOUT_SUBSEQUENT_RESEND_WAIT_DEFAULT_SECONDS,
+        hostedCheckoutVerificationResendMaxAttempts: HOSTED_CHECKOUT_VERIFICATION_RESEND_MAX_ATTEMPTS_DEFAULT,
+        hostedCheckoutVerificationPollAttempts: HOSTED_CHECKOUT_VERIFICATION_POLL_ATTEMPTS_DEFAULT,
+        hostedCheckoutVerificationPollIntervalSeconds: HOSTED_CHECKOUT_VERIFICATION_POLL_INTERVAL_DEFAULT_SECONDS,
+      };
+    }
+
+    function buildLegacyPlusCheckoutProfileFromState(state = {}) {
+      const source = state && typeof state === 'object' && !Array.isArray(state) ? state : {};
+      return {
+        hostedCheckoutVerificationUrl: String(source.hostedCheckoutVerificationUrl || '').trim(),
+        hostedCheckoutPhoneNumber: String(source.hostedCheckoutPhoneNumber || '').trim(),
+        hostedCheckoutSmsPoolText: normalizeHostedCheckoutPoolText(source.hostedCheckoutSmsPoolText || ''),
+        hostedCheckoutSmsPoolUsage: normalizeHostedCheckoutSmsPoolUsage(source.hostedCheckoutSmsPoolUsage || {}),
+        hostedCheckoutCardDeclinedRetryEnabled: source.hostedCheckoutCardDeclinedRetryEnabled !== false,
+        hostedCheckoutSmsPoolAutoDisableEnabled: Boolean(source.hostedCheckoutSmsPoolAutoDisableEnabled),
+        hostedCheckoutFirstDirectResendEnabled: Boolean(source.hostedCheckoutFirstDirectResendEnabled),
+        hostedCheckoutFirstResendWaitSeconds: normalizeHostedCheckoutResendWaitSeconds(
+          source.hostedCheckoutFirstResendWaitSeconds,
+          HOSTED_CHECKOUT_FIRST_RESEND_WAIT_DEFAULT_SECONDS
+        ),
+        hostedCheckoutSubsequentResendWaitSeconds: normalizeHostedCheckoutResendWaitSeconds(
+          source.hostedCheckoutSubsequentResendWaitSeconds,
+          HOSTED_CHECKOUT_SUBSEQUENT_RESEND_WAIT_DEFAULT_SECONDS
+        ),
+        hostedCheckoutVerificationResendMaxAttempts: normalizeHostedCheckoutVerificationResendMaxAttempts(
+          source.hostedCheckoutVerificationResendMaxAttempts
+        ),
+        hostedCheckoutVerificationPollAttempts: normalizeHostedCheckoutVerificationPollAttempts(
+          source.hostedCheckoutVerificationPollAttempts
+        ),
+        hostedCheckoutVerificationPollIntervalSeconds: normalizeHostedCheckoutVerificationPollIntervalSeconds(
+          source.hostedCheckoutVerificationPollIntervalSeconds
+        ),
+      };
+    }
+
+    function normalizePlusCheckoutProfile(profile = {}, fallback = null) {
+      const rawProfile = profile && typeof profile === 'object' && !Array.isArray(profile)
+        ? profile
+        : {};
+      const baseProfile = fallback && typeof fallback === 'object' && !Array.isArray(fallback)
+        ? fallback
+        : buildDefaultPlusCheckoutProfile();
+      return {
+        hostedCheckoutVerificationUrl: String(
+          rawProfile.hostedCheckoutVerificationUrl ?? baseProfile.hostedCheckoutVerificationUrl ?? ''
+        ).trim(),
+        hostedCheckoutPhoneNumber: String(
+          rawProfile.hostedCheckoutPhoneNumber ?? baseProfile.hostedCheckoutPhoneNumber ?? ''
+        ).trim(),
+        hostedCheckoutSmsPoolText: normalizeHostedCheckoutPoolText(
+          rawProfile.hostedCheckoutSmsPoolText ?? baseProfile.hostedCheckoutSmsPoolText ?? ''
+        ),
+        hostedCheckoutSmsPoolUsage: normalizeHostedCheckoutSmsPoolUsage(
+          rawProfile.hostedCheckoutSmsPoolUsage ?? baseProfile.hostedCheckoutSmsPoolUsage ?? {}
+        ),
+        hostedCheckoutCardDeclinedRetryEnabled: (
+          rawProfile.hostedCheckoutCardDeclinedRetryEnabled ?? baseProfile.hostedCheckoutCardDeclinedRetryEnabled
+        ) !== false,
+        hostedCheckoutSmsPoolAutoDisableEnabled: Boolean(
+          rawProfile.hostedCheckoutSmsPoolAutoDisableEnabled ?? baseProfile.hostedCheckoutSmsPoolAutoDisableEnabled
+        ),
+        hostedCheckoutFirstDirectResendEnabled: Boolean(
+          rawProfile.hostedCheckoutFirstDirectResendEnabled ?? baseProfile.hostedCheckoutFirstDirectResendEnabled
+        ),
+        hostedCheckoutFirstResendWaitSeconds: normalizeHostedCheckoutResendWaitSeconds(
+          rawProfile.hostedCheckoutFirstResendWaitSeconds ?? baseProfile.hostedCheckoutFirstResendWaitSeconds,
+          HOSTED_CHECKOUT_FIRST_RESEND_WAIT_DEFAULT_SECONDS
+        ),
+        hostedCheckoutSubsequentResendWaitSeconds: normalizeHostedCheckoutResendWaitSeconds(
+          rawProfile.hostedCheckoutSubsequentResendWaitSeconds ?? baseProfile.hostedCheckoutSubsequentResendWaitSeconds,
+          HOSTED_CHECKOUT_SUBSEQUENT_RESEND_WAIT_DEFAULT_SECONDS
+        ),
+        hostedCheckoutVerificationResendMaxAttempts: normalizeHostedCheckoutVerificationResendMaxAttempts(
+          rawProfile.hostedCheckoutVerificationResendMaxAttempts ?? baseProfile.hostedCheckoutVerificationResendMaxAttempts
+        ),
+        hostedCheckoutVerificationPollAttempts: normalizeHostedCheckoutVerificationPollAttempts(
+          rawProfile.hostedCheckoutVerificationPollAttempts ?? baseProfile.hostedCheckoutVerificationPollAttempts
+        ),
+        hostedCheckoutVerificationPollIntervalSeconds: normalizeHostedCheckoutVerificationPollIntervalSeconds(
+          rawProfile.hostedCheckoutVerificationPollIntervalSeconds ?? baseProfile.hostedCheckoutVerificationPollIntervalSeconds
+        ),
+      };
+    }
+
+    function resolveActivePlusCheckoutProfile(state = {}, stored = {}) {
+      const sourceState = state && typeof state === 'object' && !Array.isArray(state) ? state : {};
+      const storedState = stored && typeof stored === 'object' && !Array.isArray(stored) ? stored : {};
+      const mode = normalizePlusCheckoutMode(storedState.plusCheckoutMode ?? sourceState.plusCheckoutMode);
+      const rawProfiles = storedState.plusCheckoutProfiles && typeof storedState.plusCheckoutProfiles === 'object'
+        ? storedState.plusCheckoutProfiles
+        : (sourceState.plusCheckoutProfiles && typeof sourceState.plusCheckoutProfiles === 'object'
+          ? sourceState.plusCheckoutProfiles
+          : {});
+      const legacyProfile = buildLegacyPlusCheckoutProfileFromState({
+        ...sourceState,
+        ...storedState,
+      });
+      const hasUsProfile = Object.prototype.hasOwnProperty.call(rawProfiles, PLUS_CHECKOUT_MODE_US_PP);
+      const hasJpProfile = Object.prototype.hasOwnProperty.call(rawProfiles, PLUS_CHECKOUT_MODE_JP_PP);
+      const profiles = {
+        [PLUS_CHECKOUT_MODE_US_PP]: hasUsProfile
+          ? normalizePlusCheckoutProfile(rawProfiles[PLUS_CHECKOUT_MODE_US_PP])
+          : normalizePlusCheckoutProfile(legacyProfile),
+        [PLUS_CHECKOUT_MODE_JP_PP]: hasJpProfile
+          ? normalizePlusCheckoutProfile(rawProfiles[PLUS_CHECKOUT_MODE_JP_PP])
+          : normalizePlusCheckoutProfile(hasUsProfile
+            ? normalizePlusCheckoutProfile(rawProfiles[PLUS_CHECKOUT_MODE_US_PP])
+            : legacyProfile),
+      };
+      const activeProfile = profiles[mode] || legacyProfile;
+      return {
+        mode,
+        modeLabel: getPlusCheckoutModeLabel(mode),
+        profiles: {
+          ...profiles,
+          [mode]: activeProfile,
+        },
+        activeProfile,
+      };
+    }
+
+    function isSmsOauthCheckoutState(state = {}) {
+      return normalizePlusPaymentMethod(state?.plusPaymentMethod) === PLUS_PAYMENT_METHOD_PAYPAL
+        && String(state?.plusAccountAccessStrategy || '').trim().toLowerCase() === PLUS_ACCOUNT_ACCESS_STRATEGY_SMS_OAUTH;
+    }
+
+    function getCheckoutCreateDisplayStep(state = {}) {
+      const visibleStep = Math.floor(Number(state?.visibleStep) || 0);
+      return visibleStep > 0 ? visibleStep : 6;
+    }
+
+    function getCheckoutModeLabel(state = {}) {
+      const paymentMethod = normalizePlusPaymentMethod(state?.plusPaymentMethod);
+      if (paymentMethod === PLUS_PAYMENT_METHOD_GPC_HELPER) {
+        return 'GPC 订阅页';
+      }
+      return paymentMethod === PLUS_PAYMENT_METHOD_GOPAY ? 'GoPay 订阅页' : 'Plus Checkout';
+    }
+
+    async function refreshOAuthTimeoutWindowAfterHostedCheckoutSuccess() {
+      if (typeof startOAuthFlowTimeoutWindow !== 'function') {
+        return null;
+      }
+      const latestState = typeof getState === 'function'
+        ? await getState().catch(() => ({}))
+        : {};
+      const oauthUrl = String(latestState?.oauthUrl || '').trim();
+      if (!oauthUrl) {
+        await addLog('步骤 6：hosted checkout 已完成，但当前缺少 OAuth 链接，无法刷新 localhost 回调等待窗口。', 'warn');
+        return null;
+      }
+      const confirmOauthStep = typeof getStepIdByKeyForState === 'function'
+        ? Number(getStepIdByKeyForState('confirm-oauth', latestState))
+        : 0;
+      const timeoutStep = Number.isInteger(confirmOauthStep) && confirmOauthStep > 0
+        ? confirmOauthStep
+        : activeVisibleStep + 1;
+      return startOAuthFlowTimeoutWindow({
+        step: timeoutStep,
+        oauthUrl,
+        state: latestState,
+        logMessage: `步骤 ${timeoutStep}：hosted checkout 支付链路已完成，刷新 OAuth localhost 回调等待窗口。`,
+        disabledLogMessage: `步骤 ${timeoutStep}：hosted checkout 支付链路已完成；授权后链总超时已关闭，仅保留各步骤本地等待超时。`,
+      });
+    }
+
+    function getPlusPaymentMethodLabel(method = PLUS_PAYMENT_METHOD_PAYPAL) {
+      const paymentMethod = normalizePlusPaymentMethod(method);
+      if (paymentMethod === PLUS_PAYMENT_METHOD_GPC_HELPER) {
+        return 'GPC';
+      }
+      return paymentMethod === PLUS_PAYMENT_METHOD_GOPAY ? 'GoPay' : 'PayPal';
+    }
+
+    function shouldWaitForHostedCheckoutSuccess(state = {}, paymentMethod = PLUS_PAYMENT_METHOD_PAYPAL) {
+      return normalizePlusPaymentMethod(paymentMethod) === PLUS_PAYMENT_METHOD_PAYPAL
+        && state?.plusHostedCheckoutIsFinalStep !== false;
+    }
+
+    function isCheckoutReadyUrl(url = '') {
+      return CHECKOUT_READY_URL_PATTERN.test(String(url || ''));
+    }
+
+    function isPaymentsSuccessUrl(url = '') {
+      return HOSTED_CHECKOUT_SUCCESS_URL_PATTERN.test(String(url || ''));
+    }
+
+    function isChatGptUrl(url = '') {
+      return /^https:\/\/(?:chatgpt\.com|www\.chatgpt\.com|chat\.openai\.com)(?:[/?#]|$)/i.test(String(url || '').trim());
+    }
+
+    function isHostedCheckoutPendingReturnUrl(url = '') {
+      const normalizedUrl = String(url || '').trim();
+      if (!normalizedUrl) {
+        return false;
+      }
+      if (!/^https:\/\/(?:pay\.openai\.com|checkout\.stripe\.com)\/c\/pay(?:[/?#]|$)/i.test(normalizedUrl)) {
+        return false;
+      }
+      return /(?:[?&#])redirect_status=pending(?:[&#]|$)/i.test(normalizedUrl);
+    }
+
+    function isHostedCheckoutPendingUnexpectedChatGptReturnUrl(url = '') {
+      const normalizedUrl = String(url || '').trim();
+      return Boolean(normalizedUrl)
+        && isChatGptUrl(normalizedUrl)
+        && !isPaymentsSuccessUrl(normalizedUrl);
+    }
+
+    function isPayPalUrl(url = '') {
+      return /paypal\./i.test(String(url || ''))
+        || /pm-redirects\.stripe\.com/i.test(String(url || ''));
+    }
+
+    function isPayPalHermesUrl(url = '') {
+      return /paypal\.com\/webapps\/hermes/i.test(String(url || ''));
+    }
+
+    function isCustomChatGptCheckoutUrl(url = '') {
+      return /^https:\/\/(?:chatgpt\.com|www\.chatgpt\.com)\/checkout(?:[/?#]|$)/i.test(String(url || '').trim());
+    }
+
+    function normalizeText(value = '') {
+      return String(value || '').replace(/\s+/g, ' ').trim();
+    }
+
+    async function getCheckoutFrames(tabId) {
+      if (!chrome?.webNavigation?.getAllFrames) {
+        return [{ frameId: 0, url: '' }];
+      }
+      const frames = await chrome.webNavigation.getAllFrames({ tabId }).catch(() => null);
+      if (!Array.isArray(frames) || !frames.length) {
+        return [{ frameId: 0, url: '' }];
+      }
+      return frames
+        .filter((frame) => Number.isInteger(frame?.frameId))
+        .sort((left, right) => Number(left.frameId) - Number(right.frameId));
+    }
+
+    async function pingCheckoutFrame(tabId, frameId) {
+      try {
+        const pong = await chrome.tabs.sendMessage(tabId, {
+          type: 'PING',
+          source: 'background',
+          payload: {},
+        }, {
+          frameId: Number.isInteger(frameId) ? frameId : 0,
+        });
+        return Boolean(pong?.ok && (!pong.source || pong.source === PLUS_CHECKOUT_SOURCE));
+      } catch {
+        return false;
+      }
+    }
+
+    async function ensurePlusCheckoutFrameReady(tabId, frameId) {
+      if (await pingCheckoutFrame(tabId, frameId)) {
+        return true;
+      }
+      if (!chrome?.scripting?.executeScript) {
+        return false;
+      }
+
+      try {
+        await chrome.scripting.executeScript({
+          target: { tabId, frameIds: [frameId] },
+          func: (injectedSource) => {
+            window.__MULTIPAGE_SOURCE = injectedSource;
+          },
+          args: [PLUS_CHECKOUT_SOURCE],
+        });
+        await chrome.scripting.executeScript({
+          target: { tabId, frameIds: [frameId] },
+          files: PLUS_CHECKOUT_INJECT_FILES,
+        });
+      } catch {
+        // Ignore mid-navigation/frame-race errors and re-ping below.
+      }
+
+      await sleepWithStop(HOSTED_CHECKOUT_CUSTOM_FRAME_READY_DELAY_MS);
+      return await pingCheckoutFrame(tabId, frameId);
+    }
+
+    async function ensurePlusCheckoutFramesReady(tabId, frames) {
+      const checkedFrames = [];
+      for (const frame of frames) {
+        const ready = await ensurePlusCheckoutFrameReady(tabId, frame.frameId);
+        checkedFrames.push({ ...frame, ready });
+      }
+      return checkedFrames;
+    }
+
+    async function sendFrameMessage(tabId, frameId, message) {
+      return chrome.tabs.sendMessage(tabId, message, {
+        frameId: Number.isInteger(frameId) ? frameId : 0,
+      });
+    }
+
+    function isPaymentFrameUrl(url = '') {
+      return /elements-inner-payment|componentName=payment/i.test(String(url || ''));
+    }
+
+    function isAddressFrameUrl(url = '') {
+      return /elements-inner-address|componentName=address/i.test(String(url || ''));
+    }
+
+    async function inspectCheckoutFrame(tabId, frame) {
+      try {
+        const result = await sendFrameMessage(tabId, frame.frameId, {
+          type: 'PLUS_CHECKOUT_GET_STATE',
+          source: 'background',
+          payload: {},
+        });
+        if (result?.error) {
+          return { frame, error: result.error };
+        }
+        return { frame: { ...frame, ready: true }, result: result || {} };
+      } catch (error) {
+        const readyError = frame.ready === false ? 'content-script-not-ready' : '';
+        const message = error?.message || String(error || '');
+        return { frame, error: readyError ? `${readyError}: ${message}` : message };
+      }
+    }
+
+    async function inspectCheckoutFrames(tabId, frames) {
+      const inspections = [];
+      for (const frame of frames) {
+        inspections.push(await inspectCheckoutFrame(tabId, frame));
+      }
+      return inspections;
+    }
+
+    function buildFrameSummary(inspections = []) {
+      return inspections
+        .map((item) => {
+          const flags = [];
+          if (item.result?.hasPayPal) flags.push('paypal');
+          if (item.result?.billingFieldsVisible) flags.push('billing');
+          if (item.result?.hasSubscribeButton) flags.push('subscribe');
+          if (item.result?.checkoutAmountSummary?.hasTodayDue) flags.push('amount');
+          if (item.result?.customCheckoutError) flags.push('custom-error');
+          if (!flags.length && item.error) flags.push(item.error);
+          if (!flags.length) flags.push('no-match');
+          return `${item.frame.frameId}:${item.frame.url || 'about:blank'}:${flags.join(',')}`;
+        })
+        .slice(0, 8)
+        .join(' | ');
+    }
+
+    function findCustomCheckoutErrorInspection(inspections = []) {
+      return inspections.find((item) => item?.result?.customCheckoutError) || null;
+    }
+
+    async function assertNoCustomCheckoutError(tabId, candidateFrames = [], contextLabel = '') {
+      const frames = candidateFrames.length ? candidateFrames : await getCheckoutFrames(tabId);
+      const readyFrames = await ensurePlusCheckoutFramesReady(tabId, frames);
+      const inspections = await inspectCheckoutFrames(tabId, readyFrames);
+      const errorInspection = findCustomCheckoutErrorInspection(inspections);
+      if (!errorInspection) {
+        return inspections;
+      }
+      const message = String(errorInspection?.result?.customCheckoutErrorMessage || '').trim() || '页面出现错误提示框。';
+      const frameLabel = Number(errorInspection?.frame?.frameId) === 0
+        ? '主页面'
+        : `iframe(${Number(errorInspection?.frame?.frameId) || 0})`;
+      throw new Error(`${PLUS_CHECKOUT_START_NEW_FLOW_ERROR_PREFIX}步骤 6：${contextLabel ? `${contextLabel}：` : ''}custom checkout 检测到错误提示框（${frameLabel}）：${message}`);
+    }
+
+    function isRetryableCustomCheckoutEmailError(error) {
+      const message = String(error?.message || error || '').trim();
+      return /PLUS_CHECKOUT_START_NEW_FLOW::[\s\S]*(出错了，请重试|请重试|try\s+again|something\s+went\s+wrong)/i.test(message);
+    }
+
+    async function tryRecoverCustomCheckoutByRefillingEmail(tabId, registrationEmail = '', candidateFrames = [], paymentMethod = PLUS_PAYMENT_METHOD_PAYPAL) {
+      const normalizedEmail = String(registrationEmail || '').trim();
+      if (!normalizedEmail) {
+        return false;
+      }
+      await addLog('步骤 6：检测到提交后的短链错误提示，准备清空并重填顶层联系邮箱后重试订阅。', 'warn');
+      const refillResult = await sendFrameMessage(tabId, 0, {
+        type: 'PLUS_CHECKOUT_FILL_CONTACT_EMAIL',
+        source: 'background',
+        payload: {
+          email: normalizedEmail,
+          options: {
+            overwrite: true,
+            clearFirst: true,
+            forceRefill: true,
+            settleTimeoutMs: 4000,
+          },
+        },
+      }).catch(() => null);
+      if (refillResult?.error) {
+        throw new Error(refillResult.error);
+      }
+      if (refillResult?.emailFillResult) {
+        await addLog(`步骤 6：短链错误恢复后的顶层联系邮箱处理结果：${JSON.stringify({
+          contactEmail: refillResult?.contactEmail || normalizedEmail,
+          found: Boolean(refillResult.emailFillResult.found),
+          filled: Boolean(refillResult.emailFillResult.filled),
+          alreadyFilled: Boolean(refillResult.emailFillResult.alreadyFilled),
+          skipped: Boolean(refillResult.emailFillResult.skipped),
+          reason: String(refillResult.emailFillResult.reason || ''),
+          value: String(refillResult.emailFillResult.value || ''),
+        })}`, 'info');
+      }
+      await sleepWithStop(500);
+      const subscribeFrame = await waitForSubscribeFrame(tabId, candidateFrames);
+      const subscribeResult = await sendFrameMessage(tabId, subscribeFrame.frameId, {
+        type: 'PLUS_CHECKOUT_CLICK_SUBSCRIBE',
+        source: 'background',
+        payload: {
+          beforeClickDelayMs: 900,
+          paymentMethod,
+          autoCheckAgreement: true,
+        },
+      });
+      if (subscribeResult?.error) {
+        throw new Error(subscribeResult.error);
+      }
+      return true;
+    }
+
+    function pickPaymentFrame(inspections = []) {
+      return inspections.find((item) => item.result?.hasPayPal || item.result?.paypalCandidates?.length)
+        || inspections.find((item) => isPaymentFrameUrl(item.frame.url))
+        || null;
+    }
+
+    function pickBillingFrame(inspections = []) {
+      return inspections.find((item) => item.result?.billingFieldsVisible)
+        || inspections.find((item) => isAddressFrameUrl(item.frame.url))
+        || null;
+    }
+
+    function pickSubscribeFrame(inspections = []) {
+      return inspections.find((item) => item.result?.hasSubscribeButton)
+        || inspections.find((item) => item.frame.frameId === 0)
+        || null;
+    }
+
+    async function waitForFrameMatch(tabId, pickFrame, options = {}) {
+      const label = String(options.label || 'checkout frame').trim() || 'checkout frame';
+      const timeoutMs = Math.max(0, Math.floor(Number(options.timeoutMs) || HOSTED_CHECKOUT_CUSTOM_FRAME_WAIT_TIMEOUT_MS));
+      const startedAt = Date.now();
+      let lastInspections = [];
+
+      while (true) {
+        const readyFrames = await ensurePlusCheckoutFramesReady(tabId, await getCheckoutFrames(tabId));
+        const inspections = await inspectCheckoutFrames(tabId, readyFrames);
+        lastInspections = inspections;
+        const picked = pickFrame(inspections);
+        if (picked) {
+          return {
+            picked,
+            inspections,
+          };
+        }
+        if (timeoutMs > 0 && Date.now() - startedAt >= timeoutMs) {
+          const frameSummary = buildFrameSummary(lastInspections) || 'none';
+          throw new Error(`步骤 6：等待${label}超时（${Math.round(timeoutMs / 1000)} 秒）。frame 摘要：${frameSummary}`);
+        }
+        await sleepWithStop(250);
+      }
+    }
+
+    async function waitForBillingFrame(tabId) {
+      const result = await waitForFrameMatch(tabId, pickBillingFrame, {
+        label: '账单地址 iframe',
+      });
+      return {
+        frameId: result.picked.frame.frameId,
+        frameUrl: result.picked.frame.url || '',
+        ready: result.picked.frame.ready !== false,
+        inspections: result.inspections,
+      };
+    }
+
+    async function waitForSubscribeFrame(tabId, candidateFrames = []) {
+      const frames = candidateFrames.length ? candidateFrames : [{ frameId: 0, url: '' }];
+      const startedAt = Date.now();
+      let lastInspections = [];
+      while (true) {
+        const readyFrames = await ensurePlusCheckoutFramesReady(tabId, frames);
+        const inspections = await inspectCheckoutFrames(tabId, readyFrames);
+        lastInspections = inspections;
+        const picked = pickSubscribeFrame(inspections);
+        if (picked) {
+          return picked.frame;
+        }
+        if (Date.now() - startedAt >= HOSTED_CHECKOUT_CUSTOM_FRAME_WAIT_TIMEOUT_MS) {
+          const frameSummary = buildFrameSummary(lastInspections) || 'none';
+          throw new Error(`步骤 6：等待订阅按钮 iframe 超时（${Math.round(HOSTED_CHECKOUT_CUSTOM_FRAME_WAIT_TIMEOUT_MS / 1000)} 秒）。frame 摘要：${frameSummary}`);
+        }
+        await sleepWithStop(250);
+      }
+    }
+
+    async function waitForCustomCheckoutPayPalRedirect(tabId) {
+      const startedAt = Date.now();
+      while (Date.now() - startedAt < HOSTED_CHECKOUT_CUSTOM_PAYPAL_REDIRECT_TIMEOUT_MS) {
+        const tab = await chrome.tabs.get(tabId).catch(() => null);
+        if (!tab) {
+          throw new Error('步骤 6：checkout 标签页已关闭，无法继续等待 PayPal 跳转。');
+        }
+        const topLevelState = await sendFrameMessage(tabId, 0, {
+          type: 'PLUS_CHECKOUT_GET_STATE',
+          source: 'background',
+          payload: {},
+        }).catch(() => null);
+        if (topLevelState?.customCheckoutError) {
+          throw new Error(`${PLUS_CHECKOUT_START_NEW_FLOW_ERROR_PREFIX}步骤 6：等待跳转 PayPal 时检测到错误提示框：${String(topLevelState.customCheckoutErrorMessage || '').trim() || '页面出现错误提示框。'}`);
+        }
+        const url = String(tab.url || '').trim();
+        if (isPayPalUrl(url) && !isCustomChatGptCheckoutUrl(url)) {
+          await waitForTabCompleteUntilStopped(tabId);
+          await sleepWithStop(1000);
+          return tab;
+        }
+        if (url && !isCustomChatGptCheckoutUrl(url) && !isPayPalUrl(url) && !isPaymentsSuccessUrl(url)) {
+          await addLog(`步骤 6：点击订阅后页面跳转到非 PayPal 识别地址：${url}`, 'warn');
+          return null;
+        }
+        await sleepWithStop(500);
+      }
+      return null;
+    }
+
+    async function completePlusCheckoutCreate(payload = {}) {
+      await setState({
+        paypalGenericErrorRecoveryCount: 0,
+        paypalApprovalBranchRecoveryCount: 0,
+      });
+      await completeNodeFromBackground('plus-checkout-create', payload);
+    }
+
+    function normalizePayPalSessionCookieDomain(domain) {
+      return String(domain || '').trim().replace(/^\.+/, '').toLowerCase();
+    }
+
+    function shouldClearPayPalSessionCookie(cookie) {
+      const domain = normalizePayPalSessionCookieDomain(cookie?.domain);
+      if (!domain) return false;
+      return PAYPAL_SESSION_COOKIE_CLEAR_DOMAINS.some((target) => (
+        domain === target || domain.endsWith(`.${target}`)
+      ));
+    }
+
+    function buildPayPalSessionCookieRemovalUrl(cookie) {
+      const host = normalizePayPalSessionCookieDomain(cookie?.domain);
+      const rawPath = String(cookie?.path || '/');
+      const path = rawPath.startsWith('/') ? rawPath : `/${rawPath}`;
+      return `https://${host}${path}`;
+    }
+
+    async function collectPayPalSessionCookies() {
+      if (!chrome?.cookies?.getAll) {
+        return [];
+      }
+      const stores = chrome.cookies.getAllCookieStores
+        ? await chrome.cookies.getAllCookieStores()
+        : [{ id: undefined }];
+      const cookies = [];
+      const seen = new Set();
+      for (const store of stores) {
+        const storeId = store?.id;
+        const batch = await chrome.cookies.getAll(storeId ? { storeId } : {});
+        for (const cookie of batch || []) {
+          if (!shouldClearPayPalSessionCookie(cookie)) continue;
+          const key = [
+            cookie.storeId || storeId || '',
+            cookie.domain || '',
+            cookie.path || '',
+            cookie.name || '',
+            cookie.partitionKey ? JSON.stringify(cookie.partitionKey) : '',
+          ].join('|');
+          if (seen.has(key)) continue;
+          seen.add(key);
+          cookies.push(cookie);
+        }
+      }
+      return cookies;
+    }
+
+    async function removePayPalSessionCookie(cookie) {
+      const details = {
+        url: buildPayPalSessionCookieRemovalUrl(cookie),
+        name: cookie.name,
+      };
+      if (cookie.storeId) {
+        details.storeId = cookie.storeId;
+      }
+      if (cookie.partitionKey) {
+        details.partitionKey = cookie.partitionKey;
+      }
+      try {
+        return Boolean(await chrome.cookies.remove(details));
+      } catch (error) {
+        console.warn('[MultiPage:plus-checkout-create] remove PayPal cookie failed', {
+          domain: cookie?.domain,
+          name: cookie?.name,
+          message: error?.message || String(error || 'unknown error'),
+        });
+        return false;
+      }
+    }
+
+    function isPayPalSessionOriginUrl(url = '') {
+      try {
+        const parsed = new URL(String(url || '').trim());
+        const host = normalizePayPalSessionCookieDomain(parsed.hostname || '');
+        if (!host) {
+          return false;
+        }
+        return PAYPAL_SESSION_COOKIE_CLEAR_DOMAINS.some((target) => (
+          host === target || host.endsWith(`.${target}`)
+        ));
+      } catch {
+        return false;
+      }
+    }
+
+    async function collectPayPalSessionTabs() {
+      if (!chrome?.tabs?.query) {
+        return [];
+      }
+      const tabs = await chrome.tabs.query({});
+      return (tabs || []).filter((tab) => (
+        Number.isInteger(tab?.id)
+        && isPayPalSessionOriginUrl(tab?.url || '')
+      ));
+    }
+
+    async function clearPayPalSessionTabStorage() {
+      if (!chrome?.scripting?.executeScript) {
+        return { tabCount: 0, frameCount: 0 };
+      }
+      const tabs = await collectPayPalSessionTabs();
+      let frameCount = 0;
+      for (const tab of tabs) {
+        try {
+          const results = await chrome.scripting.executeScript({
+            target: {
+              tabId: tab.id,
+              allFrames: true,
+            },
+            func: () => {
+              let localCleared = false;
+              let sessionCleared = false;
+              try {
+                window.localStorage?.clear?.();
+                localCleared = true;
+              } catch {}
+              try {
+                window.sessionStorage?.clear?.();
+                sessionCleared = true;
+              } catch {}
+              return {
+                localCleared,
+                sessionCleared,
+              };
+            },
+          });
+          frameCount += Array.isArray(results) ? results.length : 0;
+        } catch (error) {
+          await addLog(`步骤 6：清理 PayPal 标签页存储失败：${error?.message || String(error || '未知错误')}`, 'warn');
+        }
+      }
+      return {
+        tabCount: tabs.length,
+        frameCount,
+      };
+    }
+
+    async function clearPayPalSessionCookies() {
+      let removedCount = 0;
+      let candidateCount = 0;
+      if (!chrome?.cookies?.getAll || !chrome.cookies?.remove) {
+        await addLog('步骤 6：当前浏览器不支持 cookies API，跳过 PayPal 会话 cookie 清理。', 'warn');
+      } else {
+        const cookies = await collectPayPalSessionCookies();
+        candidateCount = cookies.length;
+        for (const cookie of cookies) {
+          if (await removePayPalSessionCookie(cookie)) {
+            removedCount += 1;
+          }
+        }
+        if (chrome?.browsingData?.removeCookies) {
+          try {
+            await chrome.browsingData.removeCookies({
+              since: 0,
+              origins: PAYPAL_SESSION_COOKIE_CLEAR_ORIGINS,
+            });
+          } catch (error) {
+            await addLog(`步骤 6：PayPal browsingData 补扫 cookies 失败：${error?.message || String(error || '未知错误')}`, 'warn');
+          }
+        }
+      }
+
+      const tabStorageCleanup = await clearPayPalSessionTabStorage();
+      if (chrome?.browsingData?.remove) {
+        try {
+          await chrome.browsingData.remove(
+            {
+              since: 0,
+              origins: PAYPAL_SESSION_COOKIE_CLEAR_ORIGINS,
+            },
+            {
+              localStorage: true,
+            }
+          );
+        } catch (error) {
+          await addLog(`步骤 6：PayPal browsingData 补扫 localStorage 失败：${error?.message || String(error || '未知错误')}`, 'warn');
+        }
+      }
+      return {
+        removedCount,
+        candidateCount,
+        storageTabCount: tabStorageCleanup.tabCount,
+        storageFrameCount: tabStorageCleanup.frameCount,
+      };
+    }
+
+    function shouldClearPayPalSessionCookiesBeforeCheckoutCreate(state = {}, paymentMethod = '') {
+      return normalizePlusPaymentMethod(paymentMethod || state?.plusPaymentMethod) === PLUS_PAYMENT_METHOD_PAYPAL
+        && Boolean(state?.pendingPayPalCookieCleanupBeforeCheckoutCreate);
+    }
+
+    async function maybeClearPayPalSessionCookiesBeforeCheckoutCreate(state = {}, paymentMethod = PLUS_PAYMENT_METHOD_PAYPAL) {
+      if (!shouldClearPayPalSessionCookiesBeforeCheckoutCreate(state, paymentMethod)) {
+        return { triggered: false, removedCount: 0, candidateCount: 0 };
+      }
+      const updates = { pendingPayPalCookieCleanupBeforeCheckoutCreate: false };
+      await setState(updates);
+      if (typeof broadcastDataUpdate === 'function') {
+        broadcastDataUpdate(updates);
+      }
+      const cookieCleanup = await clearPayPalSessionCookies();
+      await addLog(
+        `步骤 6：检测到上一轮 PayPal 支付链路失败，重建 Checkout 前已清理 PayPal 相关 cookie ${cookieCleanup.removedCount}/${cookieCleanup.candidateCount} 个，并清理 ${cookieCleanup.storageTabCount || 0} 个标签页的 localStorage / sessionStorage（共 ${cookieCleanup.storageFrameCount || 0} 个 frame）。`,
+        'info'
+      );
+      return {
+        triggered: true,
+        ...cookieCleanup,
+      };
+    }
+
+    async function closeStalePayPalAndCheckoutTabs(referenceTabId = 0, state = {}) {
+      if (!chrome?.tabs?.remove) {
+        return { closedCount: 0 };
+      }
+      const candidateIds = new Set();
+      const normalizedReferenceTabId = Number(referenceTabId) || 0;
+      const storedTabId = Number(state?.plusCheckoutTabId) || 0;
+      if (normalizedReferenceTabId > 0) {
+        candidateIds.add(normalizedReferenceTabId);
+      }
+      if (storedTabId > 0) {
+        candidateIds.add(storedTabId);
+      }
+
+      let scopedWindowId = 0;
+      const referenceTab = normalizedReferenceTabId > 0
+        ? await chrome.tabs.get(normalizedReferenceTabId).catch(() => null)
+        : null;
+      scopedWindowId = Number(referenceTab?.windowId) || 0;
+      if (!scopedWindowId && storedTabId > 0) {
+        const storedTab = await chrome.tabs.get(storedTabId).catch(() => null);
+        scopedWindowId = Number(storedTab?.windowId) || 0;
+      }
+
+      if (chrome?.tabs?.query) {
+        const tabs = await chrome.tabs.query(scopedWindowId > 0 ? { windowId: scopedWindowId } : {}).catch(() => []);
+        for (const tab of tabs || []) {
+          const tabId = Number(tab?.id) || 0;
+          if (tabId <= 0) continue;
+          const url = String(tab?.url || '').trim();
+          if (!url) continue;
+          if (isPayPalUrl(url) || isCheckoutReadyUrl(url) || isPaymentsSuccessUrl(url)) {
+            candidateIds.add(tabId);
+          }
+        }
+      }
+
+      let closedCount = 0;
+      for (const tabId of candidateIds) {
+        await chrome.tabs.remove(tabId).then(() => {
+          closedCount += 1;
+        }).catch(() => {});
+      }
+      return { closedCount };
+    }
+
+    function getPayPalGenericErrorRecoveryCount(state = {}) {
+      return Math.max(0, Math.floor(Number(state?.paypalGenericErrorRecoveryCount) || 0));
+    }
+
+    function getPayPalApprovalBranchRecoveryCount(state = {}) {
+      return Math.max(0, Math.floor(Number(state?.paypalApprovalBranchRecoveryCount) || 0));
+    }
+
+    function getPpBoomCheckoutRebuildMaxAttempts(state = {}) {
+      const enabled = isPpBoomEnabled(state, normalizePlusPaymentMethod(state?.plusPaymentMethod));
+      if (!enabled || normalizeString(state?.plusCheckoutSource) !== PPBOOM_PLUS_CHECKOUT_SOURCE) {
+        return 0;
+      }
+      return normalizePpBoomCheckoutRebuildMaxAttempts(
+        state?.ppBoomCheckoutRebuildMaxAttempts,
+        PPBOOM_CHECKOUT_REBUILD_MAX_ATTEMPTS_DEFAULT,
+      );
+    }
+
+    function shouldAutoRecoverPayPalGenericError(state = {}) {
+      const ppBoomLimit = getPpBoomCheckoutRebuildMaxAttempts(state);
+      const limit = ppBoomLimit > 0 ? ppBoomLimit : PAYPAL_GENERIC_ERROR_RECOVERY_MAX_ATTEMPTS;
+      return getPayPalGenericErrorRecoveryCount(state) < limit;
+    }
+
+    function shouldAutoRecoverPayPalApprovalBranch(state = {}) {
+      const ppBoomLimit = getPpBoomCheckoutRebuildMaxAttempts(state);
+      const limit = ppBoomLimit > 0 ? ppBoomLimit : PAYPAL_APPROVAL_BRANCH_RECOVERY_MAX_ATTEMPTS;
+      return getPayPalApprovalBranchRecoveryCount(state) < limit;
+    }
+
+    function buildHostedHermesObservationSignature(url = '', pageState = {}) {
+      return JSON.stringify({
+        url: normalizeString(url).slice(0, 240),
+        stage: normalizeString(pageState?.hostedStage).toLowerCase(),
+        readyState: normalizeString(pageState?.readyState).toLowerCase(),
+        redirecting: Boolean(pageState?.hostedRedirecting),
+        redirectingMessage: normalizeString(pageState?.hostedRedirectingMessage).slice(0, 240),
+        reviewConsentReady: Boolean(pageState?.reviewConsentReady),
+        approveReady: Boolean(pageState?.approveReady),
+        bodyTextPreview: normalizeString(pageState?.bodyTextPreview).slice(0, 240),
+      });
+    }
+
+    function assessHostedHermesRecoveryState(url = '', pageState = {}, previousState = {}) {
+      const stage = normalizeString(pageState?.hostedStage).toLowerCase() || 'unknown';
+      const readyState = normalizeString(pageState?.readyState).toLowerCase();
+      const isHermes = isPayPalHermesUrl(url);
+      const signature = isHermes ? buildHostedHermesObservationSignature(url, pageState) : '';
+      if (!isHermes) {
+        return {
+          isHermes,
+          stage,
+          signature,
+          nextCount: 0,
+          shouldRecover: false,
+          shouldWait: false,
+        };
+      }
+      if (
+        pageState?.hostedRedirecting
+        || stage === 'redirecting'
+        || /saving\s+your\s+info.*sending\s+you\s+back\s+to\s+the\s+merchant/i.test(String(pageState?.hostedRedirectingMessage || ''))
+      ) {
+        return {
+          isHermes,
+          stage,
+          signature,
+          nextCount: 0,
+          shouldRecover: false,
+          shouldWait: true,
+        };
+      }
+      if (['review_consent', 'guest_checkout', 'verification', 'pay_login', 'account_create_email'].includes(stage)) {
+        return {
+          isHermes,
+          stage,
+          signature,
+          nextCount: 0,
+          shouldRecover: false,
+          shouldWait: false,
+        };
+      }
+      if (stage === 'unknown' && readyState && readyState !== 'complete') {
+        return {
+          isHermes,
+          stage,
+          signature,
+          nextCount: 0,
+          shouldRecover: false,
+          shouldWait: true,
+        };
+      }
+      if (!['approval', 'unknown'].includes(stage)) {
+        return {
+          isHermes,
+          stage,
+          signature,
+          nextCount: 0,
+          shouldRecover: false,
+          shouldWait: false,
+        };
+      }
+      const previousSignature = normalizeString(previousState?.signature);
+      const previousCount = Math.max(0, Math.floor(Number(previousState?.count) || 0));
+      const nextCount = previousSignature === signature ? previousCount + 1 : 1;
+      return {
+        isHermes,
+        stage,
+        signature,
+        nextCount,
+        shouldRecover: nextCount >= HOSTED_HERMES_STALL_OBSERVATION_LIMIT,
+        shouldWait: false,
+      };
+    }
+
+    function isHostedCheckoutNonFreeTrialFailure(error) {
+      const message = String(typeof error === 'string' ? error : error?.message || '');
+      return /PLUS_CHECKOUT_NON_FREE_TRIAL::|今日应付金额不是\s*0|没有免费试用资格/i.test(message);
+    }
+
+    function stripHostedCheckoutNonFreeTrialPrefix(message = '') {
+      return String(message || '').replace(/^PLUS_CHECKOUT_NON_FREE_TRIAL::/i, '').trim();
+    }
+
+    function normalizeNonFreeTrialLogMessage(message = '', options = {}) {
+      const normalized = stripHostedCheckoutNonFreeTrialPrefix(message);
+      const fallback = '步骤 6：检测到当前账号没有免费试用资格。';
+      if (!options?.willRetry) {
+        return normalized || `${fallback}已自动停止整个流程。`;
+      }
+      return (normalized || fallback)
+        .replace(/，?已自动停止整个流程。?/g, '')
+        .replace(/当前账号没有免费试用资格。?$/g, '当前账号没有免费试用资格。');
+    }
+
+    function normalizeString(value = '') {
+      return String(value || '').trim();
+    }
+
+    function firstNonEmpty(...values) {
+      for (const value of values) {
+        const normalized = normalizeString(value);
+        if (normalized) {
+          return normalized;
+        }
+      }
+      return '';
+    }
+
+    function collectSessionFieldValues(root, targetKeys = []) {
+      const normalizedTargets = new Set((Array.isArray(targetKeys) ? targetKeys : []).map((key) => normalizeString(key).toLowerCase()));
+      if (!normalizedTargets.size || !root || typeof root !== 'object') {
+        return [];
+      }
+
+      const results = [];
+      const queue = [{ value: root, path: '$' }];
+      const visited = new Set();
+      while (queue.length && results.length < 32) {
+        const current = queue.shift();
+        const value = current?.value;
+        if (!value || typeof value !== 'object') {
+          continue;
+        }
+        if (visited.has(value)) {
+          continue;
+        }
+        visited.add(value);
+
+        const entries = Array.isArray(value)
+          ? value.map((entry, index) => [String(index), entry])
+          : Object.entries(value);
+        for (const [key, entryValue] of entries) {
+          const normalizedKey = normalizeString(key).toLowerCase();
+          const path = `${current.path}.${key}`;
+          if (normalizedTargets.has(normalizedKey)) {
+            results.push({ key: normalizedKey, path, value: entryValue });
+          }
+          if (entryValue && typeof entryValue === 'object') {
+            queue.push({ value: entryValue, path });
+          }
+        }
+      }
+      return results;
+    }
+
+    function normalizePlanType(value = '') {
+      return normalizeString(value)
+        .toLowerCase()
+        .replace(/\s+/g, '_');
+    }
+
+    function isPaidPlanType(value = '') {
+      const normalized = normalizePlanType(value);
+      if (!normalized) {
+        return false;
+      }
+      return !/(^|[_-])(free|guest|basic|default|none|null|unknown)([_-]|$)/i.test(normalized);
+    }
+
+    function inspectPlusActivationFromSession(session = null) {
+      const planSignals = collectSessionFieldValues(session, [
+        'planType',
+        'plan_type',
+        'chatgpt_plan_type',
+      ]);
+      const booleanSignals = collectSessionFieldValues(session, [
+        'isPaid',
+        'is_paid',
+        'hasActiveSubscription',
+        'has_active_subscription',
+        'subscriptionActive',
+        'subscription_active',
+        'isSubscribed',
+        'is_subscribed',
+      ]);
+      const planType = firstNonEmpty(
+        ...planSignals.map((entry) => typeof entry?.value === 'string' ? entry.value : ''),
+        session?.account?.planType,
+        session?.account?.plan_type,
+        session?.planType,
+        session?.plan_type
+      );
+      const paidSignal = booleanSignals.some((entry) => entry?.value === true);
+      return {
+        active: paidSignal || isPaidPlanType(planType),
+        paidSignal,
+        planType,
+        planSignalPath: normalizeString(planSignals[0]?.path || ''),
+      };
+    }
+
+    function normalizeHostedCheckoutResendWaitSeconds(
+      value,
+      fallback = HOSTED_CHECKOUT_FIRST_RESEND_WAIT_DEFAULT_SECONDS
+    ) {
+      const rawValue = String(value ?? '').trim();
+      const fallbackValue = Math.min(
+        HOSTED_CHECKOUT_RESEND_WAIT_MAX_SECONDS,
+        Math.max(
+          HOSTED_CHECKOUT_RESEND_WAIT_MIN_SECONDS,
+          Math.floor(Number(fallback) || 0)
+        )
+      );
+      if (!rawValue) {
+        return fallbackValue;
+      }
+
+      const numeric = Number(rawValue);
+      if (!Number.isFinite(numeric)) {
+        return fallbackValue;
+      }
+
+      return Math.min(
+        HOSTED_CHECKOUT_RESEND_WAIT_MAX_SECONDS,
+        Math.max(HOSTED_CHECKOUT_RESEND_WAIT_MIN_SECONDS, Math.floor(numeric))
+      );
+    }
+
+    function normalizeHostedCheckoutVerificationResendMaxAttempts(
+      value,
+      fallback = HOSTED_CHECKOUT_VERIFICATION_RESEND_MAX_ATTEMPTS_DEFAULT
+    ) {
+      const rawValue = String(value ?? '').trim();
+      const fallbackValue = Math.min(
+        HOSTED_CHECKOUT_VERIFICATION_RESEND_MAX_ATTEMPTS_LIMIT,
+        Math.max(0, Math.floor(Number(fallback) || 0))
+      );
+      if (!rawValue) {
+        return fallbackValue;
+      }
+
+      const numeric = Number(rawValue);
+      if (!Number.isFinite(numeric)) {
+        return fallbackValue;
+      }
+
+      return Math.min(
+        HOSTED_CHECKOUT_VERIFICATION_RESEND_MAX_ATTEMPTS_LIMIT,
+        Math.max(0, Math.floor(numeric))
+      );
+    }
+
+    function normalizeHostedCheckoutVerificationPollAttempts(
+      value,
+      fallback = HOSTED_CHECKOUT_VERIFICATION_POLL_ATTEMPTS_DEFAULT
+    ) {
+      const rawValue = String(value ?? '').trim();
+      const fallbackValue = Math.min(
+        HOSTED_CHECKOUT_VERIFICATION_POLL_ATTEMPTS_LIMIT,
+        Math.max(1, Math.floor(Number(fallback) || HOSTED_CHECKOUT_VERIFICATION_POLL_ATTEMPTS_DEFAULT))
+      );
+      if (!rawValue) {
+        return fallbackValue;
+      }
+
+      const numeric = Number(rawValue);
+      if (!Number.isFinite(numeric)) {
+        return fallbackValue;
+      }
+
+      return Math.min(
+        HOSTED_CHECKOUT_VERIFICATION_POLL_ATTEMPTS_LIMIT,
+        Math.max(1, Math.floor(numeric))
+      );
+    }
+
+    function normalizeHostedCheckoutVerificationPollIntervalSeconds(
+      value,
+      fallback = HOSTED_CHECKOUT_VERIFICATION_POLL_INTERVAL_DEFAULT_SECONDS
+    ) {
+      const rawValue = String(value ?? '').trim();
+      const fallbackValue = Math.min(
+        HOSTED_CHECKOUT_VERIFICATION_POLL_INTERVAL_LIMIT_SECONDS,
+        Math.max(1, Math.floor(Number(fallback) || HOSTED_CHECKOUT_VERIFICATION_POLL_INTERVAL_DEFAULT_SECONDS))
+      );
+      if (!rawValue) {
+        return fallbackValue;
+      }
+
+      const numeric = Number(rawValue);
+      if (!Number.isFinite(numeric)) {
+        return fallbackValue;
+      }
+
+      return Math.min(
+        HOSTED_CHECKOUT_VERIFICATION_POLL_INTERVAL_LIMIT_SECONDS,
+        Math.max(1, Math.floor(numeric))
+      );
+    }
+
+    function normalizeCheckoutConversionProxyUrl(value = '') {
+      return String(value || '').trim();
+    }
+
+    function normalizePlusCheckoutCloudConversionApiUrl(value = '') {
+      const rawValue = String(value || '').trim();
+      if (!rawValue) {
+        return '';
+      }
+      try {
+        const parsed = new URL(rawValue);
+        parsed.hash = '';
+        return parsed.toString();
+      } catch {
+        return rawValue;
+      }
+    }
+
+    function isPlusCheckoutCloudConversionEnabled(state = {}, paymentMethod = PLUS_PAYMENT_METHOD_PAYPAL) {
+      return normalizePlusPaymentMethod(paymentMethod) === PLUS_PAYMENT_METHOD_PAYPAL
+        && Boolean(state?.plusCheckoutCloudConversionEnabled);
+    }
+
+    function getCheckoutBillingDetailsForPaymentMethod(paymentMethod = PLUS_PAYMENT_METHOD_PAYPAL) {
+      return normalizePlusPaymentMethod(paymentMethod) === PLUS_PAYMENT_METHOD_GOPAY
+        ? { country: 'ID', currency: 'IDR' }
+        : { country: 'US', currency: 'USD' };
+    }
+
+    function formatCloudCheckoutErrorDetail(value, fallback = '') {
+      if (typeof value === 'string') {
+        return value.trim() || fallback;
+      }
+      if (value && typeof value === 'object') {
+        return String(value.message || value.detail || value.error || JSON.stringify(value)).trim() || fallback;
+      }
+      return String(value ?? fallback).trim() || fallback;
+    }
+
+    function isCheckoutAlreadyPaidMessage(value = '') {
+      return /user\s+is\s+already\s+paid|already\s+paid|已有订阅|已订阅|already\s+subscribed/i.test(String(value || '').trim());
+    }
+
+    function isDoneNodeStatus(status = '') {
+      return ['completed', 'manual_completed', 'skipped'].includes(String(status || '').trim().toLowerCase());
+    }
+
+    function isCloudCheckoutAlreadyPaidMessage(value = '') {
+      const message = formatCloudCheckoutErrorDetail(value);
+      return /\buser\s+is\s+already\s+paid\b|already\s+(?:paid|subscribed)|already\s+has\s+(?:an?\s+)?(?:active\s+)?subscription|(?:用户|账号|账户)[\s\S]*(?:已|已经)[\s\S]*(?:付费|订阅|开通)|(?:已|已经)[\s\S]*(?:付费|订阅|开通)[\s\S]*(?:用户|账号|账户)|该账号已经开通过\s*ChatGPT\s*订阅套餐/i.test(message);
+    }
+
+    function buildCloudCheckoutError(detail, options = {}) {
+      const {
+        httpStatus = 0,
+        retryable = false,
+        responsePayload = null,
+        reason = '',
+      } = options || {};
+      const error = new Error(`步骤 6：云端支付转换失败：${detail}`);
+      error.cloudCheckoutRetryable = Boolean(retryable);
+      error.cloudCheckoutHttpStatus = Number(httpStatus) || 0;
+      error.cloudCheckoutResponsePayload = responsePayload;
+      error.cloudCheckoutReason = String(reason || '').trim();
+      return error;
+    }
+
+    function isCloudCheckoutRetryableHttpStatus(status = 0) {
+      const numeric = Number(status) || 0;
+      return numeric === 429 || numeric >= 500;
+    }
+
+    function isCloudCheckoutTransportError(error) {
+      const message = String(error?.message || error || '').trim();
+      if (!message) {
+        return false;
+      }
+      return /请求超时|timeout|timed out|networkerror|network error|failed to fetch|fetch failed|load failed|net::|econnreset|econnrefused|socket hang up|temporarily unavailable/i.test(message);
+    }
+
+    function isCloudCheckoutRetryableError(error) {
+      if (!error) {
+        return false;
+      }
+      if (error.cloudCheckoutRetryable === true) {
+        return true;
+      }
+      return isCloudCheckoutTransportError(error);
+    }
+
+    async function markPaymentNodesSkippedAfterAlreadyPaid(state = {}) {
+      const latestState = typeof getState === 'function'
+        ? await getState().catch(() => state || {})
+        : (state || {});
+      const nodeStatuses = latestState?.nodeStatuses && typeof latestState.nodeStatuses === 'object'
+        ? latestState.nodeStatuses
+        : {};
+      const skippedNodes = [];
+      const batchSkippedNodes = [];
+
+      for (const nodeId of PLUS_CHECKOUT_PAYMENT_NODE_IDS) {
+        if (!Object.prototype.hasOwnProperty.call(nodeStatuses, nodeId) || isDoneNodeStatus(nodeStatuses[nodeId])) {
+          continue;
+        }
+        skippedNodes.push(nodeId);
+        if (typeof setNodeStatus === 'function') {
+          await setNodeStatus(nodeId, 'skipped');
+        } else {
+          batchSkippedNodes.push(nodeId);
+        }
+      }
+
+      if (batchSkippedNodes.length && typeof setState === 'function') {
+        const nextNodeStatuses = { ...nodeStatuses };
+        for (const nodeId of batchSkippedNodes) {
+          nextNodeStatuses[nodeId] = 'skipped';
+        }
+        await setState({ nodeStatuses: nextNodeStatuses });
+      }
+
+      return skippedNodes;
+    }
+
+    async function completeCloudCheckoutAlreadyPaid(tabId, result = {}, state = {}) {
+      const detail = formatCloudCheckoutErrorDetail(result?.alreadyPaidDetail, 'User is already paid');
+      const skippedNodes = await markPaymentNodesSkippedAfterAlreadyPaid(state);
+      const source = String(result?.checkoutSource || CLOUD_CHECKOUT_ALREADY_PAID_SOURCE).trim();
+      const sourceLabel = source === PPBOOM_PLUS_CHECKOUT_SOURCE ? 'PPBoom' : '云端服务';
+      await setState({
+        plusCheckoutTabId: Number(tabId) || null,
+        plusCheckoutUrl: '',
+        plusCheckoutCountry: result.country || 'US',
+        plusCheckoutCurrency: result.currency || 'USD',
+        plusReturnUrl: '',
+        plusCheckoutSource: source || CLOUD_CHECKOUT_ALREADY_PAID_SOURCE,
+        plusCheckoutAlreadyPaid: true,
+        plusCheckoutAlreadyPaidAt: Date.now(),
+        plusCheckoutAlreadyPaidDetail: detail,
+      });
+      await addLog(
+        skippedNodes.length
+          ? `步骤 6：${sourceLabel}确认当前用户已有订阅（${detail}），已跳过后续支付节点：${skippedNodes.join('、')}，继续下一流程节点。`
+          : `步骤 6：${sourceLabel}确认当前用户已有订阅（${detail}），继续下一流程节点。`,
+        'ok'
+      );
+      await completePlusCheckoutCreate({
+        plusCheckoutCountry: result.country || 'US',
+        plusCheckoutCurrency: result.currency || 'USD',
+        plusCheckoutSource: CLOUD_CHECKOUT_ALREADY_PAID_SOURCE,
+        plusCheckoutAlreadyPaid: true,
+      });
+    }
+
+    function normalizeCheckoutConversionProxyProtocol(value = '') {
+      const normalized = String(value || '').trim().toLowerCase();
+      if (normalized === 'socks5h') {
+        return 'socks5';
+      }
+      return ['http', 'https', 'socks4', 'socks5'].includes(normalized) ? normalized : '';
+    }
+
+    function normalizeCheckoutConversionProxyPort(value = '') {
+      const numeric = Number.parseInt(String(value || '').trim(), 10);
+      if (!Number.isInteger(numeric) || numeric <= 0 || numeric > 65535) {
+        return 0;
+      }
+      return numeric;
+    }
+
+    function parseCheckoutConversionProxyUrl(value = '') {
+      const rawValue = normalizeCheckoutConversionProxyUrl(value);
+      if (!rawValue) {
+        return null;
+      }
+
+      let parsed = null;
+      try {
+        parsed = new URL(rawValue);
+      } catch {
+        throw new Error('支付转换代理不是有效 URL，请填写 http://host:port 或 socks5h://user:pass@host:port。');
+      }
+
+      const protocol = normalizeCheckoutConversionProxyProtocol(String(parsed.protocol || '').replace(/:$/g, ''));
+      if (!protocol) {
+        throw new Error('支付转换代理仅支持 http / https / socks4 / socks5 / socks5h。');
+      }
+
+      const host = String(parsed.hostname || '').trim();
+      if (!host) {
+        throw new Error('支付转换代理缺少主机名。');
+      }
+
+      const port = normalizeCheckoutConversionProxyPort(parsed.port);
+      if (!port) {
+        throw new Error('支付转换代理缺少有效端口。');
+      }
+
+      return {
+        protocol,
+        host,
+        port,
+        username: parsed.username ? decodeURIComponent(parsed.username) : '',
+        password: parsed.password ? decodeURIComponent(parsed.password) : '',
+      };
+    }
+
+    function describeCheckoutConversionProxyEntry(entry = null) {
+      if (!entry || typeof entry !== 'object') {
+        return '';
+      }
+      return `${String(entry.protocol || '').toLowerCase()}://${String(entry.host || '').trim()}:${Number(entry.port) || 0}`;
+    }
+
+    function buildCheckoutConversionProxyPacScript(entry = null, options = {}) {
+      if (!entry?.host || !entry?.port) {
+        return '';
+      }
+      let pacScheme = 'PROXY';
+      if (entry.protocol === 'https') {
+        pacScheme = 'HTTPS';
+      } else if (entry.protocol === 'socks4') {
+        pacScheme = 'SOCKS4';
+      } else if (entry.protocol === 'socks5' || entry.protocol === 'socks5h') {
+        pacScheme = 'SOCKS5';
+      }
+      const targetPatterns = (
+        Array.isArray(options?.targetHostPatterns) && options.targetHostPatterns.length
+          ? options.targetHostPatterns
+          : CHECKOUT_CONVERSION_PROXY_TARGET_HOST_PATTERNS
+      ).map((pattern) => `'${String(pattern).replace(/'/g, "\\'")}'`).join(', ');
+      const bypassList = CHECKOUT_CONVERSION_PROXY_BYPASS_LIST
+        .map((pattern) => `'${String(pattern).replace(/'/g, "\\'")}'`)
+        .join(', ');
+      const proxyEndpoint = `${pacScheme} ${entry.host}:${entry.port}`;
+      return `
+function FindProxyForURL(url, host) {
+  if (!host) return "DIRECT";
+  if (isInNet(host, "10.0.0.0", "255.0.0.0")
+    || isInNet(host, "172.16.0.0", "255.240.0.0")
+    || isInNet(host, "192.168.0.0", "255.255.0.0")
+    || isInNet(host, "127.0.0.0", "255.0.0.0")) {
+    return "DIRECT";
+  }
+  var bypassList = [${bypassList}];
+  for (var i = 0; i < bypassList.length; i++) {
+    var bypass = bypassList[i];
+    if (shExpMatch(host, bypass) || host === bypass) {
+      return "DIRECT";
+    }
+  }
+  var targets = [${targetPatterns}];
+  for (var j = 0; j < targets.length; j++) {
+    var pattern = targets[j];
+    if (pattern.indexOf('*.') === 0) {
+      var suffix = pattern.substring(1);
+      var direct = pattern.substring(2);
+      if (dnsDomainIs(host, suffix) || host === direct) {
+        return "${proxyEndpoint}";
+      }
+      continue;
+    }
+    if (host === pattern || dnsDomainIs(host, '.' + pattern)) {
+      return "${proxyEndpoint}";
+    }
+  }
+  return "DIRECT";
+}`.trim();
+    }
+
+    function buildCheckoutConversionFixedProxyConfig(entry = null) {
+      if (!entry?.host || !entry?.port) {
+        return null;
+      }
+      const scheme = String(entry.protocol || '').trim().toLowerCase();
+      return {
+        mode: 'fixed_servers',
+        rules: {
+          singleProxy: {
+            scheme: scheme === 'socks5h' ? 'socks5' : scheme,
+            host: entry.host,
+            port: entry.port,
+          },
+          bypassList: CHECKOUT_CONVERSION_PROXY_BYPASS_LIST.slice(),
+        },
+      };
+    }
+
+    function validateCheckoutProxyControlAfterApply(details = {}, entry = null) {
+      const level = String(details?.levelOfControl || '').trim();
+      if (level && level !== 'controlled_by_this_extension') {
+        return {
+          ok: false,
+          message: `代理控制权不在当前扩展（levelOfControl=${level || 'unknown'}）`,
+        };
+      }
+
+      const mode = String(details?.value?.mode || '').trim().toLowerCase();
+      if (mode !== 'fixed_servers') {
+        return {
+          ok: false,
+          message: `代理模式不是 fixed_servers（当前为 ${mode || 'unknown'}）`,
+        };
+      }
+
+      const singleProxy = details?.value?.rules?.singleProxy || null;
+      const appliedHost = String(singleProxy?.host || '').trim().toLowerCase();
+      const appliedPort = Number.parseInt(String(singleProxy?.port || ''), 10) || 0;
+      const expectedHost = String(entry?.host || '').trim().toLowerCase();
+      const expectedPort = Number.parseInt(String(entry?.port || ''), 10) || 0;
+      if (!appliedHost || !appliedPort || appliedHost !== expectedHost || appliedPort !== expectedPort) {
+        return {
+          ok: false,
+          message: `fixed_servers 未绑定到当前代理节点 ${expectedHost}:${expectedPort}，疑似被其他代理配置覆盖`,
+        };
+      }
+
+      return { ok: true };
+    }
+
+    function getCheckoutProxySettings(details = { incognito: false }) {
+      const proxySettings = chrome?.proxy?.settings;
+      if (!proxySettings || typeof proxySettings.get !== 'function') {
+        return Promise.reject(new Error('当前浏览器不支持扩展代理 API。'));
+      }
+      return new Promise((resolve, reject) => {
+        proxySettings.get(details, (value) => {
+          const runtimeError = chrome?.runtime?.lastError;
+          if (runtimeError) {
+            reject(new Error(runtimeError.message || '读取浏览器代理配置失败。'));
+            return;
+          }
+          resolve(value || {});
+        });
+      });
+    }
+
+    function setCheckoutProxySettings(value) {
+      const proxySettings = chrome?.proxy?.settings;
+      if (!proxySettings || typeof proxySettings.set !== 'function') {
+        return Promise.reject(new Error('当前浏览器不支持扩展代理 API。'));
+      }
+      return new Promise((resolve, reject) => {
+        proxySettings.set({
+          value,
+          scope: CHECKOUT_CONVERSION_PROXY_SETTINGS_SCOPE,
+        }, () => {
+          const runtimeError = chrome?.runtime?.lastError;
+          if (runtimeError) {
+            reject(new Error(runtimeError.message || '写入浏览器代理配置失败。'));
+            return;
+          }
+          resolve();
+        });
+      });
+    }
+
+    function clearCheckoutProxySettings() {
+      const proxySettings = chrome?.proxy?.settings;
+      if (!proxySettings || typeof proxySettings.clear !== 'function') {
+        return Promise.reject(new Error('当前浏览器不支持扩展代理 API。'));
+      }
+      return new Promise((resolve, reject) => {
+        proxySettings.clear({
+          scope: CHECKOUT_CONVERSION_PROXY_SETTINGS_SCOPE,
+        }, () => {
+          const runtimeError = chrome?.runtime?.lastError;
+          if (runtimeError) {
+            reject(new Error(runtimeError.message || '清理浏览器代理配置失败。'));
+            return;
+          }
+          resolve();
+        });
+      });
+    }
+
+    async function defaultApplyCheckoutScopedProxyFromUrl(proxyUrl, options = {}) {
+      const entry = parseCheckoutConversionProxyUrl(proxyUrl);
+      if (!entry) {
+        return null;
+      }
+
+      const previousProxySettings = await getCheckoutProxySettings({ incognito: false }).catch(() => ({}));
+      const previousAuthEntry = typeof currentIpProxyAuthEntry === 'undefined'
+        ? null
+        : (currentIpProxyAuthEntry ? { ...currentIpProxyAuthEntry } : null);
+      const fixedProxyConfig = buildCheckoutConversionFixedProxyConfig(entry);
+      if (!fixedProxyConfig) {
+        throw new Error('支付转换代理配置不完整，无法生成 fixed_servers 规则。');
+      }
+
+      try {
+        if (typeof installIpProxyAuthListener === 'function') {
+          installIpProxyAuthListener();
+        }
+        if (typeof installIpProxyErrorListener === 'function') {
+          installIpProxyErrorListener();
+        }
+        if (typeof currentIpProxyAuthEntry !== 'undefined') {
+          currentIpProxyAuthEntry = entry.username
+            ? {
+                host: entry.host,
+                port: entry.port,
+                username: entry.username,
+                password: String(entry.password || ''),
+              }
+            : null;
+        }
+        await setCheckoutProxySettings(fixedProxyConfig);
+        const appliedSettings = await getCheckoutProxySettings({ incognito: false }).catch(() => null);
+        const takeoverCheck = validateCheckoutProxyControlAfterApply(appliedSettings || {}, entry);
+        if (!takeoverCheck?.ok) {
+          throw new Error(takeoverCheck.message || '支付转换代理接管校验失败。');
+        }
+      } catch (error) {
+        if (typeof currentIpProxyAuthEntry !== 'undefined') {
+          currentIpProxyAuthEntry = previousAuthEntry ? { ...previousAuthEntry } : null;
+        }
+        try {
+          const restoreValue = previousProxySettings?.value;
+          if (restoreValue && restoreValue.mode) {
+            await setCheckoutProxySettings(restoreValue);
+          } else {
+            await clearCheckoutProxySettings();
+          }
+        } catch {
+          // Ignore restore failures here and surface the original apply error.
+        }
+        throw error;
+      }
+
+      return {
+        applied: true,
+        entry,
+        displayName: describeCheckoutConversionProxyEntry(entry),
+        previousProxySettings,
+        previousAuthEntry,
+      };
+    }
+
+    async function defaultRestoreCheckoutScopedProxySnapshot(snapshot = null) {
+      if (!snapshot?.applied) {
+        return;
+      }
+      if (typeof currentIpProxyAuthEntry !== 'undefined') {
+        currentIpProxyAuthEntry = snapshot.previousAuthEntry ? { ...snapshot.previousAuthEntry } : null;
+      }
+      const restoreValue = snapshot?.previousProxySettings?.value;
+      if (restoreValue && restoreValue.mode) {
+        await setCheckoutProxySettings(restoreValue);
+        return;
+      }
+      await clearCheckoutProxySettings();
+    }
+
+    function summarizeCheckoutConversionProxyDiagnostics(items = [], maxItems = 3) {
+      const normalizedItems = Array.isArray(items)
+        ? Array.from(new Set(items.map((item) => String(item || '').trim()).filter(Boolean)))
+        : [];
+      if (!normalizedItems.length) {
+        return '';
+      }
+      if (typeof buildProbeDiagnosticsSummary === 'function') {
+        return buildProbeDiagnosticsSummary(normalizedItems, maxItems);
+      }
+      return normalizedItems.slice(0, Math.max(1, Number(maxItems) || 3)).join(' | ');
+    }
+
+    async function testCheckoutConversionProxy(options = {}) {
+      const proxyUrl = normalizeCheckoutConversionProxyUrl(options?.proxyUrl);
+      if (!proxyUrl) {
+        throw new Error('请先填写支付转换代理地址。');
+      }
+
+      const parsedEntry = parseCheckoutConversionProxyUrl(proxyUrl);
+      const applyProxy = typeof applyCheckoutScopedProxyFromUrl === 'function'
+        ? applyCheckoutScopedProxyFromUrl
+        : defaultApplyCheckoutScopedProxyFromUrl;
+      const restoreProxy = typeof restoreCheckoutScopedProxySnapshot === 'function'
+        ? restoreCheckoutScopedProxySnapshot
+        : defaultRestoreCheckoutScopedProxySnapshot;
+      const probeDiagnostics = [];
+      const targetDiagnostics = [];
+      let snapshot = null;
+
+      try {
+        snapshot = await applyProxy(proxyUrl, {
+          targetHostPatterns: CHECKOUT_CONVERSION_PROXY_TEST_TARGET_HOST_PATTERNS,
+        });
+
+        let exit = null;
+        if (typeof detectProxyExitInfoByPageContext === 'function') {
+          exit = await detectProxyExitInfoByPageContext({
+            timeoutMs: 12000,
+            errors: probeDiagnostics,
+            probeEndpoints: CHECKOUT_CONVERSION_PROXY_TEST_PROBE_ENDPOINTS,
+          }).catch((error) => {
+            probeDiagnostics.push(`probe:page_context:${error?.message || error}`);
+            return { ip: '', region: '', source: 'page_context_unavailable', endpoint: '' };
+          });
+        }
+        if (!exit?.ip && typeof detectProxyExitInfoByBackgroundFetch === 'function') {
+          exit = await detectProxyExitInfoByBackgroundFetch({
+            timeoutMs: 12000,
+            errors: probeDiagnostics,
+            probeEndpoints: CHECKOUT_CONVERSION_PROXY_TEST_PROBE_ENDPOINTS,
+          }).catch((error) => {
+            probeDiagnostics.push(`probe:background:${error?.message || error}`);
+            return exit || { ip: '', region: '', source: 'background_unavailable', endpoint: '' };
+          });
+        }
+
+        const exitIp = String(exit?.ip || '').trim();
+        const exitRegion = String(exit?.region || '').trim();
+        if (!exitIp) {
+          const diagnostics = summarizeCheckoutConversionProxyDiagnostics(probeDiagnostics, 4);
+          throw new Error(diagnostics
+            ? `未检测到代理出口 IP。诊断：${diagnostics}`
+            : '未检测到代理出口 IP。');
+        }
+
+        let reachability = { reachable: true, skipped: true, endpoint: '', source: '' };
+        if (typeof detectIpProxyTargetReachabilityByPageContext === 'function') {
+          reachability = await detectIpProxyTargetReachabilityByPageContext({
+            timeoutMs: 12000,
+            errors: targetDiagnostics,
+            targetReachabilityEndpoints: CHECKOUT_CONVERSION_PROXY_TEST_TARGET_ENDPOINTS,
+          }).catch((error) => {
+            targetDiagnostics.push(`target:${error?.message || error}`);
+            return {
+              reachable: false,
+              endpoint: CHECKOUT_CONVERSION_PROXY_TEST_TARGET_ENDPOINTS[0],
+              source: 'target_page_context',
+              error: error?.message || String(error || '目标站点连通性检测失败'),
+            };
+          });
+        }
+
+        if (reachability?.reachable === false && reachability?.skipped !== true) {
+          const failureMessage = typeof buildTargetReachabilityFailureMessage === 'function'
+            ? buildTargetReachabilityFailureMessage({
+              exitIp,
+              exitRegion,
+            }, reachability)
+            : `已检测到出口 IP ${exitIp}${exitRegion ? ` [${exitRegion}]` : ''}，但 chatgpt.com 不可达。`;
+          throw new Error(failureMessage);
+        }
+
+        return {
+          ok: true,
+          proxyDisplayName: describeCheckoutConversionProxyEntry(parsedEntry),
+          exitIp,
+          exitRegion,
+          exitSource: String(exit?.source || '').trim(),
+          exitEndpoint: String(exit?.endpoint || '').trim(),
+          targetEndpoint: String(reachability?.endpoint || CHECKOUT_CONVERSION_PROXY_TEST_TARGET_ENDPOINTS[0] || '').trim(),
+          diagnostics: summarizeCheckoutConversionProxyDiagnostics([
+            ...probeDiagnostics,
+            ...targetDiagnostics,
+          ], 4),
+        };
+      } finally {
+        if (snapshot?.applied) {
+          await restoreProxy(snapshot).catch(() => {});
+        }
+      }
+    }
+
+    async function maybeApplyCheckoutConversionProxy(state = {}, paymentMethod = PLUS_PAYMENT_METHOD_PAYPAL) {
+      if (normalizePlusPaymentMethod(paymentMethod) !== PLUS_PAYMENT_METHOD_PAYPAL) {
+        return null;
+      }
+      if (isPlusCheckoutCloudConversionEnabled(state, paymentMethod)) {
+        const proxyUrl = normalizeCheckoutConversionProxyUrl(state?.plusCheckoutConversionProxyUrl);
+        if (proxyUrl) {
+          await addLog('步骤 6：已启用云端支付转换，本地支付转换代理配置已忽略。', 'info');
+        }
+        return null;
+      }
+      const proxyUrl = normalizeCheckoutConversionProxyUrl(state?.plusCheckoutConversionProxyUrl);
+      if (!proxyUrl) {
+        return null;
+      }
+      const applyProxy = typeof applyCheckoutScopedProxyFromUrl === 'function'
+        ? applyCheckoutScopedProxyFromUrl
+        : defaultApplyCheckoutScopedProxyFromUrl;
+      const snapshot = await applyProxy(proxyUrl, {
+        targetHostPatterns: CHECKOUT_CONVERSION_PROXY_TARGET_HOST_PATTERNS,
+      });
+      const displayName = String(snapshot?.displayName || describeCheckoutConversionProxyEntry(snapshot?.entry) || proxyUrl).trim();
+      await addLog(`步骤 6：已启用支付转换代理 ${displayName}，仅临时接管 checkout session 到 hosted checkout 的跳转链路。`, 'info');
+      return snapshot;
+    }
+
+    async function maybeRestoreCheckoutConversionProxy(snapshot = null) {
+      if (!snapshot?.applied) {
+        return;
+      }
+      const restoreProxy = typeof restoreCheckoutScopedProxySnapshot === 'function'
+        ? restoreCheckoutScopedProxySnapshot
+        : defaultRestoreCheckoutScopedProxySnapshot;
+      await restoreProxy(snapshot);
+      await addLog('步骤 6：支付转换代理已释放，后续步骤恢复原网络/原代理环境。', 'info');
+    }
+
+    function normalizeHostedCheckoutPoolText(value = '') {
+      return String(value || '')
+        .replace(/\r/g, '')
+        .split('\n')
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .join('\n');
+    }
+
+    function normalizeHostedCheckoutUsPhoneDigits(value = '') {
+      const rawValue = String(value || '').trim();
+      const digits = rawValue.replace(/\D+/g, '');
+      if (digits.length === 11 && digits.startsWith('1')) {
+        return digits.slice(1);
+      }
+      return digits || rawValue;
+    }
+
+    function normalizeHostedCheckoutPoolPhone(value = '') {
+      return normalizeHostedCheckoutUsPhoneDigits(value);
+    }
+
+    function normalizeHostedCheckoutPoolUrl(value = '') {
+      const rawValue = String(value || '').trim();
+      if (!rawValue) {
+        return '';
+      }
+      try {
+        const parsed = new URL(rawValue);
+        parsed.searchParams.delete('t');
+        return parsed.toString();
+      } catch {
+        return rawValue
+          .replace(/([?&])t=\d+(?=(&|$))/i, '$1')
+          .replace(/[?&]$/g, '');
+      }
+    }
+
+    function buildHostedCheckoutPoolKey(phone = '', verificationUrl = '') {
+      const normalizedPhone = normalizeHostedCheckoutPoolPhone(phone);
+      const normalizedUrl = normalizeHostedCheckoutPoolUrl(verificationUrl);
+      return normalizedPhone && normalizedUrl
+        ? `${normalizedPhone}${HOSTED_CHECKOUT_SMS_POOL_SEPARATOR}${normalizedUrl}`
+        : '';
+    }
+
+    function isHostedCheckoutSampleEntry(phone = '', verificationUrl = '') {
+      return normalizeHostedCheckoutPoolPhone(phone) === HOSTED_CHECKOUT_SAMPLE_PHONE
+        && normalizeHostedCheckoutPoolUrl(verificationUrl) === HOSTED_CHECKOUT_SAMPLE_VERIFICATION_URL;
+    }
+
+    function parseHostedCheckoutSmsPoolEntries(text = '') {
+      const lines = normalizeHostedCheckoutPoolText(text).split('\n').filter(Boolean);
+      const seen = new Set();
+      const entries = [];
+      for (let index = 0; index < lines.length; index += 1) {
+        const line = lines[index];
+        const separatorIndex = line.indexOf(HOSTED_CHECKOUT_SMS_POOL_SEPARATOR);
+        const hasSeparator = separatorIndex > 0;
+        const phone = hasSeparator
+          ? normalizeHostedCheckoutPoolPhone(line.slice(0, separatorIndex))
+          : normalizeHostedCheckoutPoolPhone(line);
+        const verificationUrl = hasSeparator
+          ? normalizeHostedCheckoutPoolUrl(line.slice(separatorIndex + HOSTED_CHECKOUT_SMS_POOL_SEPARATOR.length))
+          : normalizeHostedCheckoutPoolUrl(lines[index + 1] || '');
+        if (!hasSeparator && verificationUrl) {
+          index += 1;
+        }
+        const key = buildHostedCheckoutPoolKey(phone, verificationUrl);
+        if (!phone || !verificationUrl || !key || seen.has(key) || isHostedCheckoutSampleEntry(phone, verificationUrl)) {
+          continue;
+        }
+        seen.add(key);
+        entries.push({
+          index: entries.length,
+          key,
+          phone,
+          verificationUrl,
+        });
+      }
+      return entries;
+    }
+
+    function normalizeHostedCheckoutSmsPoolUsage(value = {}) {
+      if (!value || typeof value !== 'object' || Array.isArray(value)) {
+        return {};
+      }
+      return Object.fromEntries(Object.entries(value).map(([key, item]) => {
+        const usage = item && typeof item === 'object' && !Array.isArray(item) ? item : {};
+        const legacyUsedCount = Number(usage.usedAt) > 0 ? 1 : 0;
+        const useCount = Math.max(0, Math.floor(Number(usage.useCount ?? usage.usageCount ?? legacyUsedCount) || 0));
+        return [String(key || '').trim(), {
+          useCount,
+          usedAt: Math.max(0, Number(usage.usedAt) || 0),
+          lastAttemptAt: Math.max(0, Number(usage.lastAttemptAt) || 0),
+          lastError: String(usage.lastError || '').trim(),
+          blockedAt: Math.max(0, Number(usage.blockedAt) || 0),
+          blockedReason: String(usage.blockedReason || '').trim(),
+          enabled: usage.enabled !== false,
+          disabledReason: String(usage.disabledReason || '').trim(),
+          disabledAt: Math.max(0, Number(usage.disabledAt) || 0),
+          failureCount: Math.max(0, Math.floor(Number(usage.failureCount) || 0)),
+        }];
+      }).filter(([key]) => Boolean(key)));
+    }
+
+    function isHostedCheckoutSmsPoolEntryEnabled(usage = {}) {
+      return !(usage && typeof usage === 'object' && (usage.enabled === false || Number(usage.blockedAt) > 0));
+    }
+
+    function normalizeHostedCheckoutCurrentSmsEntry(entry = null, entries = []) {
+      if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
+        return null;
+      }
+      const key = String(
+        entry.key
+        || buildHostedCheckoutPoolKey(entry.phone, entry.verificationUrl)
+      ).trim();
+      if (!key) {
+        return null;
+      }
+      const matchedEntry = Array.isArray(entries)
+        ? entries.find((candidate) => candidate.key === key)
+        : null;
+      if (matchedEntry) {
+        return { ...matchedEntry };
+      }
+      const phone = normalizeHostedCheckoutPoolPhone(entry.phone);
+      const verificationUrl = normalizeHostedCheckoutPoolUrl(entry.verificationUrl);
+      if (!phone || !verificationUrl) {
+        return null;
+      }
+      return {
+        key,
+        phone,
+        verificationUrl,
+      };
+    }
+
+    function chooseHostedCheckoutSmsPoolEntry(entries = [], usage = {}) {
+      if (!Array.isArray(entries) || entries.length === 0) {
+        return null;
+      }
+      const normalizedUsage = normalizeHostedCheckoutSmsPoolUsage(usage);
+      return entries
+        .map((entry, index) => {
+          const itemUsage = normalizedUsage[entry.key] || {};
+          if (itemUsage.blockedAt) {
+            return null;
+          }
+          return {
+            ...entry,
+            index: Number.isFinite(entry.index) ? entry.index : index,
+            useCount: Math.max(0, Math.floor(Number(itemUsage.useCount) || 0)),
+            usedAt: Math.max(0, Number(itemUsage.usedAt) || 0),
+            enabled: isHostedCheckoutSmsPoolEntryEnabled(itemUsage),
+          };
+        })
+        .filter((entry) => entry && entry.enabled)
+        .sort((left, right) => {
+          if (left.useCount !== right.useCount) {
+            return left.useCount - right.useCount;
+          }
+          if (left.usedAt !== right.usedAt) {
+            return left.usedAt - right.usedAt;
+          }
+          return left.index - right.index;
+        })[0] || null;
+    }
+
+    function buildHostedCheckoutConfigDiagnostics({
+      state = {},
+      stored = {},
+      poolEntries = [],
+      poolUsage = {},
+      selectedSmsEntry = null,
+    } = {}) {
+      return {
+        stateHostedCheckoutPhoneNumber: String(state?.hostedCheckoutPhoneNumber || '').trim(),
+        localHostedCheckoutPhoneNumber: String(stored?.hostedCheckoutPhoneNumber || '').trim(),
+        stateHostedCheckoutVerificationUrl: String(state?.hostedCheckoutVerificationUrl || '').trim(),
+        localHostedCheckoutVerificationUrl: String(stored?.hostedCheckoutVerificationUrl || '').trim(),
+        stateHostedCheckoutSmsPoolTextLines: parseHostedCheckoutSmsPoolEntries(state?.hostedCheckoutSmsPoolText || '').length,
+        localHostedCheckoutSmsPoolTextLines: parseHostedCheckoutSmsPoolEntries(stored?.hostedCheckoutSmsPoolText || '').length,
+        effectiveHostedSmsPoolEntries: Array.isArray(poolEntries) ? poolEntries.length : 0,
+        selectedHostedSmsPoolPhone: String(selectedSmsEntry?.phone || '').trim(),
+        selectedHostedSmsPoolVerificationUrl: String(selectedSmsEntry?.verificationUrl || '').trim(),
+        hostedCheckoutSmsPoolAutoDisableEnabled: Boolean(stored?.hostedCheckoutSmsPoolAutoDisableEnabled ?? state?.hostedCheckoutSmsPoolAutoDisableEnabled),
+        hostedCheckoutCardDeclinedRetryEnabled: stored?.hostedCheckoutCardDeclinedRetryEnabled !== undefined
+          ? stored.hostedCheckoutCardDeclinedRetryEnabled !== false
+          : state?.hostedCheckoutCardDeclinedRetryEnabled !== false,
+        hostedCheckoutFirstDirectResendEnabled: Boolean(stored?.hostedCheckoutFirstDirectResendEnabled ?? state?.hostedCheckoutFirstDirectResendEnabled),
+        hostedCheckoutFirstResendWaitSeconds: normalizeHostedCheckoutResendWaitSeconds(
+          stored?.hostedCheckoutFirstResendWaitSeconds ?? state?.hostedCheckoutFirstResendWaitSeconds,
+          HOSTED_CHECKOUT_FIRST_RESEND_WAIT_DEFAULT_SECONDS
+        ),
+        hostedCheckoutSubsequentResendWaitSeconds: normalizeHostedCheckoutResendWaitSeconds(
+          stored?.hostedCheckoutSubsequentResendWaitSeconds ?? state?.hostedCheckoutSubsequentResendWaitSeconds,
+          HOSTED_CHECKOUT_SUBSEQUENT_RESEND_WAIT_DEFAULT_SECONDS
+        ),
+        hostedCheckoutVerificationResendMaxAttempts: normalizeHostedCheckoutVerificationResendMaxAttempts(
+          stored?.hostedCheckoutVerificationResendMaxAttempts ?? state?.hostedCheckoutVerificationResendMaxAttempts
+        ),
+        hostedCheckoutVerificationPollAttempts: normalizeHostedCheckoutVerificationPollAttempts(
+          stored?.hostedCheckoutVerificationPollAttempts ?? state?.hostedCheckoutVerificationPollAttempts
+        ),
+        hostedCheckoutVerificationPollIntervalSeconds: normalizeHostedCheckoutVerificationPollIntervalSeconds(
+          stored?.hostedCheckoutVerificationPollIntervalSeconds ?? state?.hostedCheckoutVerificationPollIntervalSeconds
+        ),
+        enabledHostedSmsPoolEntries: poolEntries.filter((entry) => isHostedCheckoutSmsPoolEntryEnabled(poolUsage[entry.key] || {})).length,
+        disabledHostedSmsPoolEntries: poolEntries.filter((entry) => !isHostedCheckoutSmsPoolEntryEnabled(poolUsage[entry.key] || {})).length,
+      };
+    }
+
+    async function applyHostedCheckoutRuntimePatch(patch = {}) {
+      if (!patch || typeof patch !== 'object' || Array.isArray(patch) || Object.keys(patch).length === 0) {
+        return;
+      }
+      if (typeof setState === 'function') {
+        await setState(patch);
+      }
+      if (typeof broadcastDataUpdate === 'function') {
+        broadcastDataUpdate(patch);
+      }
+    }
+
+    async function clearHostedCheckoutCurrentSmsEntry() {
+      await applyHostedCheckoutRuntimePatch({
+        hostedCheckoutCurrentSmsEntry: null,
+      });
+    }
+
+    async function updateHostedCheckoutPoolUsage(entry = null, options = {}) {
+      const normalizedEntry = normalizeHostedCheckoutCurrentSmsEntry(entry);
+      if (!normalizedEntry?.key || typeof getState !== 'function') {
+        return null;
+      }
+      const state = await getState().catch(() => ({}));
+      const usage = normalizeHostedCheckoutSmsPoolUsage(state?.hostedCheckoutSmsPoolUsage || {});
+      const previous = usage[normalizedEntry.key] || {};
+      const now = Date.now();
+      const incrementUseCount = Boolean(options.incrementUseCount);
+      const success = options.success === true;
+      const enabled = options.enabled === undefined
+        ? isHostedCheckoutSmsPoolEntryEnabled(previous)
+        : Boolean(options.enabled);
+      const failureCount = options.failureCount === undefined
+        ? (
+          success
+            ? 0
+            : Math.max(0, Math.floor(Number(previous.failureCount) || 0)) + (options.incrementFailureCount === true ? 1 : 0)
+        )
+        : Math.max(0, Math.floor(Number(options.failureCount) || 0));
+      const nextUsage = {
+        ...usage,
+        [normalizedEntry.key]: {
+          useCount: incrementUseCount
+            ? Math.max(0, Math.floor(Number(previous.useCount) || 0)) + 1
+            : Math.max(0, Math.floor(Number(previous.useCount) || 0)),
+          usedAt: incrementUseCount
+            ? now
+            : Math.max(0, Number(previous.usedAt) || 0),
+          lastAttemptAt: now,
+          lastError: success ? '' : String(options.error || '').trim(),
+          blockedAt: Math.max(0, Number(previous.blockedAt) || 0),
+          blockedReason: String(previous.blockedReason || '').trim(),
+          blockedAt: Math.max(0, Number(previous.blockedAt) || 0),
+          blockedReason: String(previous.blockedReason || '').trim(),
+          enabled,
+          disabledReason: enabled ? '' : String(options.disabledReason || options.error || '').trim(),
+          disabledAt: enabled ? 0 : Math.max(0, Number(options.disabledAt) || now),
+          failureCount,
+        },
+      };
+      await applyHostedCheckoutRuntimePatch({
+        hostedCheckoutCurrentSmsEntry: normalizedEntry,
+        hostedCheckoutSmsPoolUsage: nextUsage,
+      });
+      return nextUsage;
+    }
+
+    async function getHostedCheckoutSmsPoolSnapshot() {
+      const state = typeof getState === 'function' ? await getState().catch(() => ({})) : {};
+      let stored = {};
+      if (chrome?.storage?.local?.get) {
+        stored = await chrome.storage.local.get([
+          'hostedCheckoutSmsPoolText',
+          'hostedCheckoutSmsPoolUsage',
+        ]).catch(() => ({}));
+      }
+      const poolEntries = parseHostedCheckoutSmsPoolEntries(
+        stored?.hostedCheckoutSmsPoolText
+        || state?.hostedCheckoutSmsPoolText
+        || ''
+      );
+      const poolUsage = normalizeHostedCheckoutSmsPoolUsage(
+        stored?.hostedCheckoutSmsPoolUsage
+        || state?.hostedCheckoutSmsPoolUsage
+        || {}
+      );
+      return {
+        state,
+        stored,
+        poolEntries,
+        poolUsage,
+        currentEntry: normalizeHostedCheckoutCurrentSmsEntry(state?.hostedCheckoutCurrentSmsEntry, poolEntries),
+      };
+    }
+
+    async function blockHostedCheckoutCurrentSmsEntry(entry = null, reason = '') {
+      const snapshot = await getHostedCheckoutSmsPoolSnapshot();
+      const normalizedEntry = normalizeHostedCheckoutCurrentSmsEntry(entry || snapshot.currentEntry, snapshot.poolEntries);
+      if (!normalizedEntry?.key) {
+        return null;
+      }
+      const now = Date.now();
+      const usage = normalizeHostedCheckoutSmsPoolUsage(snapshot.poolUsage || {});
+      const previous = usage[normalizedEntry.key] || {};
+      const blockedReason = String(reason || 'PayPal hosted checkout 拒绝当前电话号码。').trim();
+      const nextUsage = {
+        ...usage,
+        [normalizedEntry.key]: {
+          useCount: Math.max(0, Math.floor(Number(previous.useCount) || 0)),
+          usedAt: Math.max(0, Number(previous.usedAt) || 0),
+          lastAttemptAt: now,
+          lastError: blockedReason,
+          blockedAt: now,
+          blockedReason,
+        },
+      };
+      await applyHostedCheckoutRuntimePatch({
+        hostedCheckoutCurrentSmsEntry: null,
+        hostedCheckoutSmsPoolUsage: nextUsage,
+      });
+      return {
+        entry: normalizedEntry,
+        usage: nextUsage,
+        poolEntries: snapshot.poolEntries,
+      };
+    }
+
+    async function rotateHostedCheckoutSmsEntryAfterPhoneReject(reason = '') {
+      const snapshot = await getHostedCheckoutSmsPoolSnapshot();
+      const currentEntry = normalizeHostedCheckoutCurrentSmsEntry(snapshot.currentEntry, snapshot.poolEntries);
+      if (!currentEntry?.key) {
+        throw new Error('步骤 6：PayPal hosted checkout 当前使用的是单独配置的固定电话，固定电话被 PayPal 拒绝后无法自动换号；请更换固定电话或导入 hosted checkout 号池。');
+      }
+      const blocked = await blockHostedCheckoutCurrentSmsEntry(currentEntry, reason);
+      const nextEntry = chooseHostedCheckoutSmsPoolEntry(blocked?.poolEntries || snapshot.poolEntries, blocked?.usage || {});
+      if (!nextEntry) {
+        throw new Error('步骤 6：PayPal hosted checkout 没有可用号码：号池中的号码均已被标记不可用。');
+      }
+      const nextUsage = await updateHostedCheckoutPoolUsage(nextEntry, {
+        incrementUseCount: true,
+        success: true,
+      });
+      await addLog(
+        `步骤 6：PayPal hosted checkout 已切换到下一个号码 ${nextEntry.phone}（当前累计 ${Math.max(0, Number(nextUsage?.[nextEntry.key]?.useCount) || 0)} 次）。`,
+        'info'
+      );
+      return {
+        phone: nextEntry.phone,
+        verificationUrl: nextEntry.verificationUrl,
+        hostedCheckoutCurrentSmsEntry: nextEntry,
+        hostedCheckoutUsesSmsPool: true,
+      };
+    }
+
+    async function disableHostedCheckoutSmsPoolEntry(entry = null, reason = '', options = {}) {
+      const normalizedEntry = normalizeHostedCheckoutCurrentSmsEntry(entry);
+      if (!normalizedEntry?.key || typeof getState !== 'function') {
+        return null;
+      }
+      const state = await getState().catch(() => ({}));
+      const poolEntries = parseHostedCheckoutSmsPoolEntries(state?.hostedCheckoutSmsPoolText || '');
+      const usage = normalizeHostedCheckoutSmsPoolUsage(state?.hostedCheckoutSmsPoolUsage || {});
+      const previous = usage[normalizedEntry.key] || {};
+      if (!isHostedCheckoutSmsPoolEntryEnabled(previous)) {
+        return {
+          disabledEntry: normalizedEntry,
+          nextEntry: chooseHostedCheckoutSmsPoolEntry(poolEntries, usage),
+        };
+      }
+      const nextUsage = await updateHostedCheckoutPoolUsage(normalizedEntry, {
+        success: false,
+        incrementFailureCount: false,
+        failureCount: Math.max(0, Math.floor(Number(options.failureCount ?? previous.failureCount) || 0)),
+        error: String(reason || '').trim(),
+        enabled: false,
+        disabledReason: String(reason || '').trim(),
+      });
+      const normalizedNextUsage = normalizeHostedCheckoutSmsPoolUsage(nextUsage || usage);
+      const nextEntry = chooseHostedCheckoutSmsPoolEntry(poolEntries, normalizedNextUsage);
+      const currentKey = String(
+        state?.hostedCheckoutCurrentSmsEntry?.key
+        || buildHostedCheckoutPoolKey(
+          state?.hostedCheckoutCurrentSmsEntry?.phone,
+          state?.hostedCheckoutCurrentSmsEntry?.verificationUrl
+        )
+      ).trim();
+      await applyHostedCheckoutRuntimePatch({
+        hostedCheckoutCurrentSmsEntry: currentKey && currentKey === normalizedEntry.key
+          ? (nextEntry || null)
+          : state?.hostedCheckoutCurrentSmsEntry || null,
+        hostedCheckoutSmsPoolUsage: normalizedNextUsage,
+      });
+      return {
+        disabledEntry: normalizedEntry,
+        nextEntry,
+      };
+    }
+
+    async function getHostedCheckoutRuntimeConfig(options = {}) {
+      const {
+        ensureCurrentSmsEntry = false,
+      } = options || {};
+      const state = typeof getState === 'function' ? await getState().catch(() => ({})) : {};
+      let stored = {};
+      if (chrome?.storage?.local?.get) {
+        stored = await chrome.storage.local.get([
+          'plusCheckoutMode',
+          'plusCheckoutProfiles',
+          'hostedCheckoutVerificationUrl',
+          'hostedCheckoutPhoneNumber',
+          'hostedCheckoutSmsPoolText',
+          'hostedCheckoutSmsPoolUsage',
+          'hostedCheckoutCardDeclinedRetryEnabled',
+          'hostedCheckoutSmsPoolAutoDisableEnabled',
+          'hostedCheckoutFirstDirectResendEnabled',
+          'hostedCheckoutFirstResendWaitSeconds',
+          'hostedCheckoutSubsequentResendWaitSeconds',
+          'hostedCheckoutVerificationResendMaxAttempts',
+          'hostedCheckoutVerificationPollAttempts',
+          'hostedCheckoutVerificationPollIntervalSeconds',
+        ]).catch(() => ({}));
+      }
+      const checkoutProfileState = resolveActivePlusCheckoutProfile(state, stored);
+      const activeProfile = checkoutProfileState.activeProfile;
+      const poolEntries = parseHostedCheckoutSmsPoolEntries(
+        activeProfile.hostedCheckoutSmsPoolText || ''
+      );
+      const poolUsage = normalizeHostedCheckoutSmsPoolUsage(
+        activeProfile.hostedCheckoutSmsPoolUsage || {}
+      );
+      let selectedSmsEntry = normalizeHostedCheckoutCurrentSmsEntry(state?.hostedCheckoutCurrentSmsEntry, poolEntries);
+      if (selectedSmsEntry) {
+        const currentUsage = poolUsage[selectedSmsEntry.key] || {};
+        if (!isHostedCheckoutSmsPoolEntryEnabled(currentUsage)) {
+          selectedSmsEntry = null;
+          await clearHostedCheckoutCurrentSmsEntry();
+        }
+      }
+      if (!selectedSmsEntry && ensureCurrentSmsEntry && poolEntries.length > 0) {
+        selectedSmsEntry = chooseHostedCheckoutSmsPoolEntry(poolEntries, poolUsage);
+        if (selectedSmsEntry) {
+          const nextUsage = await updateHostedCheckoutPoolUsage(selectedSmsEntry, {
+            incrementUseCount: true,
+            success: true,
+          });
+          await addLog(
+            `步骤 6：PayPal 接码池已选择号码 ${selectedSmsEntry.phone}（最少使用次数优先，当前累计 ${Math.max(0, Number(nextUsage?.[selectedSmsEntry.key]?.useCount) || 0)} 次）。`,
+            'info'
+          );
+        }
+      }
+      const verificationUrl = String(
+        selectedSmsEntry?.verificationUrl
+        || (
+          poolEntries.length > 0 && !selectedSmsEntry
+            ? chooseHostedCheckoutSmsPoolEntry(poolEntries, poolUsage)?.verificationUrl
+            : ''
+        )
+        || ''
+      ).trim() || String(activeProfile.hostedCheckoutVerificationUrl || '').trim();
+      const phone = String(
+        selectedSmsEntry?.phone
+        || (
+          poolEntries.length > 0 && !selectedSmsEntry
+            ? chooseHostedCheckoutSmsPoolEntry(poolEntries, poolUsage)?.phone
+            : ''
+        )
+        || ''
+      ).trim() || String(activeProfile.hostedCheckoutPhoneNumber || '').trim();
+      const hostedCheckoutSmsPoolAutoDisableEnabled = Boolean(
+        activeProfile.hostedCheckoutSmsPoolAutoDisableEnabled
+      );
+      const cardDeclinedRetryEnabled = activeProfile.hostedCheckoutCardDeclinedRetryEnabled !== false;
+      const firstDirectResendEnabled = Boolean(
+        activeProfile.hostedCheckoutFirstDirectResendEnabled
+      );
+      const firstResendWaitSeconds = normalizeHostedCheckoutResendWaitSeconds(
+        activeProfile.hostedCheckoutFirstResendWaitSeconds,
+        HOSTED_CHECKOUT_FIRST_RESEND_WAIT_DEFAULT_SECONDS
+      );
+      const subsequentResendWaitSeconds = normalizeHostedCheckoutResendWaitSeconds(
+        activeProfile.hostedCheckoutSubsequentResendWaitSeconds,
+        HOSTED_CHECKOUT_SUBSEQUENT_RESEND_WAIT_DEFAULT_SECONDS
+      );
+      const verificationResendMaxAttempts = normalizeHostedCheckoutVerificationResendMaxAttempts(
+        activeProfile.hostedCheckoutVerificationResendMaxAttempts
+      );
+      const verificationPollAttempts = normalizeHostedCheckoutVerificationPollAttempts(
+        activeProfile.hostedCheckoutVerificationPollAttempts
+      );
+      const verificationPollIntervalSeconds = normalizeHostedCheckoutVerificationPollIntervalSeconds(
+        activeProfile.hostedCheckoutVerificationPollIntervalSeconds
+      );
+      const diagnostics = buildHostedCheckoutConfigDiagnostics({
+        state,
+        stored: {
+          ...stored,
+          ...activeProfile,
+          plusCheckoutMode: checkoutProfileState.mode,
+        },
+        poolEntries,
+        poolUsage,
+        selectedSmsEntry,
+      });
+      return {
+        plusCheckoutMode: checkoutProfileState.mode,
+        plusCheckoutModeLabel: checkoutProfileState.modeLabel,
+        verificationUrl,
+        phone,
+        hostedCheckoutSmsPoolAutoDisableEnabled,
+        hostedCheckoutCardDeclinedRetryEnabled: cardDeclinedRetryEnabled,
+        firstDirectResendEnabled,
+        firstResendWaitSeconds,
+        subsequentResendWaitSeconds,
+        verificationResendMaxAttempts,
+        verificationPollAttempts,
+        verificationPollIntervalSeconds,
+        hostedCheckoutCurrentSmsEntry: selectedSmsEntry,
+        hostedCheckoutUsesSmsPool: Boolean(selectedSmsEntry),
+        diagnostics,
+      };
+    }
+
+    async function waitForCheckoutSurface(tabId) {
+      if (!chrome?.tabs?.get) {
+        return null;
+      }
+      if (typeof waitForTabUrlMatchUntilStopped === 'function') {
+        try {
+          return await Promise.race([
+            waitForTabUrlMatchUntilStopped(tabId, (url) => isCheckoutReadyUrl(url)),
+            new Promise((resolve) => {
+              setTimeout(() => resolve(null), CHECKOUT_REDIRECT_WAIT_TIMEOUT_MS);
+            }),
+          ]);
+        } catch {
+          return null;
+        }
+      }
+
+      const startedAt = Date.now();
+      while (Date.now() - startedAt < CHECKOUT_REDIRECT_WAIT_TIMEOUT_MS) {
+        const tab = await chrome.tabs.get(tabId).catch(() => null);
+        if (!tab) {
+          return null;
+        }
+        if (isCheckoutReadyUrl(tab.url || '')) {
+          return tab;
+        }
+        await sleepWithStop(300);
+      }
+      return null;
+    }
+
+    async function waitForUrlMatch(tabId, matcher, timeoutMs = 30000, retryDelayMs = 400) {
+      if (typeof waitForTabUrlMatchUntilStopped === 'function') {
+        const timeout = Date.now() + Math.max(1000, Number(timeoutMs) || 30000);
+        while (Date.now() < timeout) {
+          throwIfStopped();
+          const remainingMs = Math.max(1000, timeout - Date.now());
+          const result = await Promise.race([
+            waitForTabUrlMatchUntilStopped(tabId, matcher, { retryDelayMs }),
+            new Promise((resolve) => {
+              setTimeout(() => resolve(null), Math.min(remainingMs, 1000));
+            }),
+          ]);
+          if (result) {
+            return result;
+          }
+        }
+        return null;
+      }
+
+      const startedAt = Date.now();
+      while (Date.now() - startedAt < timeoutMs) {
+        throwIfStopped();
+        const tab = await chrome?.tabs?.get?.(tabId).catch(() => null);
+        if (!tab) {
+          return null;
+        }
+        if (typeof matcher === 'function' && matcher(tab.url || '', tab)) {
+          return tab;
+        }
+        await sleepWithStop(retryDelayMs);
+      }
+      return null;
+    }
+
+    async function openFreshChatGptTabForCheckoutCreate() {
+      const tab = typeof createAutomationTab === 'function'
+        ? await createAutomationTab({ url: PLUS_CHECKOUT_ENTRY_URL, active: true })
+        : await chrome.tabs.create({ url: PLUS_CHECKOUT_ENTRY_URL, active: true });
+      const tabId = Number(tab?.id);
+      if (!Number.isInteger(tabId)) {
+        throw new Error('步骤 6：打开 ChatGPT 页面失败，无法创建订阅页。');
+      }
+      if (typeof registerTab === 'function') {
+        await registerTab(PLUS_CHECKOUT_SOURCE, tabId);
+      }
+      return tabId;
+    }
+
+    function buildHostedCheckoutRandomEmail() {
+      const alphabet = 'abcdefghijklmnopqrstuvwxyz0123456789';
+      let localPart = '';
+      for (let index = 0; index < 16; index += 1) {
+        localPart += alphabet[Math.floor(Math.random() * alphabet.length)];
+      }
+      return `${localPart}@gmail.com`;
+    }
+
+    function buildHostedCheckoutRandomPassword() {
+      const lowercase = 'abcdefghijklmnopqrstuvwxyz';
+      const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      const digits = '0123456789';
+      const symbols = '!@#$%^';
+      const alphabet = `${lowercase}${uppercase}${digits}${symbols}`;
+      const values = [
+        lowercase[Math.floor(Math.random() * lowercase.length)],
+        uppercase[Math.floor(Math.random() * uppercase.length)],
+        digits[Math.floor(Math.random() * digits.length)],
+        symbols[Math.floor(Math.random() * symbols.length)],
+      ];
+      while (values.length < 14) {
+        values.push(alphabet[Math.floor(Math.random() * alphabet.length)]);
+      }
+      return values.sort(() => Math.random() - 0.5).join('');
+    }
+
+    function normalizeHostedCheckoutSignupPassword(value = '') {
+      const normalized = String(value || '').replace(/\s+/g, '').trim();
+      if (
+        normalized.length >= 8
+        && normalized.length <= 20
+        && /^[A-Za-z0-9!@#$%^]+$/.test(normalized)
+        && /[\d!@#$%^]/.test(normalized)
+      ) {
+        return normalized;
+      }
+      return buildHostedCheckoutRandomPassword();
+    }
+
+    function buildHostedCheckoutVisaCard() {
+      const prefixes = [
+        [4, 1, 4, 7],
+        [4, 1, 0, 0],
+      ];
+      const digits = prefixes[Math.floor(Math.random() * prefixes.length)].slice();
+      while (digits.length < 15) {
+        digits.push(Math.floor(Math.random() * 10));
+      }
+      const reversed = digits.slice().reverse();
+      let sum = 0;
+      for (let index = 0; index < reversed.length; index += 1) {
+        let digit = reversed[index];
+        if (index % 2 === 0) {
+          digit *= 2;
+          if (digit > 9) {
+            digit -= 9;
+          }
+        }
+        sum += digit;
+      }
+      const checkDigit = (10 - (sum % 10)) % 10;
+      digits.push(checkDigit);
+      const month = String(Math.floor(Math.random() * 12) + 1).padStart(2, '0');
+      const currentYear = new Date().getFullYear() % 100;
+      const year = currentYear + Math.floor(Math.random() * 4) + 2;
+      const cvv = String(Math.floor(100 + Math.random() * 900));
+      return {
+        number: digits.join(''),
+        expiry: `${month} / ${year}`,
+        cvv,
+      };
+    }
+
+    function getHostedCheckoutAddressCountryCode(value = '') {
+      const normalized = String(value || '').trim().toUpperCase();
+      return normalized === 'JP' ? 'JP' : 'US';
+    }
+
+    function getHostedCheckoutAddressCountryCodeForMode(mode = '') {
+      return normalizePlusCheckoutMode(mode) === PLUS_CHECKOUT_MODE_JP_PP ? 'JP' : 'US';
+    }
+
+    function getHostedCheckoutAddressApiPath(countryCode = 'US') {
+      return getHostedCheckoutAddressCountryCode(countryCode) === 'JP' ? '/jp-address' : '/';
+    }
+
+    function getHostedCheckoutAddressFallback(countryCode = 'US') {
+      return getHostedCheckoutAddressCountryCode(countryCode) === 'JP'
+        ? {
+          street: '1-1 Chiyoda',
+          city: 'Chiyoda-ku',
+          state: '東京都',
+          zip: '1000001',
+        }
+        : {
+          street: '123 Main St',
+          city: 'New York',
+          state: 'New York',
+          zip: '10001',
+      };
+    }
+
+    const HOSTED_CHECKOUT_JP_PREFECTURE_ALIASES = Object.freeze({
+      hokkaido: '北海道',
+      aomori: '青森県',
+      iwate: '岩手県',
+      miyagi: '宮城県',
+      akita: '秋田県',
+      yamagata: '山形県',
+      fukushima: '福島県',
+      ibaraki: '茨城県',
+      tochigi: '栃木県',
+      gunma: '群馬県',
+      saitama: '埼玉県',
+      chiba: '千葉県',
+      tokyo: '東京都',
+      kanagawa: '神奈川県',
+      niigata: '新潟県',
+      toyama: '富山県',
+      ishikawa: '石川県',
+      fukui: '福井県',
+      yamanashi: '山梨県',
+      nagano: '長野県',
+      gifu: '岐阜県',
+      shizuoka: '静岡県',
+      aichi: '愛知県',
+      mie: '三重県',
+      shiga: '滋賀県',
+      kyoto: '京都府',
+      osaka: '大阪府',
+      hyogo: '兵庫県',
+      nara: '奈良県',
+      wakayama: '和歌山県',
+      tottori: '鳥取県',
+      shimane: '島根県',
+      okayama: '岡山県',
+      hiroshima: '広島県',
+      yamaguchi: '山口県',
+      tokushima: '徳島県',
+      kagawa: '香川県',
+      ehime: '愛媛県',
+      kochi: '高知県',
+      fukuoka: '福岡県',
+      saga: '佐賀県',
+      nagasaki: '長崎県',
+      kumamoto: '熊本県',
+      oita: '大分県',
+      miyazaki: '宮崎県',
+      kagoshima: '鹿児島県',
+      okinawa: '沖縄県',
+    });
+
+    function normalizeHostedCheckoutJapanesePrefecture(value = '') {
+      const raw = String(value || '').replace(/\s+/g, ' ').trim();
+      if (!raw) {
+        return '';
+      }
+      if (/[都道府県]$/.test(raw) && Object.values(HOSTED_CHECKOUT_JP_PREFECTURE_ALIASES).includes(raw)) {
+        return raw;
+      }
+      const compact = raw.toLowerCase().replace(/[^a-z0-9\u4e00-\u9fff]/g, '');
+      if (HOSTED_CHECKOUT_JP_PREFECTURE_ALIASES[compact]) {
+        return HOSTED_CHECKOUT_JP_PREFECTURE_ALIASES[compact];
+      }
+      return Object.entries(HOSTED_CHECKOUT_JP_PREFECTURE_ALIASES).find(([english, japanese]) => {
+        const japaneseCompact = japanese.toLowerCase().replace(/[^a-z0-9\u4e00-\u9fff]/g, '');
+        return compact === japaneseCompact || compact.includes(english) || compact.includes(japaneseCompact);
+      })?.[1] || '';
+    }
+
+    function resolveHostedCheckoutJapanesePrefecture(address = {}, fallback = '') {
+      const candidates = [
+        address.State_Full,
+        address.State,
+        address.state,
+        ...String(address.Trans_Address || address.Address || address.street || '')
+          .split(',')
+          .map((part) => part.trim())
+          .reverse(),
+      ];
+      for (const candidate of candidates) {
+        const prefecture = normalizeHostedCheckoutJapanesePrefecture(candidate);
+        if (prefecture) {
+          return prefecture;
+        }
+      }
+      return normalizeHostedCheckoutJapanesePrefecture(fallback) || fallback;
+    }
+
+    function normalizeHostedCheckoutPostalCode(value = '', countryCode = 'US') {
+      const normalized = String(value || '').trim();
+      if (getHostedCheckoutAddressCountryCode(countryCode) === 'JP') {
+        return normalized.replace(/[^\d-]/g, '').slice(0, 8);
+      }
+      return normalized.slice(0, 5);
+    }
+
+    function normalizeHostedCheckoutCardExpiry(value = '') {
+      const rawValue = String(value || '').trim();
+      const match = rawValue.match(/(\d{1,2})\D+(\d{2,4})/);
+      if (!match) {
+        return '';
+      }
+      const monthNumber = Math.max(1, Math.min(12, Number.parseInt(match[1], 10) || 1));
+      const month = String(monthNumber).padStart(2, '0');
+      const year = String(match[2] || '').slice(-2).padStart(2, '0');
+      return `${month} / ${year}`;
+    }
+
+    function generateHostedCheckoutDateOfBirth(countryCode = 'US') {
+      const currentYear = new Date().getFullYear();
+      const age = 19 + Math.floor(Math.random() * 7);
+      const year = currentYear - age;
+      const month = 1 + Math.floor(Math.random() * 12);
+      const maxDay = new Date(year, month, 0).getDate();
+      const day = 1 + Math.floor(Math.random() * maxDay);
+      if (getHostedCheckoutAddressCountryCode(countryCode) === 'JP') {
+        return `${String(year).padStart(4, '0')}/${String(month).padStart(2, '0')}/${String(day).padStart(2, '0')}`;
+      }
+      return `${String(month).padStart(2, '0')}/${String(day).padStart(2, '0')}/${String(year).padStart(4, '0')}`;
+    }
+
+    function normalizeHostedCheckoutLatinNamePart(value = '', fallback = '') {
+      const normalized = String(value || '').replace(/\s+/g, ' ').trim();
+      const compact = normalized.replace(/[^A-Za-z]/g, '').toUpperCase();
+      const blockedNameParts = new Set([
+        'ADMIN',
+        'CHATGPT',
+        'CUSTOMER',
+        'DEMO',
+        'FIRST',
+        'LAST',
+        'NAME',
+        'NONE',
+        'NULL',
+        'OPENAI',
+        'PAYPAL',
+        'PRD',
+        'PROD',
+        'PRODUCTION',
+        'SAMPLE',
+        'STRIPE',
+        'TEST',
+        'UNKNOWN',
+        'USER',
+      ]);
+      if (
+        /^[A-Za-z][A-Za-z\s'-]{1,98}$/.test(normalized)
+        && !blockedNameParts.has(compact)
+        && !(/^[A-Z]{3,6}$/.test(compact) && !/[AEIOUY]/.test(compact))
+      ) {
+        return normalized.replace(/\b[A-Z]{2,}\b/g, (part) => (
+          part.charAt(0) + part.slice(1).toLowerCase()
+        ));
+      }
+      return fallback;
+    }
+
+    function splitHostedCheckoutFullName(fullName = '') {
+      const parts = String(fullName || '').replace(/\s+/g, ' ').trim().split(' ').filter(Boolean);
+      if (parts.length >= 2) {
+        return {
+          firstName: parts.slice(0, -1).join(' '),
+          lastName: parts[parts.length - 1],
+        };
+      }
+      if (parts.length === 1) {
+        return {
+          firstName: parts[0],
+          lastName: 'Customer',
+        };
+      }
+      return {
+        firstName: '',
+        lastName: '',
+      };
+    }
+
+    async function fetchHostedCheckoutRawAddress(countryCode = 'US') {
+      const { response, data } = await fetchJsonWithTimeout(HOSTED_CHECKOUT_ADDRESS_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          path: getHostedCheckoutAddressApiPath(countryCode),
+          method: 'address',
+        }),
+      }, 30000);
+      if (!response?.ok) {
+        throw new Error(`获取 hosted checkout 地址失败（HTTP ${response?.status || 0}）。`);
+      }
+      return data?.address || data || {};
+    }
+
+    async function fetchHostedCheckoutEnglishIdentity() {
+      try {
+        const address = await fetchHostedCheckoutRawAddress('US');
+        const fullName = String(address.Full_Name || address.Full_Name_Tran || '').replace(/\s+/g, ' ').trim();
+        const nameParts = splitHostedCheckoutFullName(fullName);
+        const firstName = normalizeHostedCheckoutLatinNamePart(nameParts.firstName, 'James');
+        const lastName = normalizeHostedCheckoutLatinNamePart(nameParts.lastName, 'Smith');
+        return {
+          fullName: `${firstName} ${lastName}`,
+          firstName,
+          lastName,
+        };
+      } catch {
+        return {
+          fullName: 'James Smith',
+          firstName: 'James',
+          lastName: 'Smith',
+        };
+      }
+    }
+
+    async function fetchHostedCheckoutAddress(options = {}) {
+      const countryCode = getHostedCheckoutAddressCountryCode(options?.countryCode);
+      const fallback = getHostedCheckoutAddressFallback(countryCode);
+      const address = await fetchHostedCheckoutRawAddress(countryCode);
+      const fullName = String(address.Full_Name_Tran || address.Full_Name || '').replace(/\s+/g, ' ').trim();
+      const nameParts = splitHostedCheckoutFullName(fullName);
+      const firstName = normalizeHostedCheckoutLatinNamePart(nameParts.firstName, 'James');
+      const lastName = normalizeHostedCheckoutLatinNamePart(nameParts.lastName, 'Smith');
+      return {
+        countryCode,
+        street: String(address.Trans_Address || address.Address || address.street || fallback.street).trim(),
+        city: String(address.City || address.city || fallback.city).trim(),
+        state: countryCode === 'JP'
+          ? resolveHostedCheckoutJapanesePrefecture(address, fallback.state)
+          : String(address.State_Full || address.State || address.state || fallback.state).trim(),
+        zip: normalizeHostedCheckoutPostalCode(address.Zip_Code || address.zip || fallback.zip, countryCode) || fallback.zip,
+        fullName: `${firstName} ${lastName}`,
+        firstName,
+        lastName,
+        email: '',
+        password: normalizeHostedCheckoutSignupPassword(address.Password || address.password || ''),
+        cardNumber: String(address.Credit_Card_Number || address.cardNumber || '').replace(/\D+/g, ''),
+        cardExpiry: normalizeHostedCheckoutCardExpiry(address.Expires || address.cardExpiry || ''),
+        cardCvv: String(address.CVV2 || address.cardCvv || '').replace(/\D+/g, '').slice(0, 4),
+        dateOfBirth: generateHostedCheckoutDateOfBirth(countryCode),
+      };
+    }
+
+    function buildHostedCheckoutAddressSeed(address = {}) {
+      const countryCode = getHostedCheckoutAddressCountryCode(address?.countryCode || 'US');
+      const address1 = normalizeText(address?.street || address?.address1 || address?.line1 || '123 Main St');
+      const city = normalizeText(address?.city || 'New York');
+      const region = normalizeText(address?.state || address?.stateFull || address?.prefecture || 'New York');
+      const postalCode = normalizeText(address?.zip || address?.postalCode || '10001');
+      if (!address1 || !city || !postalCode) {
+        return null;
+      }
+      return {
+        countryCode,
+        query: [address1, city].filter(Boolean).join(', '),
+        source: 'hosted-checkout',
+        skipAutocomplete: true,
+        autoCheckAgreement: true,
+        fallback: {
+          address1,
+          city,
+          region,
+          postalCode,
+        },
+      };
+    }
+
+    function buildHostedCheckoutGuestProfile(address = {}, config = {}) {
+      const card = buildHostedCheckoutVisaCard();
+      const countryCode = getHostedCheckoutAddressCountryCode(address?.countryCode || 'US');
+      return {
+        email: String(address.email || '').trim() || buildHostedCheckoutRandomEmail(),
+        password: normalizeHostedCheckoutSignupPassword(address.password || ''),
+        phone: String(config?.phone || '').trim(),
+        firstName: normalizeHostedCheckoutLatinNamePart(address.firstName, 'James'),
+        lastName: normalizeHostedCheckoutLatinNamePart(address.lastName, 'Smith'),
+        fullName: [
+          normalizeHostedCheckoutLatinNamePart(address.firstName, 'James'),
+          normalizeHostedCheckoutLatinNamePart(address.lastName, 'Smith'),
+        ].join(' '),
+        cardNumber: String(address.cardNumber || '').replace(/\D+/g, '') || card.number,
+        cardExpiry: String(address.cardExpiry || '').trim() || card.expiry,
+        cardCvv: String(address.cardCvv || '').replace(/\D+/g, '').slice(0, 4) || card.cvv,
+        dateOfBirth: String(address.dateOfBirth || '').trim(),
+        countrySpecificFirstName: countryCode === 'JP' ? String(address.countrySpecificFirstName || 'タロウ').trim() : '',
+        countrySpecificLastName: countryCode === 'JP' ? String(address.countrySpecificLastName || 'ヤマダ').trim() : '',
+        address,
+      };
+    }
+
+    function extractHostedCheckoutVerificationCode(payload = {}) {
+      const trustedTextKeyPattern = /^(sms|smsCode|sms_code|message|msg|text|content|body|code|otp|verification_code|verificationCode)$/i;
+      const metadataKeyPattern = /(^|[_-])(phone|mobile|tel|id|order|time|date|expired|expire|status)([_-]|$)/i;
+      const exactCodePattern = /^\D*(\d[\s-]?\d[\s-]?\d[\s-]?\d[\s-]?\d[\s-]?\d)\D*$/;
+      const seen = new Set();
+      const blockedExampleCodes = new Set([
+        '000000',
+        '012345',
+        '111111',
+        '222222',
+        '333333',
+        '444444',
+        '555555',
+        '666666',
+        '777777',
+        '888888',
+        '999999',
+      ]);
+
+      function normalizeCandidateCode(value = '') {
+        const code = String(value || '').replace(/\D+/g, '');
+        if (code.length !== 6 || blockedExampleCodes.has(code)) {
+          return '';
+        }
+        return code;
+      }
+
+      function collectCandidates(value, path = '') {
+        if (value === null || value === undefined) {
+          return [];
+        }
+        if (typeof value === 'string' || typeof value === 'number') {
+          const text = String(value).trim();
+          return text ? [{
+            key: String(path).split('.').pop() || '',
+            path,
+            text,
+          }] : [];
+        }
+        if (typeof value !== 'object') {
+          return [];
+        }
+        if (seen.has(value)) {
+          return [];
+        }
+        seen.add(value);
+        if (Array.isArray(value)) {
+          return value.flatMap((item, index) => collectCandidates(item, `${path}[${index}]`));
+        }
+        return Object.entries(value).flatMap(([key, child]) => (
+          collectCandidates(child, path ? `${path}.${key}` : key)
+        ));
+      }
+
+      function extractContextualCode(text) {
+        const source = String(text || '');
+        const contextualPatterns = [
+          /(\d[\s-]?\d[\s-]?\d[\s-]?\d[\s-]?\d[\s-]?\d)[\s\S]{0,80}?(?:security\s*code|verification\s*code|one[-\s]?time\s*(?:passcode|code)|passcode|otp|code|验证码|安全码)/gi,
+          /(?:security\s*code|verification\s*code|one[-\s]?time\s*(?:passcode|code)|passcode|otp|code|验证码|安全码)[^\d]{0,24}(\d[\s-]?\d[\s-]?\d[\s-]?\d[\s-]?\d[\s-]?\d)/gi,
+        ];
+        for (const pattern of contextualPatterns) {
+          let match = pattern.exec(source);
+          while (match) {
+            const code = normalizeCandidateCode(match[1]);
+            if (code) {
+              return code;
+            }
+            match = pattern.exec(source);
+          }
+        }
+        return '';
+      }
+
+      const candidates = collectCandidates(payload);
+
+      for (const candidate of candidates) {
+        const code = extractContextualCode(candidate.text);
+        if (code) {
+          return code;
+        }
+      }
+
+      for (const candidate of candidates) {
+        const key = String(candidate.key || '');
+        const path = String(candidate.path || '');
+        const isRootText = !path;
+        if (!isRootText && (!trustedTextKeyPattern.test(key) || metadataKeyPattern.test(key) || metadataKeyPattern.test(path))) {
+          continue;
+        }
+        const match = candidate.text.match(exactCodePattern);
+        if (match) {
+          const code = normalizeCandidateCode(match[1]);
+          if (code) {
+            return code;
+          }
+        }
+      }
+
+      return '';
+    }
+
+    function collectHostedCheckoutPayloadTextCandidates(value, path = '', seen = new Set()) {
+      if (value === null || value === undefined) {
+        return [];
+      }
+      if (typeof value === 'string') {
+        const text = value.trim();
+        return text ? [{
+          key: String(path).split('.').pop() || '',
+          path,
+          text,
+        }] : [];
+      }
+      if (typeof value === 'number' || typeof value === 'boolean') {
+        return [];
+      }
+      if (typeof value !== 'object') {
+        return [];
+      }
+      if (seen.has(value)) {
+        return [];
+      }
+      seen.add(value);
+      if (Array.isArray(value)) {
+        return value.flatMap((item, index) => collectHostedCheckoutPayloadTextCandidates(item, `${path}[${index}]`, seen));
+      }
+      return Object.entries(value).flatMap(([key, child]) => (
+        collectHostedCheckoutPayloadTextCandidates(child, path ? `${path}.${key}` : key, seen)
+      ));
+    }
+
+    function isHostedCheckoutNoCodePlaceholderText(text = '') {
+      const normalized = String(text || '').replace(/\s+/g, ' ').trim();
+      if (!normalized) {
+        return true;
+      }
+      if (/^(?:ok|success|true|false|null|none|no|0|200)$/i.test(normalized)) {
+        return true;
+      }
+      return /暂无验证码|暂无(?:短信|消息)|未收到|没有(?:验证码|短信)|等待(?:短信|验证码)|no\s*(?:sms|code|message)|not\s*(?:found|ready|received)|pending|waiting/i.test(normalized);
+    }
+
+    function getHostedCheckoutNonVerificationContentPreview(payload = {}) {
+      const candidates = collectHostedCheckoutPayloadTextCandidates(payload);
+      for (const candidate of candidates) {
+        const key = String(candidate.key || '');
+        const path = String(candidate.path || '');
+        const text = String(candidate.text || '').replace(/\s+/g, ' ').trim();
+        if (!text || isHostedCheckoutNoCodePlaceholderText(text)) {
+          continue;
+        }
+        if (/^(?:msg|message|status|code)$/i.test(key) && text.length < 16) {
+          continue;
+        }
+        if (/(?:^|[.\[])(?:msg|message|status|code)(?:\]|\b|$)/i.test(path) && text.length < 16) {
+          continue;
+        }
+        if (/paypal|thanks\s+for\s+confirming|confirming\s+your\s+phone|transaction\s+alerts|log\s+in\s+or\s+get\s+the\s+app|security|verification|验证码|安全码/i.test(text)) {
+          return text.slice(0, 180);
+        }
+        if (text.length >= 24) {
+          return text.slice(0, 180);
+        }
+      }
+      return '';
+    }
+
+    function getHostedCheckoutNoCodeResponsePreview(payload = {}) {
+      if (typeof payload === 'string') {
+        return payload.replace(/\s+/g, ' ').trim().slice(0, 180);
+      }
+      try {
+        return JSON.stringify(payload).replace(/\s+/g, ' ').trim().slice(0, 180);
+      } catch {
+        return '';
+      }
+    }
+
+    function buildHostedCheckoutNoVerificationCodeError(payload = {}) {
+      const preview = getHostedCheckoutNonVerificationContentPreview(payload);
+      const error = new Error('hosted checkout 验证码接口暂未返回有效验证码。');
+      if (preview) {
+        error.hostedCheckoutResendImmediately = true;
+        error.hostedCheckoutResponsePreview = preview;
+        error.message = `hosted checkout 验证码接口返回了非验证码内容，准备直接 Resend：${preview}`;
+      } else {
+        const responsePreview = getHostedCheckoutNoCodeResponsePreview(payload);
+        if (responsePreview) {
+          error.hostedCheckoutResponsePreview = responsePreview;
+          error.message = `hosted checkout 验证码接口暂未返回有效验证码，响应预览：${responsePreview}`;
+        }
+      }
+      return error;
+    }
+
+    function parseHostedCheckoutVerificationPayloadText(text = '') {
+      const rawText = String(text || '');
+      try {
+        return rawText ? JSON.parse(rawText) : {};
+      } catch {
+        return rawText;
+      }
+    }
+
+    async function readHostedCheckoutVerificationTextFromTab(tabId, timeoutMs = 9000) {
+      const startedAt = Date.now();
+      let lastText = '';
+      while (Date.now() - startedAt < timeoutMs) {
+        throwIfStopped();
+        const injections = await chrome.scripting.executeScript({
+          target: { tabId, allFrames: false },
+          world: 'MAIN',
+          func: () => {
+            const bodyText = document.body?.innerText || '';
+            const documentText = document.documentElement?.innerText || '';
+            return String(bodyText || documentText || '').trim();
+          },
+        }).catch(() => []);
+        const text = String(injections?.[0]?.result || '').trim();
+        if (text) {
+          lastText = text;
+          const payload = parseHostedCheckoutVerificationPayloadText(text);
+          if (extractHostedCheckoutVerificationCode(payload)) {
+            return text;
+          }
+          if (!/just a moment|enable javascript and cookies|checking your browser|cloudflare/i.test(text)) {
+            return text;
+          }
+        }
+        await sleepWithStop(1000);
+      }
+      return lastText;
+    }
+
+    async function fetchHostedCheckoutVerificationCodeViaBrowserTab(verificationUrl = '') {
+      if (!chrome?.tabs || !chrome?.scripting?.executeScript) {
+        throw new Error('当前运行环境不支持浏览器标签页兜底取码。');
+      }
+      const created = typeof createAutomationTab === 'function'
+        ? await createAutomationTab({ url: verificationUrl, active: false })
+        : await chrome.tabs.create({ url: verificationUrl, active: false });
+      const tabId = Number(created?.id);
+      if (!Number.isInteger(tabId)) {
+        throw new Error('浏览器标签页兜底取码失败：无法打开验证码接口页面。');
+      }
+      try {
+        await waitForTabCompleteUntilStopped(tabId, { timeoutMs: 15000 }).catch(() => null);
+        const text = await readHostedCheckoutVerificationTextFromTab(tabId);
+        const payload = parseHostedCheckoutVerificationPayloadText(text);
+        const code = extractHostedCheckoutVerificationCode(payload);
+        if (!code) {
+          const error = buildHostedCheckoutNoVerificationCodeError(payload);
+          error.message = `浏览器标签页兜底取码未解析到验证码：${error.message}`;
+          throw error;
+        }
+        await addLog(`步骤 6：后台接口未直接返回验证码，已通过浏览器标签页兜底读取到验证码：${code}。`, 'info');
+        return {
+          code,
+          payload,
+        };
+      } finally {
+        await chrome.tabs.remove(tabId).catch(() => {});
+      }
+    }
+
+    async function fetchHostedCheckoutVerificationCode() {
+      const runtimeConfig = await getHostedCheckoutRuntimeConfig({
+        ensureCurrentSmsEntry: true,
+      });
+      const verificationUrl = runtimeConfig.verificationUrl;
+      await addLog(`步骤 6：当前 hosted checkout 验证码接口配置为 ${verificationUrl || '(空)'}。`, 'info');
+      const fetcher = typeof fetchImpl === 'function'
+        ? fetchImpl
+        : (typeof fetch === 'function' ? fetch.bind(globalThis) : null);
+      if (typeof fetcher !== 'function') {
+        throw new Error('当前运行环境不支持 fetch，无法获取 hosted checkout 验证码。');
+      }
+      if (!verificationUrl) {
+        throw new Error('当前未配置 hosted checkout 验证码接口地址。');
+      }
+      const response = await fetcher(verificationUrl, {
+        method: 'GET',
+        cache: 'no-store',
+        credentials: 'include',
+        headers: {
+          Accept: 'application/json,text/plain,*/*',
+          'Cache-Control': 'no-cache, no-store, max-age=0',
+          Pragma: 'no-cache',
+        },
+      });
+      const text = await response.text().catch(() => '');
+      const payload = parseHostedCheckoutVerificationPayloadText(text);
+      const code = extractHostedCheckoutVerificationCode(payload);
+      if (!code) {
+        const noCodeError = buildHostedCheckoutNoVerificationCodeError(payload);
+        if (!noCodeError.hostedCheckoutResendImmediately && verificationUrl) {
+          try {
+            const fallbackResult = await fetchHostedCheckoutVerificationCodeViaBrowserTab(verificationUrl);
+            if (runtimeConfig.hostedCheckoutUsesSmsPool && runtimeConfig.hostedCheckoutCurrentSmsEntry) {
+              await updateHostedCheckoutPoolUsage(runtimeConfig.hostedCheckoutCurrentSmsEntry, {
+                success: true,
+              });
+            }
+            return fallbackResult.code;
+          } catch (fallbackError) {
+            await addLog(`步骤 6：浏览器标签页兜底取码未成功：${fallbackError?.message || fallbackError}`, 'warn');
+          }
+        }
+        if (runtimeConfig.hostedCheckoutUsesSmsPool && runtimeConfig.hostedCheckoutCurrentSmsEntry) {
+          await updateHostedCheckoutPoolUsage(runtimeConfig.hostedCheckoutCurrentSmsEntry, {
+            success: false,
+            error: noCodeError.message,
+          });
+        }
+        throw noCodeError;
+      }
+      if (runtimeConfig.hostedCheckoutUsesSmsPool && runtimeConfig.hostedCheckoutCurrentSmsEntry) {
+        await updateHostedCheckoutPoolUsage(runtimeConfig.hostedCheckoutCurrentSmsEntry, {
+          success: true,
+        });
+      }
+      await addLog(`步骤 6：验证码接口直接返回有效验证码：${code}。`, 'info');
+      return code;
+    }
+
+    async function fetchHostedCheckoutVerificationCodeManually(options = {}) {
+      const manualVerificationUrl = String(options?.verificationUrl || '').trim();
+      if (manualVerificationUrl) {
+        const fetcher = typeof fetchImpl === 'function'
+          ? fetchImpl
+          : (typeof fetch === 'function' ? fetch.bind(globalThis) : null);
+        if (typeof fetcher !== 'function') {
+          throw new Error('当前运行环境不支持 fetch，无法获取 hosted checkout 验证码。');
+        }
+        const response = await fetcher(manualVerificationUrl, {
+          method: 'GET',
+          cache: 'no-store',
+          credentials: 'include',
+          headers: {
+            Accept: 'application/json,text/plain,*/*',
+            'Cache-Control': 'no-cache, no-store, max-age=0',
+            Pragma: 'no-cache',
+          },
+        });
+        const text = await response.text().catch(() => '');
+        const payload = parseHostedCheckoutVerificationPayloadText(text);
+        const code = extractHostedCheckoutVerificationCode(payload);
+        if (!code) {
+          const noCodeError = buildHostedCheckoutNoVerificationCodeError(payload);
+          if (!noCodeError.hostedCheckoutResendImmediately) {
+            try {
+              const fallbackResult = await fetchHostedCheckoutVerificationCodeViaBrowserTab(manualVerificationUrl);
+              return {
+                code: fallbackResult.code,
+                verificationUrl: manualVerificationUrl,
+              };
+            } catch (fallbackError) {
+              await addLog(`步骤 6：浏览器标签页兜底取码未成功：${fallbackError?.message || fallbackError}`, 'warn');
+            }
+          }
+          throw noCodeError;
+        }
+        return {
+          code,
+          verificationUrl: manualVerificationUrl,
+        };
+      }
+      try {
+        const code = await fetchHostedCheckoutVerificationCode();
+        const runtimeConfig = await getHostedCheckoutRuntimeConfig();
+        return {
+          code,
+          verificationUrl: String(runtimeConfig?.verificationUrl || '').trim(),
+        };
+      } finally {
+        await clearHostedCheckoutCurrentSmsEntry();
+      }
+    }
+
+    async function pollHostedCheckoutVerificationCode() {
+      const runtimeConfig = await getHostedCheckoutRuntimeConfig({
+        ensureCurrentSmsEntry: true,
+      });
+      const firstWaitSeconds = normalizeHostedCheckoutResendWaitSeconds(
+        runtimeConfig?.firstResendWaitSeconds,
+        HOSTED_CHECKOUT_FIRST_RESEND_WAIT_DEFAULT_SECONDS
+      );
+      const pollAttempts = normalizeHostedCheckoutVerificationPollAttempts(
+        runtimeConfig?.verificationPollAttempts
+      );
+      const pollIntervalSeconds = normalizeHostedCheckoutVerificationPollIntervalSeconds(
+        runtimeConfig?.verificationPollIntervalSeconds
+      );
+      const pollIntervalMs = pollIntervalSeconds * 1000;
+      let lastError = null;
+      if (firstWaitSeconds > 0) {
+        await addLog(
+          `步骤 6：检测到 hosted checkout OpenAI 验证码弹窗，先按首次等码配置等待 ${firstWaitSeconds} 秒，再开始轮询验证码接口。`,
+          'info'
+        );
+        await sleepWithStop(firstWaitSeconds * 1000);
+      }
+      for (let attempt = 1; attempt <= pollAttempts; attempt += 1) {
+        throwIfStopped();
+        try {
+          const code = await fetchHostedCheckoutVerificationCode();
+          await addLog(`步骤 6：已获取 hosted checkout 验证码（${attempt}/${pollAttempts}）。`, 'info');
+          return code;
+        } catch (error) {
+          lastError = error;
+          await addLog(
+            `步骤 6：hosted checkout 验证码暂不可用（${attempt}/${pollAttempts}）：${error?.message || error}`,
+            'warn'
+          );
+          if (attempt < pollAttempts) {
+            await sleepWithStop(pollIntervalMs);
+          }
+        }
+      }
+      throw lastError || new Error('hosted checkout 验证码轮询失败。');
+    }
+
+    async function waitForHostedCheckoutVerificationCodeWindow(waitSeconds, options = {}) {
+      const normalizedWaitSeconds = normalizeHostedCheckoutResendWaitSeconds(waitSeconds, 0);
+      const label = String(options.label || 'PayPal 验证码').trim() || 'PayPal 验证码';
+      const pollAttempts = normalizeHostedCheckoutVerificationPollAttempts(options.pollAttempts);
+      const pollIntervalSeconds = normalizeHostedCheckoutVerificationPollIntervalSeconds(options.pollIntervalSeconds);
+      const pollIntervalMs = pollIntervalSeconds * 1000;
+      const allowImmediateResendOnNonCode = options.allowImmediateResendOnNonCode !== false;
+      const excludedCodes = new Set(
+        Array.isArray(options.excludedCodes)
+          ? options.excludedCodes.map((item) => String(item || '').trim()).filter(Boolean)
+          : []
+      );
+      const allowExcludedCodeFallback = options.allowExcludedCodeFallback !== false;
+      if (normalizedWaitSeconds > 0) {
+        await addLog(`步骤 6：${label} 将先等待 ${normalizedWaitSeconds} 秒，再请求验证码接口。`, 'info');
+        await sleepWithStop(normalizedWaitSeconds * 1000);
+      }
+      let attempt = 0;
+      let lastError = null;
+      let fallbackExcludedCode = '';
+
+      while (attempt < pollAttempts) {
+        throwIfStopped();
+        attempt += 1;
+        try {
+          const code = await fetchHostedCheckoutVerificationCode();
+          if (excludedCodes.has(code)) {
+            fallbackExcludedCode = code;
+            lastError = new Error(`接口仍返回已试过的旧验证码 ${code}，继续等待新验证码。`);
+            if (attempt >= pollAttempts) {
+              break;
+            }
+            await addLog(`步骤 6：${label} 命中已试过的旧验证码 ${code}（${attempt}/${pollAttempts}），${pollIntervalSeconds} 秒后继续请求。`, 'warn');
+            await sleepWithStop(pollIntervalMs);
+            continue;
+          }
+          await addLog(`步骤 6：已获取 ${label}（已等待 ${normalizedWaitSeconds} 秒，第 ${attempt}/${pollAttempts} 次请求）。`, 'info');
+          return code;
+        } catch (error) {
+          lastError = error;
+          if (error?.hostedCheckoutResendImmediately) {
+            if (allowImmediateResendOnNonCode) {
+              await addLog(`步骤 6：${label} 接口返回非验证码内容，将立即触发 Resend：${error.hostedCheckoutResponsePreview || error.message}`, 'warn');
+              return null;
+            }
+            if (attempt >= pollAttempts) {
+              break;
+            }
+            await addLog(`步骤 6：${label} 接口返回非验证码内容，${pollIntervalSeconds} 秒后继续请求：${error.hostedCheckoutResponsePreview || error.message}`, 'warn');
+            await sleepWithStop(pollIntervalMs);
+            continue;
+          }
+          if (attempt >= pollAttempts) {
+            break;
+          }
+          await addLog(`步骤 6：${label} 暂不可用（${attempt}/${pollAttempts}），${pollIntervalSeconds} 秒后继续请求：${error?.message || error}`, 'warn');
+          await sleepWithStop(pollIntervalMs);
+        }
+      }
+
+      if (fallbackExcludedCode && allowExcludedCodeFallback) {
+        await addLog(
+          `步骤 6：${label} 在 ${pollAttempts} 次请求内未拿到新验证码，接口始终返回同一码 ${fallbackExcludedCode}，本次将兜底再试一次该验证码。`,
+          'warn'
+        );
+        return fallbackExcludedCode;
+      }
+
+      await addLog(
+        `步骤 6：${label} 等待 ${normalizedWaitSeconds} 秒后连续请求 ${pollAttempts} 次仍未返回有效验证码${lastError ? `：${lastError.message || lastError}` : '。'}`,
+        'warn'
+      );
+      return null;
+    }
+
+    async function clickHostedCheckoutVerificationResend(tabId, attempt = 1, maxAttempts = 1, reason = '', options = {}) {
+      const reasonText = reason ? `${reason}，` : '';
+      await addLog(`步骤 6：${reasonText}正在点击 PayPal 验证码 Resend（${attempt}/${maxAttempts}）...`, 'warn');
+      const preClickDelayMs = Math.max(0, Math.floor(Number(options?.preClickDelayMs) || 0));
+      if (preClickDelayMs > 0) {
+        await sleepWithStop(preClickDelayMs);
+      }
+      const resendResult = await runHostedCheckoutPayPalStep(tabId, {
+        resendVerificationCode: true,
+      });
+      if (resendResult?.resendSkipped) {
+        await addLog(`步骤 6：PayPal 页面已不在验证码页（当前阶段：${resendResult.stage || 'unknown'}），跳过本次 Resend。`, 'warn');
+        return resendResult;
+      }
+      await addLog('步骤 6：已点击 PayPal 验证码 Resend。', 'info');
+      return resendResult;
+    }
+
+    async function acquireHostedCheckoutPayPalVerificationCode(tabId, resendAttemptsUsed = 0) {
+      const runtimeConfig = await getHostedCheckoutRuntimeConfig({
+        ensureCurrentSmsEntry: true,
+      });
+      const maxResendAttempts = normalizeHostedCheckoutVerificationResendMaxAttempts(
+        runtimeConfig?.verificationResendMaxAttempts
+      );
+      const firstWaitSeconds = normalizeHostedCheckoutResendWaitSeconds(
+        runtimeConfig?.firstResendWaitSeconds,
+        HOSTED_CHECKOUT_FIRST_RESEND_WAIT_DEFAULT_SECONDS
+      );
+      const subsequentWaitSeconds = normalizeHostedCheckoutResendWaitSeconds(
+        runtimeConfig?.subsequentResendWaitSeconds,
+        HOSTED_CHECKOUT_SUBSEQUENT_RESEND_WAIT_DEFAULT_SECONDS
+      );
+      const pollOptions = {
+        pollAttempts: runtimeConfig?.verificationPollAttempts,
+        pollIntervalSeconds: runtimeConfig?.verificationPollIntervalSeconds,
+      };
+      let usedResendAttempts = Math.max(0, Math.floor(Number(resendAttemptsUsed) || 0));
+
+      if (runtimeConfig?.firstDirectResendEnabled && usedResendAttempts < maxResendAttempts) {
+        await addLog('步骤 6：已开启 PayPal 接码首次直接重发，检测到验证码弹窗后等待 1 秒并点击 Resend。', 'warn');
+        await sleepWithStop(HOSTED_CHECKOUT_FIRST_DIRECT_RESEND_DELAY_MS);
+        usedResendAttempts += 1;
+        await clickHostedCheckoutVerificationResend(
+          tabId,
+          usedResendAttempts,
+          maxResendAttempts,
+          '首次直接重发'
+        );
+        const directCode = await waitForHostedCheckoutVerificationCodeWindow(firstWaitSeconds, {
+          label: 'PayPal 首次重发验证码',
+          ...pollOptions,
+        });
+        if (directCode) {
+          return {
+            code: directCode,
+            resendAttemptsUsed: usedResendAttempts,
+          };
+        }
+      } else {
+        const initialCode = await waitForHostedCheckoutVerificationCodeWindow(firstWaitSeconds, {
+          label: 'PayPal 首次验证码',
+          ...pollOptions,
+        });
+        if (initialCode) {
+          return {
+            code: initialCode,
+            resendAttemptsUsed: usedResendAttempts,
+          };
+        }
+      }
+
+      while (usedResendAttempts < maxResendAttempts) {
+        usedResendAttempts += 1;
+        await clickHostedCheckoutVerificationResend(
+          tabId,
+          usedResendAttempts,
+          maxResendAttempts,
+          '等待窗口内未获取到有效验证码'
+        );
+        const resentCode = await waitForHostedCheckoutVerificationCodeWindow(subsequentWaitSeconds, {
+          label: 'PayPal 重发验证码',
+          ...pollOptions,
+        });
+        if (resentCode) {
+          return {
+            code: resentCode,
+            resendAttemptsUsed: usedResendAttempts,
+          };
+        }
+      }
+
+      throw buildHostedCheckoutVerificationResendLimitError();
+    }
+
+    async function resendHostedCheckoutVerificationCodeAndRefill(
+      tabId,
+      guestProfile = {},
+      attempt = 1,
+      maxAttempts = 1,
+      waitSeconds = HOSTED_CHECKOUT_SUBSEQUENT_RESEND_WAIT_DEFAULT_SECONDS,
+      excludedCodes = [],
+      reason = 'PayPal 提示验证码错误'
+    ) {
+      const runtimeConfig = await getHostedCheckoutRuntimeConfig({
+        ensureCurrentSmsEntry: true,
+      });
+      await clickHostedCheckoutVerificationResend(tabId, attempt, maxAttempts, reason, {
+        preClickDelayMs: HOSTED_CHECKOUT_VERIFICATION_INVALID_RESEND_DELAY_MS,
+      });
+      const verificationCode = await waitForHostedCheckoutVerificationCodeWindow(waitSeconds, {
+        label: `${String(reason || 'PayPal 验证码错误').trim()}后重发验证码`,
+        pollAttempts: runtimeConfig?.verificationPollAttempts,
+        pollIntervalSeconds: runtimeConfig?.verificationPollIntervalSeconds,
+        excludedCodes,
+        allowImmediateResendOnNonCode: false,
+      });
+      if (!verificationCode) {
+        throw buildHostedCheckoutVerificationResendLimitError();
+      }
+      await runHostedCheckoutPayPalStep(tabId, {
+        ...guestProfile,
+        verificationCode,
+      });
+      await addLog(`步骤 6：已向 PayPal 授权页发送重发验证码填充指令：${String(verificationCode || '').trim()}。`, 'info');
+      return {
+        verificationCode,
+      };
+    }
+
+    async function reopenPpBoomCheckoutFromSavedRedirectUrl(latestState = {}, completionPayload = {}, options = {}) {
+      if (normalizeString(latestState?.plusCheckoutSource) !== PPBOOM_PLUS_CHECKOUT_SOURCE) {
+        return null;
+      }
+      const stripeRedirectUrl = String(latestState?.ppBoomStripeRedirectUrl || '').trim();
+      if (!stripeRedirectUrl) {
+        return null;
+      }
+
+      const sourceLabel = String(options?.sourceLabel || 'PayPal hosted checkout').trim() || 'PayPal hosted checkout';
+      const nextAttempt = Math.max(1, Number(options?.nextAttempt) || 1);
+      const maxAttempts = Math.max(1, Number(options?.maxAttempts) || PAYPAL_GENERIC_ERROR_RECOVERY_MAX_ATTEMPTS);
+      await addLog(
+        `步骤 6：${sourceLabel}准备直接复用上一条 Stripe Redirect URL 重进支付链路（${nextAttempt}/${maxAttempts}），不再重建 Checkout。`,
+        'warn'
+      );
+
+      let reopenTab = null;
+      if (typeof createAutomationTab === 'function') {
+        reopenTab = await createAutomationTab({ url: stripeRedirectUrl, active: true });
+      } else if (chrome?.tabs?.create) {
+        reopenTab = await chrome.tabs.create({ url: stripeRedirectUrl, active: true });
+      }
+      const tabId = Number(reopenTab?.id);
+      if (!Number.isInteger(tabId) || tabId <= 0) {
+        throw new Error(`步骤 6：${sourceLabel}复用 Stripe Redirect URL 失败：无法打开新的支付标签页。`);
+      }
+
+      const ppBoomCompletionPayload = {
+        plusCheckoutCountry: String(latestState?.ppBoomBillingCountry || 'DE').trim() || 'DE',
+        plusCheckoutCurrency: String(latestState?.ppBoomCurrency || 'EUR').trim() || 'EUR',
+        ...(completionPayload && typeof completionPayload === 'object' ? completionPayload : {}),
+      };
+
+      const landedTab = await waitForUrlMatch(
+        tabId,
+        (url) => isPayPalUrl(url) || isPaymentsSuccessUrl(url) || isHostedCheckoutCompletionPageUrl(url),
+        60000,
+        500
+      );
+      const landedUrl = String(landedTab?.url || '').trim();
+      if (!landedUrl) {
+        throw new Error(`步骤 6：${sourceLabel}复用 Stripe Redirect URL 后未落到有效页面。`);
+      }
+
+      if (isPaymentsSuccessUrl(landedUrl)) {
+        await addLog(`步骤 6：${sourceLabel}复用 Stripe Redirect URL 后已直接进入 ChatGPT 支付成功页。`, 'ok');
+        await refreshOAuthTimeoutWindowAfterHostedCheckoutSuccess();
+        await completePlusCheckoutCreate(ppBoomCompletionPayload);
+        return {
+          resolvedByPlusActivation: true,
+          tabId,
+          via: 'payments_success_url',
+        };
+      }
+
+      if (isHostedCheckoutCompletionPageUrl(landedUrl)) {
+        const completionResolution = await tryResolveHostedCheckoutCompletionPageByPlusActivation(
+          tabId,
+          landedUrl,
+          ppBoomCompletionPayload,
+          { sourceLabel: 'PPBoom' },
+        );
+        if (completionResolution?.resolvedByPlusActivation) {
+          return {
+            resolvedByPlusActivation: true,
+            tabId: completionResolution.tabId || tabId,
+            via: 'openai_completion_page',
+          };
+        }
+        throw new Error(`步骤 6：${sourceLabel}复用 Stripe Redirect URL 后落到 OpenAI 支付完成页，但复核后仍未检测到 PLUS 生效。`);
+      }
+
+      if (!isPayPalUrl(landedUrl)) {
+        throw new Error(`步骤 6：${sourceLabel}复用 Stripe Redirect URL 后未进入 PayPal 页面，当前 URL：${landedUrl}`);
+      }
+
+      if (typeof registerTab === 'function') {
+        await registerTab(PAYPAL_SOURCE, tabId);
+      }
+      await setState({
+        plusCheckoutTabId: tabId,
+        plusCheckoutUrl: landedUrl,
+        plusCheckoutCountry: ppBoomCompletionPayload.plusCheckoutCountry,
+        plusCheckoutCurrency: ppBoomCompletionPayload.plusCheckoutCurrency,
+        plusReturnUrl: '',
+        plusCheckoutSource: PPBOOM_PLUS_CHECKOUT_SOURCE,
+      });
+      await addLog(`步骤 6：${sourceLabel}已复用上一条 Stripe Redirect URL，并重新进入 PayPal 页面：${landedUrl}`, 'info');
+      await runPpBoomHostedCheckoutAutomation(tabId, ppBoomCompletionPayload);
+      return {
+        restarted: true,
+        tabId,
+        via: 'paypal_redirect',
+      };
+    }
+
+    async function recoverFromPayPalHostedGenericError(tabId, pageMessage, completionPayload = {}, latestState = {}) {
+      const nextAttempt = getPayPalGenericErrorRecoveryCount(latestState) + 1;
+      const recoveryLimit = (() => {
+        const ppBoomLimit = getPpBoomCheckoutRebuildMaxAttempts(latestState);
+        return ppBoomLimit > 0 ? ppBoomLimit : PAYPAL_GENERIC_ERROR_RECOVERY_MAX_ATTEMPTS;
+      })();
+      await setState({
+        paypalGenericErrorRecoveryCount: nextAttempt,
+      });
+      if (typeof broadcastDataUpdate === 'function') {
+        broadcastDataUpdate({ paypalGenericErrorRecoveryCount: nextAttempt });
+      }
+
+      const cookieCleanup = await clearPayPalSessionCookies();
+      await addLog(
+        `步骤 6：PayPal hosted checkout 返回 genericError，已清理 PayPal 会话 cookie ${cookieCleanup.removedCount}/${cookieCleanup.candidateCount} 个，并清理 ${cookieCleanup.storageTabCount || 0} 个标签页的 localStorage / sessionStorage（共 ${cookieCleanup.storageFrameCount || 0} 个 frame），准备尝试自动恢复支付链路（${nextAttempt}/${recoveryLimit}）。`,
+        'warn'
+      );
+      const closedTabs = await closeStalePayPalAndCheckoutTabs(tabId, latestState);
+      if (closedTabs.closedCount > 0) {
+        await addLog(`步骤 6：已关闭 ${closedTabs.closedCount} 个失效的 PayPal / Checkout 标签页。`, 'info');
+      }
+      await setState({
+        plusCheckoutTabId: null,
+        plusCheckoutUrl: '',
+      });
+      if (typeof broadcastDataUpdate === 'function') {
+        broadcastDataUpdate({
+          plusCheckoutTabId: null,
+          plusCheckoutUrl: '',
+        });
+      }
+      await sleepWithStop(PAYPAL_GENERIC_ERROR_SESSION_SETTLE_WAIT_MS);
+
+      const recoveryState = typeof getState === 'function'
+        ? await getState().catch(() => (latestState || {}))
+        : (latestState || {});
+      const paymentMethod = normalizePlusPaymentMethod(recoveryState?.plusPaymentMethod);
+      if (paymentMethod !== PLUS_PAYMENT_METHOD_PAYPAL) {
+        throw new Error(`${HOSTED_CHECKOUT_GENERIC_ERROR_PREFIX}${pageMessage}`);
+      }
+
+      const reusedPpBoomCheckout = await reopenPpBoomCheckoutFromSavedRedirectUrl(
+        recoveryState,
+        completionPayload,
+        {
+          sourceLabel: 'PayPal hosted checkout genericError 恢复',
+          nextAttempt,
+          maxAttempts: recoveryLimit,
+        },
+      );
+      if (reusedPpBoomCheckout?.restarted || reusedPpBoomCheckout?.resolvedByPlusActivation) {
+        return reusedPpBoomCheckout;
+      }
+
+      const preparedSession = await preparePlusCheckoutSession(recoveryState, paymentMethod, {
+        openingMessage: '步骤 6：PayPal genericError 恢复中，正在打开新的 ChatGPT 会话并重建 Plus Checkout...',
+      });
+      if (preparedSession?.alreadyPaid) {
+        await completeCloudCheckoutAlreadyPaid(preparedSession.tabId, preparedSession.result, recoveryState);
+        return {
+          resolvedByAlreadyPaid: true,
+          restarted: true,
+        };
+      }
+      if (preparedSession?.resolvedByPlusActivation) {
+        return {
+          resolvedByPlusActivation: true,
+          restarted: true,
+          tabId: preparedSession.tabId,
+        };
+      }
+
+      if (shouldWaitForHostedCheckoutSuccess(recoveryState, paymentMethod)) {
+        await addLog('步骤 6：PayPal genericError 恢复后的 hosted checkout 已就绪，继续自动支付链路。', 'info');
+        await runHostedCheckoutAutomation(preparedSession.tabId, preparedSession.completionPayload || completionPayload);
+        return {
+          restarted: true,
+          tabId: preparedSession.tabId,
+        };
+      }
+
+      await completePlusCheckoutCreate(preparedSession.completionPayload || completionPayload);
+      return {
+        restarted: true,
+        tabId: preparedSession.tabId,
+      };
+    }
+
+    async function recoverFromPayPalApprovalBranch(tabId, branchLabel = '', completionPayload = {}, latestState = {}) {
+      const nextAttempt = getPayPalApprovalBranchRecoveryCount(latestState) + 1;
+      const recoveryLimit = (() => {
+        const ppBoomLimit = getPpBoomCheckoutRebuildMaxAttempts(latestState);
+        return ppBoomLimit > 0 ? ppBoomLimit : PAYPAL_APPROVAL_BRANCH_RECOVERY_MAX_ATTEMPTS;
+      })();
+      await setState({
+        paypalApprovalBranchRecoveryCount: nextAttempt,
+      });
+      if (typeof broadcastDataUpdate === 'function') {
+        broadcastDataUpdate({ paypalApprovalBranchRecoveryCount: nextAttempt });
+      }
+
+      const cookieCleanup = await clearPayPalSessionCookies();
+      const normalizedLabel = String(branchLabel || 'PayPal Hermes / 普通授权页').trim() || 'PayPal Hermes / 普通授权页';
+      await addLog(
+        `步骤 6：检测到 ${normalizedLabel}，准备关闭旧页并尝试自动恢复支付链路（${nextAttempt}/${recoveryLimit}）；已清理 PayPal 会话 cookie ${cookieCleanup.removedCount}/${cookieCleanup.candidateCount} 个，并清理 ${cookieCleanup.storageTabCount || 0} 个标签页的 localStorage / sessionStorage（共 ${cookieCleanup.storageFrameCount || 0} 个 frame）。`,
+        'warn'
+      );
+      const closedTabs = await closeStalePayPalAndCheckoutTabs(tabId, latestState);
+      if (closedTabs.closedCount > 0) {
+        await addLog(`步骤 6：已关闭 ${closedTabs.closedCount} 个失效的 PayPal / Checkout 标签页。`, 'info');
+      }
+      await setState({
+        plusCheckoutTabId: null,
+        plusCheckoutUrl: '',
+      });
+      if (typeof broadcastDataUpdate === 'function') {
+        broadcastDataUpdate({
+          plusCheckoutTabId: null,
+          plusCheckoutUrl: '',
+        });
+      }
+      await sleepWithStop(PAYPAL_GENERIC_ERROR_SESSION_SETTLE_WAIT_MS);
+
+      const recoveryState = typeof getState === 'function'
+        ? await getState().catch(() => (latestState || {}))
+        : (latestState || {});
+      const paymentMethod = normalizePlusPaymentMethod(recoveryState?.plusPaymentMethod);
+      if (paymentMethod !== PLUS_PAYMENT_METHOD_PAYPAL) {
+        throw new Error(`${HOSTED_CHECKOUT_GENERIC_ERROR_PREFIX}${normalizedLabel}`);
+      }
+
+      const reusedPpBoomCheckout = await reopenPpBoomCheckoutFromSavedRedirectUrl(
+        recoveryState,
+        completionPayload,
+        {
+          sourceLabel: `${normalizedLabel} 恢复`,
+          nextAttempt,
+          maxAttempts: recoveryLimit,
+        },
+      );
+      if (reusedPpBoomCheckout?.restarted || reusedPpBoomCheckout?.resolvedByPlusActivation) {
+        return reusedPpBoomCheckout;
+      }
+
+      const preparedSession = await preparePlusCheckoutSession(recoveryState, paymentMethod, {
+        openingMessage: `步骤 6：${normalizedLabel} 恢复中，正在打开新的 ChatGPT 会话并重建 Plus Checkout...`,
+      });
+      if (preparedSession?.alreadyPaid) {
+        await completeCloudCheckoutAlreadyPaid(preparedSession.tabId, preparedSession.result, recoveryState);
+        return {
+          resolvedByAlreadyPaid: true,
+          restarted: true,
+        };
+      }
+      if (preparedSession?.resolvedByPlusActivation) {
+        return {
+          resolvedByPlusActivation: true,
+          restarted: true,
+          tabId: preparedSession.tabId,
+        };
+      }
+
+      if (shouldWaitForHostedCheckoutSuccess(recoveryState, paymentMethod)) {
+        await addLog(`步骤 6：${normalizedLabel} 恢复后的 hosted checkout 已就绪，继续自动支付链路。`, 'info');
+        await runHostedCheckoutAutomation(preparedSession.tabId, preparedSession.completionPayload || completionPayload);
+        return {
+          restarted: true,
+          tabId: preparedSession.tabId,
+        };
+      }
+
+      await completePlusCheckoutCreate(preparedSession.completionPayload || completionPayload);
+      return {
+        restarted: true,
+        tabId: preparedSession.tabId,
+      };
+    }
+
+    async function requestHostedCheckoutApprovalBranchRecovery(tabId, branchLabel = '', completionPayload = {}) {
+      const latestState = typeof getState === 'function'
+        ? await getState().catch(() => ({}))
+        : {};
+      const recoveryCount = getPayPalApprovalBranchRecoveryCount(latestState);
+      const recoveryLimit = (() => {
+        const ppBoomLimit = getPpBoomCheckoutRebuildMaxAttempts(latestState);
+        return ppBoomLimit > 0 ? ppBoomLimit : PAYPAL_APPROVAL_BRANCH_RECOVERY_MAX_ATTEMPTS;
+      })();
+      const normalizedLabel = String(branchLabel || 'PayPal Hermes / 普通授权页').trim() || 'PayPal Hermes / 普通授权页';
+      if (shouldAutoRecoverPayPalApprovalBranch(latestState)) {
+        return recoverFromPayPalApprovalBranch(tabId, normalizedLabel, completionPayload, latestState);
+      }
+
+      const patch = {
+        plusManualConfirmationPending: true,
+        plusManualConfirmationRequestId: `paypal-approval-branch-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        plusManualConfirmationStep: 6,
+        plusManualConfirmationMethod: 'paypal-hosted-generic-error',
+        plusManualConfirmationTitle: 'PayPal Checkout 异常',
+        plusManualConfirmationMessage: `${normalizedLabel} 自动恢复已达上限，请检查 PLUS 是否正常开通，或重新创建 Plus Checkout。`,
+      };
+      await setState(patch);
+      if (typeof broadcastDataUpdate === 'function') {
+        broadcastDataUpdate(patch);
+      }
+      await addLog(`步骤 6：${normalizedLabel} 自动恢复已达上限，已停止当前支付链路并等待你选择“检查”或“重试”。`, 'error');
+      throw new Error(`${HOSTED_CHECKOUT_GENERIC_ERROR_PREFIX}${normalizedLabel}`);
+    }
+
+    async function requestHostedCheckoutGenericErrorChoice(tabId, pageState = {}, completionPayload = {}) {
+      const requestId = `paypal-hosted-generic-error-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const pageMessage = String(pageState?.hostedGenericErrorMessage || '').trim()
+        || 'Things don’t appear to be working at the moment.';
+      const latestState = typeof getState === 'function'
+        ? await getState().catch(() => ({}))
+        : {};
+      const recoveryCount = getPayPalGenericErrorRecoveryCount(latestState);
+      const recoveryLimit = (() => {
+        const ppBoomLimit = getPpBoomCheckoutRebuildMaxAttempts(latestState);
+        return ppBoomLimit > 0 ? ppBoomLimit : PAYPAL_GENERIC_ERROR_RECOVERY_MAX_ATTEMPTS;
+      })();
+      try {
+        const inspection = await refreshChatGptSessionAndInspectPlusActivation();
+        if (inspection?.active) {
+          await addLog(
+            `步骤 6：PayPal hosted checkout 返回 genericError，但刷新 ChatGPT 会话后检测到 PLUS 已生效（planType=${inspection.planType || 'unknown'}），直接继续下一步。`,
+            'ok'
+          );
+          await refreshOAuthTimeoutWindowAfterHostedCheckoutSuccess();
+          await completePlusCheckoutCreate({
+            ...completionPayload,
+            plusDetectedPlanType: inspection.planType || '',
+            plusCheckoutTabId: inspection.tabId,
+          });
+          return {
+            resolvedByPlusActivation: true,
+            planType: inspection.planType || '',
+            tabId: inspection.tabId,
+          };
+        }
+        const planTypeSuffix = inspection?.planType ? `（planType=${inspection.planType}）` : '';
+        if (shouldAutoRecoverPayPalGenericError(latestState)) {
+          await addLog(
+            `步骤 6：PayPal hosted checkout 返回 genericError，刷新 ChatGPT 会话后暂未检测到 PLUS 生效${planTypeSuffix}，准备自动清理 PayPal 会话并恢复支付链路。`,
+            'warn'
+          );
+          return recoverFromPayPalHostedGenericError(tabId, pageMessage, completionPayload, latestState);
+        }
+        await addLog(
+          `步骤 6：PayPal hosted checkout 返回 genericError，刷新 ChatGPT 会话后暂未检测到 PLUS 生效${planTypeSuffix}，且自动恢复已达到上限（${recoveryCount}/${recoveryLimit}），将停止当前支付链路并等待你选择“检查”或“重试”。`,
+          'warn'
+        );
+      } catch (error) {
+        const message = error?.message || String(error || '未知错误');
+        if (message.includes(HOSTED_CHECKOUT_GENERIC_ERROR_PREFIX)) {
+          throw error;
+        }
+        if (shouldAutoRecoverPayPalGenericError(latestState)) {
+          await addLog(
+            `步骤 6：PayPal hosted checkout 返回 genericError，刷新 ChatGPT 会话检查 PLUS 状态失败，仍将尝试自动清理 PayPal 会话并恢复支付链路。原因：${message}`,
+            'warn'
+          );
+          return recoverFromPayPalHostedGenericError(tabId, pageMessage, completionPayload, latestState);
+        }
+        await addLog(
+          `步骤 6：PayPal hosted checkout 返回 genericError，刷新 ChatGPT 会话检查 PLUS 状态失败，且自动恢复已达到上限（${recoveryCount}/${recoveryLimit}），将停止当前支付链路并等待你选择“检查”或“重试”。原因：${message}`,
+          'warn'
+        );
+      }
+      const patch = {
+        plusManualConfirmationPending: true,
+        plusManualConfirmationRequestId: requestId,
+        plusManualConfirmationStep: 6,
+        plusManualConfirmationMethod: 'paypal-hosted-generic-error',
+        plusManualConfirmationTitle: 'PayPal Checkout 异常',
+        plusManualConfirmationMessage: `${pageMessage} 自动恢复已达上限，请检查 PLUS 是否正常开通，或重新创建 Plus Checkout。`,
+      };
+      await setState(patch);
+      if (typeof broadcastDataUpdate === 'function') {
+        broadcastDataUpdate(patch);
+      }
+      await addLog('步骤 6：PayPal hosted checkout 返回 genericError，且自动恢复已达上限，已停止当前支付链路并等待你选择“检查”或“重试”。', 'error');
+      throw new Error(`${HOSTED_CHECKOUT_GENERIC_ERROR_PREFIX}${pageMessage}`);
+    }
+
+    function buildHostedCheckoutVerificationResendLimitError() {
+      return new Error(
+        `${HOSTED_CHECKOUT_VERIFICATION_RESEND_LIMIT_PREFIX}PayPal 验证码自动 Resend 重试已达到上限，请尝试在页面手动获取验证码并填入。`
+      );
+    }
+
+    function shouldAutoDisableHostedCheckoutSmsEntry(error) {
+      const message = String(typeof error === 'string' ? error : error?.message || '');
+      return message.includes(HOSTED_CHECKOUT_VERIFICATION_RESEND_LIMIT_PREFIX)
+        || /hosted checkout 验证码接口暂未返回有效验证码|浏览器标签页兜底取码|未解析到验证码|验证码自动 Resend 重试已达到上限/i.test(message);
+    }
+
+    function buildHostedCheckoutSmsPoolDisableReason(error) {
+      const message = String(typeof error === 'string' ? error : error?.message || '')
+        .replace(HOSTED_CHECKOUT_VERIFICATION_RESEND_LIMIT_PREFIX, '')
+        .trim();
+      if (/验证码自动 Resend 重试已达到上限/i.test(message)) {
+        return `PayPal 验证码多次失败：${message}`;
+      }
+      if (/hosted checkout 验证码接口暂未返回有效验证码|未解析到验证码/i.test(message)) {
+        return `验证码接口连续异常：${message}`;
+      }
+      return message || 'PayPal 接码异常';
+    }
+
+    async function maybeAutoDisableHostedCheckoutCurrentSmsEntry(error) {
+      const latestConfig = await getHostedCheckoutRuntimeConfig({
+        ensureCurrentSmsEntry: false,
+      });
+      if (!latestConfig?.hostedCheckoutSmsPoolAutoDisableEnabled) {
+        return null;
+      }
+      if (!shouldAutoDisableHostedCheckoutSmsEntry(error)) {
+        return null;
+      }
+      const currentEntry = latestConfig?.hostedCheckoutCurrentSmsEntry || null;
+      if (!latestConfig?.hostedCheckoutUsesSmsPool || !currentEntry?.key) {
+        return null;
+      }
+      const state = typeof getState === 'function' ? await getState().catch(() => ({})) : {};
+      const usage = normalizeHostedCheckoutSmsPoolUsage(state?.hostedCheckoutSmsPoolUsage || {});
+      const currentUsage = usage[currentEntry.key] || {};
+      const nextFailureCount = Math.max(0, Math.floor(Number(currentUsage.failureCount) || 0)) + 1;
+      const reason = buildHostedCheckoutSmsPoolDisableReason(error);
+      if (nextFailureCount < HOSTED_CHECKOUT_SMS_POOL_DISABLE_THRESHOLD) {
+        await updateHostedCheckoutPoolUsage(currentEntry, {
+          success: false,
+          error: reason,
+          failureCount: nextFailureCount,
+          incrementFailureCount: false,
+        });
+        await addLog(
+          `步骤 6：PayPal 接码池号码 ${currentEntry.phone} 已累计失败 ${nextFailureCount}/${HOSTED_CHECKOUT_SMS_POOL_DISABLE_THRESHOLD} 次，暂不禁用。原因：${reason}`,
+          'warn'
+        );
+        return {
+          disabled: false,
+          failureCount: nextFailureCount,
+          threshold: HOSTED_CHECKOUT_SMS_POOL_DISABLE_THRESHOLD,
+          entry: currentEntry,
+        };
+      }
+      const result = await disableHostedCheckoutSmsPoolEntry(currentEntry, reason, {
+        failureCount: nextFailureCount,
+      });
+      await addLog(`步骤 6：PayPal 接码池号码 ${currentEntry.phone} 已自动禁用。原因：${reason}`, 'warn');
+      if (result?.nextEntry?.phone) {
+        await addLog(`步骤 6：PayPal 接码池已切换到下一个启用号码 ${result.nextEntry.phone}。`, 'info');
+      } else {
+        await addLog('步骤 6：PayPal 接码池已无可用启用号码，请手动启用或导入新号码。', 'warn');
+      }
+      return {
+        disabled: true,
+        entry: currentEntry,
+        nextEntry: result?.nextEntry || null,
+      };
+    }
+
+    function isHostedCheckoutGenericErrorMessage(message = '') {
+      return /HOSTED_CHECKOUT_GENERIC_ERROR::|Things\s+don[’']?t\s+appear\s+to\s+be\s+working\s+at\s+the\s+moment|Sorry,\s*something\s+went\s+wrong\.?\s*Please\s+try\s+again/i.test(String(message || ''));
+    }
+
+    function isHostedCheckoutOpenAiAddressErrorState(state = {}) {
+      const message = String(state?.hostedAddressErrorMessage || state?.error || '').trim();
+      return Boolean(state?.hostedAddressError)
+        || /customer'?s\s+location\s+isn'?t\s+recognized|set\s+a\s+valid\s+customer\s+address|automatically\s+calculate\s+tax|valid\s+customer\s+address|无法识别.*地址|地址.*无法识别|税.*地址/i.test(message);
+    }
+
+    function isHostedCheckoutOpenAiCardDeclinedState(state = {}) {
+      const message = String(state?.hostedCardDeclinedErrorMessage || state?.error || '').trim();
+      return Boolean(state?.hostedCardDeclinedError)
+        || /(?:bank\s*)?card\s+(?:was\s+)?declined|try\s+another\s+card|payment\s+method\s+was\s+declined|银行卡被拒绝|请尝试另一张卡|请尝试另一张银行卡|您的银行卡被拒绝/i.test(message);
+    }
+
+    function isHostedCheckoutCompletionPageUrl(url = '') {
+      return /^https:\/\/(?:pay\.openai\.com|checkout\.stripe\.com)\/c\/pay\/cs_/i.test(String(url || '').trim());
+    }
+
+    function isHostedCheckoutSucceededRedirectUrl(url = '') {
+      try {
+        const parsed = new URL(String(url || '').trim());
+        return isHostedCheckoutCompletionPageUrl(url)
+          && String(parsed.searchParams.get('redirect_status') || '').trim().toLowerCase() === 'succeeded';
+      } catch {
+        return false;
+      }
+    }
+
+    async function readPlusCheckoutPageState(tabId, options = {}) {
+      await ensureContentScriptReadyOnTabUntilStopped(PLUS_CHECKOUT_SOURCE, tabId, {
+        inject: PLUS_CHECKOUT_INJECT_FILES,
+        injectSource: PLUS_CHECKOUT_SOURCE,
+        logMessage: '步骤 6：正在等待支付完成页脚本就绪...',
+      });
+      const result = await sendTabMessageUntilStopped(tabId, PLUS_CHECKOUT_SOURCE, {
+        type: 'PLUS_CHECKOUT_GET_STATE',
+        source: 'background',
+        payload: options,
+      });
+      if (result?.error) {
+        throw new Error(result.error);
+      }
+      return result || {};
+    }
+
+    async function tryResolveHostedCheckoutCompletionPageByPlusActivation(tabId, currentUrl, completionPayload = {}, options = {}) {
+      if (!isHostedCheckoutCompletionPageUrl(currentUrl)) {
+        return {
+          detected: false,
+          resolvedByPlusActivation: false,
+        };
+      }
+      const succeededRedirect = isHostedCheckoutSucceededRedirectUrl(currentUrl);
+      const completionSignalWaitMs = Math.max(0, Number(options?.completionSignalWaitMs) || (succeededRedirect ? 12000 : 6000));
+      const completionSignalPollMs = Math.max(500, Number(options?.completionSignalPollMs) || 1000);
+      const completionSignalDeadline = Date.now() + completionSignalWaitMs;
+      let pageState = null;
+      let loggedWaitingForCompletionCopy = false;
+      while (true) {
+        pageState = await readPlusCheckoutPageState(tabId);
+        if (pageState?.hostedCompletionDetected) {
+          break;
+        }
+        if (succeededRedirect) {
+          if (!loggedWaitingForCompletionCopy) {
+            await addLog('步骤 6：当前已命中 redirect_status=succeeded，正在等待 OpenAI 支付完成页文案与订阅状态落稳...', 'info');
+            loggedWaitingForCompletionCopy = true;
+          }
+        } else {
+          return {
+            detected: false,
+            resolvedByPlusActivation: false,
+            pageState,
+          };
+        }
+        if (Date.now() >= completionSignalDeadline) {
+          break;
+        }
+        await sleepWithStop(completionSignalPollMs);
+      }
+      if (!pageState?.hostedCompletionDetected && !succeededRedirect) {
+        return {
+          detected: false,
+          resolvedByPlusActivation: false,
+          pageState,
+        };
+      }
+
+      const sourceLabel = String(options?.sourceLabel || 'hosted checkout').trim() || 'hosted checkout';
+      const title = String(pageState?.hostedCompletionTitle || '').trim();
+      const detail = String(pageState?.hostedCompletionDetail || '').trim();
+      const completionSignalLabel = pageState?.hostedCompletionDetected
+        ? `${title ? `（${title}${detail ? ` / ${detail}` : ''}）` : ''}`
+        : '（已命中 redirect_status=succeeded，页面文案仍在加载）';
+      await addLog(
+        `步骤 6：检测到 ${sourceLabel} 支付完成页${completionSignalLabel}，正在刷新 ChatGPT 会话检查 PLUS 状态...`,
+        'info'
+      );
+
+      const maxChecks = Math.max(1, Number(options?.maxChecks) || 4);
+      const firstSettleMs = Math.max(0, Number(options?.firstSettleMs) || 12000);
+      if (firstSettleMs > 0) {
+        await addLog(`步骤 6：${sourceLabel} 支付完成页已出现，先等待 ${Math.round(firstSettleMs / 1000)} 秒让订阅状态同步...`, 'info');
+        await sleepWithStop(firstSettleMs);
+      }
+      let lastInspection = null;
+      for (let attempt = 1; attempt <= maxChecks; attempt += 1) {
+        const inspection = await refreshChatGptSessionAndInspectPlusActivation();
+        lastInspection = inspection;
+        if (inspection?.active) {
+          await addLog(
+            `步骤 6：${sourceLabel} 支付完成页已确认 PLUS 生效（planType=${inspection.planType || 'paid'}），继续下一步。`,
+            'ok'
+          );
+          await refreshOAuthTimeoutWindowAfterHostedCheckoutSuccess();
+          await completePlusCheckoutCreate({
+            ...completionPayload,
+            plusDetectedPlanType: inspection.planType || '',
+            plusCheckoutTabId: inspection.tabId,
+          });
+          return {
+            detected: true,
+            resolvedByPlusActivation: true,
+            pageState,
+            planType: inspection.planType || '',
+            tabId: inspection.tabId,
+          };
+        }
+        if (attempt < maxChecks) {
+          await addLog(
+            `步骤 6：${sourceLabel} 支付完成页第 ${attempt}/${maxChecks} 次复核暂未检测到 PLUS 生效${inspection?.planType ? `（planType=${inspection.planType}）` : ''}，8 秒后再检查一次...`,
+            'warn'
+          );
+          await sleepWithStop(8000);
+        }
+      }
+
+      await addLog(
+        `步骤 6：${sourceLabel} 支付完成页已出现，但复核后仍未检测到 PLUS 生效${lastInspection?.planType ? `（planType=${lastInspection.planType}）` : ''}。`,
+        'warn'
+      );
+      return {
+        detected: true,
+        resolvedByPlusActivation: false,
+        deferToReturnConfirm: Boolean(options?.allowDeferredCompletionOnSucceededRedirect) && succeededRedirect,
+        pageState,
+        planType: lastInspection?.planType || '',
+        tabId: lastInspection?.tabId || 0,
+      };
+    }
+
+    async function confirmPlusActivationAfterExternalBrowserCheckout(sourceLabel = 'PPBoom 外部浏览器', completionPayload = {}, result = {}) {
+      const normalizedLabel = String(sourceLabel || 'PPBoom 外部浏览器').trim() || 'PPBoom 外部浏览器';
+      const pageTitle = String(result?.pageTitle || '').trim();
+      const pageUrl = String(result?.pageUrl || '').trim();
+      const bodyText = String(result?.bodyText || '').trim();
+      const signalLabel = pageTitle || pageUrl || '支付完成页';
+      await addLog(
+        `步骤 6：${normalizedLabel} 已落到完成页候选（${signalLabel}），正在刷新 ChatGPT 会话复核 PLUS 状态...`,
+        'info'
+      );
+      await sleepWithStop(12000);
+      let lastInspection = null;
+      for (let attempt = 1; attempt <= 4; attempt += 1) {
+        const inspection = await refreshChatGptSessionAndInspectPlusActivation();
+        lastInspection = inspection;
+        if (inspection?.active) {
+          await addLog(
+            `步骤 6：${normalizedLabel} 已确认 PLUS 生效（planType=${inspection.planType || 'paid'}），继续下一步。`,
+            'ok'
+          );
+          await refreshOAuthTimeoutWindowAfterHostedCheckoutSuccess();
+          return {
+            resolvedByPlusActivation: true,
+            planType: inspection.planType || '',
+            tabId: inspection.tabId || 0,
+          };
+        }
+        if (attempt < 4) {
+          await addLog(
+            `步骤 6：${normalizedLabel} 第 ${attempt}/4 次复核暂未检测到 PLUS 生效${inspection?.planType ? `（planType=${inspection.planType}）` : ''}，8 秒后再检查一次...`,
+            'warn'
+          );
+          await sleepWithStop(8000);
+        }
+      }
+      await addLog(
+        `步骤 6：${normalizedLabel} 页面文案为完成页候选，但复核后仍未检测到 PLUS 生效${lastInspection?.planType ? `（planType=${lastInspection.planType}）` : ''}。页面：${pageTitle || pageUrl || bodyText.slice(0, 80)}`,
+        'warn'
+      );
+      return {
+        resolvedByPlusActivation: false,
+        planType: lastInspection?.planType || '',
+        tabId: lastInspection?.tabId || 0,
+      };
+    }
+
+    async function completePpBoomCheckoutViaDeferredCompletionPage(tabId, currentUrl, completionPayload = {}) {
+      const nextPayload = {
+        plusCheckoutCountry: 'DE',
+        plusCheckoutCurrency: 'EUR',
+        ...(completionPayload && typeof completionPayload === 'object' ? completionPayload : {}),
+      };
+      await addLog(
+        '步骤 6：已命中 OpenAI 支付完成页且 URL 已包含 redirect_status=succeeded；虽然当前会话暂未立即识别到 PLUS，但本次不再判失败，继续交给后续确认节点复核。',
+        'warn'
+      );
+      await setState({
+        plusCheckoutTabId: Number(tabId) || null,
+        plusCheckoutUrl: String(currentUrl || '').trim(),
+        plusCheckoutCountry: nextPayload.plusCheckoutCountry,
+        plusCheckoutCurrency: nextPayload.plusCheckoutCurrency,
+        plusReturnUrl: String(currentUrl || '').trim(),
+        plusCheckoutSource: PPBOOM_PLUS_CHECKOUT_SOURCE,
+      });
+      await completePlusCheckoutCreate(nextPayload);
+      return {
+        resolvedByDeferredCompletion: true,
+        tabId,
+      };
+    }
+
+    async function runHostedCheckoutCustomChatGptFlow(tabId, guestProfile = {}) {
+      await addLog('步骤 6：检测到 ChatGPT custom checkout 页面，改用 iframe 账单流程进入 PayPal。', 'info');
+      const latestState = typeof getState === 'function'
+        ? await getState().catch(() => ({}))
+        : {};
+      const topLevelState = await sendTabMessageUntilStopped(tabId, PLUS_CHECKOUT_SOURCE, {
+        type: 'PLUS_CHECKOUT_GET_STATE',
+        source: 'background',
+        payload: {},
+      });
+      if (topLevelState?.error) {
+        throw new Error(topLevelState.error);
+      }
+      if (topLevelState?.customCheckoutError) {
+        throw new Error(`${PLUS_CHECKOUT_START_NEW_FLOW_ERROR_PREFIX}步骤 6：custom checkout 检测到错误提示框：${String(topLevelState.customCheckoutErrorMessage || '').trim() || '页面出现错误提示框。'}`);
+      }
+      const amountSummary = topLevelState?.checkoutAmountSummary || null;
+      if (amountSummary?.hasTodayDue && !amountSummary.isZero) {
+        const amountLabel = amountSummary.rawAmount || (
+          Number.isFinite(Number(amountSummary.amount)) ? String(amountSummary.amount) : '未知金额'
+        );
+        throw new Error(`PLUS_CHECKOUT_NON_FREE_TRIAL::步骤 6：检测到今日应付金额不是 0（${amountLabel}），当前账号没有免费试用资格，已自动停止整个流程。`);
+      }
+
+      const registrationEmail = String(
+        latestState?.email
+        || latestState?.registrationEmailState?.current
+        || guestProfile?.email
+        || ''
+      ).trim();
+      const addressSeed = buildHostedCheckoutAddressSeed(guestProfile?.address || {});
+      if (!addressSeed) {
+        throw new Error('步骤 6：custom checkout 缺少完整地址，无法自动填写 PayPal 账单信息。');
+      }
+
+      const paymentFrameMatch = await waitForFrameMatch(tabId, pickPaymentFrame, {
+        label: 'PayPal iframe',
+      });
+      const initialInspections = paymentFrameMatch.inspections || [];
+      const paymentFrame = paymentFrameMatch.picked;
+      if (!paymentFrame) {
+        const frameSummary = buildFrameSummary(initialInspections) || 'none';
+        throw new Error(`步骤 6：检测到 ChatGPT custom checkout 页面，但未在主页面或 iframe 中发现 PayPal DOM。frame 摘要：${frameSummary}`);
+      }
+      if (paymentFrame.frame.ready === false) {
+        throw new Error(`步骤 6：已定位到 PayPal 所在 iframe（frameId=${paymentFrame.frame.frameId}），但账单脚本无法注入该 iframe。`);
+      }
+
+      if (paymentFrame.frame.frameId !== 0) {
+        await addLog(`步骤 6：PayPal 位于 checkout iframe（frameId=${paymentFrame.frame.frameId}），将改为在该 frame 内操作。`, 'info');
+      }
+
+      const selectResult = await sendFrameMessage(tabId, paymentFrame.frame.frameId, {
+        type: 'PLUS_CHECKOUT_SELECT_PAYPAL',
+        source: 'background',
+        payload: { paymentMethod: PLUS_PAYMENT_METHOD_PAYPAL },
+      });
+      if (selectResult?.error) {
+        throw new Error(selectResult.error);
+      }
+
+      await sleepWithStop(1000);
+      let billingFrame = null;
+      try {
+        billingFrame = await waitForBillingFrame(tabId);
+      } catch (error) {
+        await addLog(`步骤 6：暂未识别到独立账单地址 iframe，先尝试直接在 PayPal frame 内填写：${error?.message || String(error || '未知错误')}`, 'warn');
+      }
+      const activeBillingFrame = billingFrame || {
+        frameId: paymentFrame.frame.frameId,
+        frameUrl: paymentFrame.frame.url || '',
+        ready: paymentFrame.frame.ready !== false,
+      };
+      if (!activeBillingFrame.ready) {
+        throw new Error(`步骤 6：已定位到账单信息所在 iframe（frameId=${activeBillingFrame.frameId}），但账单脚本无法注入该 iframe。`);
+      }
+      if (activeBillingFrame.frameId !== paymentFrame.frame.frameId) {
+        await addLog(`步骤 6：账单信息位于 checkout iframe（frameId=${activeBillingFrame.frameId}），将改为在该 frame 内填写。`, 'info');
+      }
+
+      const fillResult = await sendFrameMessage(tabId, activeBillingFrame.frameId, {
+        type: 'PLUS_CHECKOUT_FILL_BILLING_ADDRESS',
+        source: 'background',
+        payload: {
+          fullName: String(guestProfile?.fullName || '').trim(),
+          email: registrationEmail,
+          phone: String(guestProfile?.phone || '').trim(),
+          addressSeed,
+          skipContactEmailFill: true,
+          autoCheckAgreement: true,
+        },
+      });
+      if (fillResult?.error) {
+        throw new Error(fillResult.error);
+      }
+      await assertNoCustomCheckoutError(tabId, [
+        { frameId: 0, url: '' },
+        { frameId: paymentFrame.frame.frameId, url: paymentFrame.frame.url || '' },
+        { frameId: activeBillingFrame.frameId, url: activeBillingFrame.frameUrl || '' },
+      ], '填写账单信息后');
+      if (registrationEmail) {
+        const topLevelEmailResult = await sendFrameMessage(tabId, 0, {
+          type: 'PLUS_CHECKOUT_FILL_CONTACT_EMAIL',
+          source: 'background',
+          payload: {
+            email: registrationEmail,
+          },
+        }).catch(() => null);
+        if (topLevelEmailResult?.error) {
+          throw new Error(topLevelEmailResult.error);
+        }
+        if (topLevelEmailResult?.emailFillResult) {
+          await addLog(`步骤 6：custom checkout 顶层联系邮箱处理结果：${JSON.stringify({
+            contactEmail: topLevelEmailResult?.contactEmail || registrationEmail || '',
+            found: Boolean(topLevelEmailResult.emailFillResult.found),
+            filled: Boolean(topLevelEmailResult.emailFillResult.filled),
+            alreadyFilled: Boolean(topLevelEmailResult.emailFillResult.alreadyFilled),
+            skipped: Boolean(topLevelEmailResult.emailFillResult.skipped),
+            reason: String(topLevelEmailResult.emailFillResult.reason || ''),
+            value: String(topLevelEmailResult.emailFillResult.value || ''),
+          })}`, 'info');
+        }
+      }
+      if (fillResult?.emailFillResult && fillResult.emailFillResult.reason !== 'skipped_by_payload') {
+        await addLog(`步骤 6：custom checkout 联系邮箱处理结果：${JSON.stringify({
+          contactEmail: fillResult?.contactEmail || registrationEmail || '',
+          found: Boolean(fillResult.emailFillResult.found),
+          filled: Boolean(fillResult.emailFillResult.filled),
+          alreadyFilled: Boolean(fillResult.emailFillResult.alreadyFilled),
+          skipped: Boolean(fillResult.emailFillResult.skipped),
+          reason: String(fillResult.emailFillResult.reason || ''),
+          value: String(fillResult.emailFillResult.value || ''),
+        })}`, 'info');
+      }
+
+      let redirectedTab = null;
+      let lastSubmitError = '';
+      for (let attempt = 1; attempt <= HOSTED_CHECKOUT_CUSTOM_SUBMIT_MAX_ATTEMPTS; attempt += 1) {
+        await addLog(
+          attempt === 1
+            ? '步骤 6：custom checkout 信息已填写完成，等待 3 秒让页面校验后再提交...'
+            : `步骤 6：准备第 ${attempt}/${HOSTED_CHECKOUT_CUSTOM_SUBMIT_MAX_ATTEMPTS} 次重新点击订阅...`,
+          attempt === 1 ? 'info' : 'warn'
+        );
+        await sleepWithStop(3000);
+        const subscribeFrame = await waitForSubscribeFrame(tabId, [
+          { frameId: 0, url: '' },
+          { frameId: paymentFrame.frame.frameId, url: paymentFrame.frame.url || '' },
+          { frameId: activeBillingFrame.frameId, url: activeBillingFrame.frameUrl || '' },
+        ]);
+        const subscribeResult = await sendFrameMessage(tabId, subscribeFrame.frameId, {
+          type: 'PLUS_CHECKOUT_CLICK_SUBSCRIBE',
+          source: 'background',
+          payload: {
+            beforeClickDelayMs: attempt === 1 ? 700 : 1200,
+            paymentMethod: PLUS_PAYMENT_METHOD_PAYPAL,
+            autoCheckAgreement: true,
+          },
+        });
+        if (subscribeResult?.error) {
+          lastSubmitError = subscribeResult.error;
+          await addLog(`步骤 6：点击订阅失败（${attempt}/${HOSTED_CHECKOUT_CUSTOM_SUBMIT_MAX_ATTEMPTS}）：${lastSubmitError}`, 'warn');
+          continue;
+        }
+        const recoveryFrames = [
+          { frameId: 0, url: '' },
+          { frameId: paymentFrame.frame.frameId, url: paymentFrame.frame.url || '' },
+          { frameId: activeBillingFrame.frameId, url: activeBillingFrame.frameUrl || '' },
+          { frameId: subscribeFrame.frameId, url: subscribeFrame.url || '' },
+        ];
+        let recoveredFromEmailError = false;
+        try {
+          await assertNoCustomCheckoutError(tabId, recoveryFrames, '点击订阅后');
+        } catch (error) {
+          if (isRetryableCustomCheckoutEmailError(error) && await tryRecoverCustomCheckoutByRefillingEmail(tabId, registrationEmail, recoveryFrames, PLUS_PAYMENT_METHOD_PAYPAL)) {
+            recoveredFromEmailError = true;
+          } else {
+            throw error;
+          }
+        }
+
+        await addLog(
+          recoveredFromEmailError
+            ? `步骤 6：邮箱已清空并重填，正在重新等待跳转到 PayPal（${attempt}/${HOSTED_CHECKOUT_CUSTOM_SUBMIT_MAX_ATTEMPTS}）...`
+            : `步骤 6：已点击订阅，正在等待跳转到 PayPal（${attempt}/${HOSTED_CHECKOUT_CUSTOM_SUBMIT_MAX_ATTEMPTS}）...`,
+          recoveredFromEmailError ? 'warn' : 'info'
+        );
+        try {
+          redirectedTab = await waitForCustomCheckoutPayPalRedirect(tabId);
+        } catch (error) {
+          if (isRetryableCustomCheckoutEmailError(error) && await tryRecoverCustomCheckoutByRefillingEmail(tabId, registrationEmail, recoveryFrames, PLUS_PAYMENT_METHOD_PAYPAL)) {
+            await addLog(`步骤 6：邮箱已清空并重填，正在再次等待跳转到 PayPal（${attempt}/${HOSTED_CHECKOUT_CUSTOM_SUBMIT_MAX_ATTEMPTS}）...`, 'warn');
+            redirectedTab = await waitForCustomCheckoutPayPalRedirect(tabId);
+          } else {
+            throw error;
+          }
+        }
+        if (redirectedTab) {
+          break;
+        }
+        lastSubmitError = `提交后 ${Math.round(HOSTED_CHECKOUT_CUSTOM_PAYPAL_REDIRECT_TIMEOUT_MS / 1000)} 秒内未跳转到 PayPal`;
+        await addLog(`步骤 6：${lastSubmitError}，将重试提交。`, 'warn');
+      }
+
+      if (!redirectedTab) {
+        throw new Error(`步骤 6：custom checkout 多次点击订阅后仍未跳转到 PayPal。${lastSubmitError}`);
+      }
+
+      return {
+        transitioned: true,
+        url: String(redirectedTab?.url || '').trim(),
+        guestProfile,
+      };
+    }
+
+    async function runHostedCheckoutOpenAiFlow(tabId, guestProfile, runtimeConfig = {}) {
+      await addLog('步骤 6：等待浏览器真正跳转到 Stripe 托管收银台页面...', 'info');
+      await waitForUrlMatch(
+        tabId,
+        (url) => {
+          const u = String(url || '').toLowerCase();
+          return u.includes('pay.openai.com')
+            || u.includes('checkout.stripe.com')
+            || (u.includes('chatgpt.com') && u.includes('/checkout/'));
+        },
+        15000,
+        500
+      );
+
+      await ensureContentScriptReadyOnTabUntilStopped(PLUS_CHECKOUT_SOURCE, tabId, {
+        inject: PLUS_CHECKOUT_INJECT_FILES,
+        injectSource: PLUS_CHECKOUT_SOURCE,
+        logMessage: '步骤 6：hosted checkout 页面仍在加载，等待脚本就绪...',
+      });
+      const currentTab = await chrome?.tabs?.get?.(tabId).catch(() => null);
+      const currentUrl = String(currentTab?.url || '').trim();
+      if (isCustomChatGptCheckoutUrl(currentUrl)) {
+        return runHostedCheckoutCustomChatGptFlow(tabId, guestProfile);
+      }
+      const registrationEmail = String(guestProfile?.email || '').trim();
+      await addLog(
+        registrationEmail
+          ? `步骤 6：hosted checkout 联系邮箱准备使用 ${registrationEmail}。`
+          : '步骤 6：当前没有可用注册邮箱，hosted checkout 联系邮箱自动填写将跳过。',
+        registrationEmail ? 'info' : 'warn'
+      );
+      await addLog('步骤 6：hosted checkout 已打开，正在按油猴脚本顺序自动切换 PayPal、填写地址并提交...', 'info');
+      const initialResult = await sendTabMessageUntilStopped(tabId, PLUS_CHECKOUT_SOURCE, {
+        type: 'RUN_HOSTED_OPENAI_CHECKOUT_STEP',
+        source: 'background',
+        payload: {
+          email: registrationEmail,
+          address: guestProfile.address,
+        },
+      });
+      if (initialResult?.error) {
+        throw new Error(initialResult.error);
+      }
+      if (initialResult?.emailFillResult) {
+        await addLog(`步骤 6：hosted checkout 联系邮箱处理结果：${JSON.stringify({
+          contactEmail: initialResult?.contactEmail || registrationEmail || '',
+          found: Boolean(initialResult.emailFillResult.found),
+          filled: Boolean(initialResult.emailFillResult.filled),
+          alreadyFilled: Boolean(initialResult.emailFillResult.alreadyFilled),
+          skipped: Boolean(initialResult.emailFillResult.skipped),
+          reason: String(initialResult.emailFillResult.reason || ''),
+          value: String(initialResult.emailFillResult.value || ''),
+        })}`, 'info');
+      }
+
+      const startedAt = Date.now();
+      let verificationSubmitted = false;
+      let hostedOpenAiAddressRetries = 0;
+      let hostedOpenAiCardDeclinedRetries = 0;
+      while (Date.now() - startedAt < HOSTED_CHECKOUT_TRANSITION_TIMEOUT_MS) {
+        throwIfStopped();
+        const tab = await chrome?.tabs?.get?.(tabId).catch(() => null);
+        if (!tab) {
+          throw new Error('步骤 6：hosted checkout 标签页已关闭。');
+        }
+        const currentUrl = String(tab.url || '').trim();
+        if (isPayPalUrl(currentUrl) || isPaymentsSuccessUrl(currentUrl)) {
+          return {
+            transitioned: true,
+            url: currentUrl,
+            guestProfile,
+          };
+        }
+
+        const state = await sendTabMessageUntilStopped(tabId, PLUS_CHECKOUT_SOURCE, {
+          type: 'PLUS_CHECKOUT_GET_STATE',
+          source: 'background',
+          payload: {},
+        });
+        if (state?.error) {
+          throw new Error(state.error);
+        }
+        if (state?.hostedCardFallback) {
+          throw new Error(
+            `${HOSTED_CHECKOUT_CARD_FALLBACK_ERROR_PREFIX}步骤 6：hosted checkout 落到银行卡分支，未跳转到 PayPal。${String(state?.hostedCardFallbackReason || '').trim() || '页面仅展示银行卡支付。'}`
+          );
+        }
+        if (isHostedCheckoutOpenAiCardDeclinedState(state)) {
+          if (runtimeConfig?.hostedCheckoutCardDeclinedRetryEnabled === false) {
+            throw new Error(
+              `${HOSTED_CHECKOUT_CARD_DECLINED_ERROR_PREFIX}步骤 6：hosted checkout 检测到银行卡被拒绝，且当前已关闭“拒卡重试”：${state.hostedCardDeclinedErrorMessage || '请尝试另一张卡。'}`
+            );
+          }
+          if (hostedOpenAiCardDeclinedRetries >= HOSTED_CHECKOUT_OPENAI_ADDRESS_RETRY_MAX_ATTEMPTS) {
+            throw new Error(
+              `${HOSTED_CHECKOUT_CARD_DECLINED_ERROR_PREFIX}步骤 6：hosted checkout 连续出现银行卡被拒绝 ${HOSTED_CHECKOUT_OPENAI_ADDRESS_RETRY_MAX_ATTEMPTS} 次：${state.hostedCardDeclinedErrorMessage || '请尝试另一张卡。'}`
+            );
+          }
+          hostedOpenAiCardDeclinedRetries += 1;
+          verificationSubmitted = false;
+          const retryAddress = await fetchHostedCheckoutAddress({
+            countryCode: guestProfile?.address?.countryCode,
+          });
+          guestProfile = {
+            ...guestProfile,
+            address: retryAddress,
+          };
+          await addLog(
+            `步骤 6：hosted checkout 返回“银行卡被拒绝”，正在更换地址后重新填写（${hostedOpenAiCardDeclinedRetries}/${HOSTED_CHECKOUT_OPENAI_ADDRESS_RETRY_MAX_ATTEMPTS}）。错误：${state.hostedCardDeclinedErrorMessage || '请尝试另一张卡。'}`,
+            'warn'
+          );
+          await addLog(`步骤 6：hosted checkout 银行卡拒绝后的重填地址：${JSON.stringify(retryAddress)}`, 'info');
+          const retryResult = await sendTabMessageUntilStopped(tabId, PLUS_CHECKOUT_SOURCE, {
+            type: 'RUN_HOSTED_OPENAI_CHECKOUT_STEP',
+            source: 'background',
+            payload: {
+              email: registrationEmail,
+              address: guestProfile.address,
+            },
+          });
+          if (retryResult?.error) {
+            throw new Error(retryResult.error);
+          }
+          await sleepWithStop(1000);
+          continue;
+        }
+        if (isHostedCheckoutOpenAiAddressErrorState(state)) {
+          if (runtimeConfig?.hostedCheckoutCardDeclinedRetryEnabled === false) {
+            throw new Error(
+              `步骤 6：hosted checkout 检测到地址校验失败，且当前已关闭“拒卡重试”：${state.hostedAddressErrorMessage || '地址无法用于自动计算税费'}`
+            );
+          }
+          if (hostedOpenAiAddressRetries >= HOSTED_CHECKOUT_OPENAI_ADDRESS_RETRY_MAX_ATTEMPTS) {
+            throw new Error(`步骤 6：hosted checkout 地址校验连续失败 ${HOSTED_CHECKOUT_OPENAI_ADDRESS_RETRY_MAX_ATTEMPTS} 次：${state.hostedAddressErrorMessage || '地址无法用于自动计算税费'}`);
+          }
+          hostedOpenAiAddressRetries += 1;
+          verificationSubmitted = false;
+          const retryAddress = await fetchHostedCheckoutAddress({
+            countryCode: guestProfile?.address?.countryCode,
+          });
+          guestProfile = {
+            ...guestProfile,
+            address: retryAddress,
+          };
+          await addLog(
+            `步骤 6：hosted checkout 地址被拒绝，正在更换地址后重新填写（${hostedOpenAiAddressRetries}/${HOSTED_CHECKOUT_OPENAI_ADDRESS_RETRY_MAX_ATTEMPTS}）。错误：${state.hostedAddressErrorMessage || '地址无法用于自动计算税费'}`,
+            'warn'
+          );
+          await addLog(`步骤 6：hosted checkout 重填地址：${JSON.stringify(retryAddress)}`, 'info');
+          const retryResult = await sendTabMessageUntilStopped(tabId, PLUS_CHECKOUT_SOURCE, {
+            type: 'RUN_HOSTED_OPENAI_CHECKOUT_STEP',
+            source: 'background',
+            payload: {
+              email: registrationEmail,
+              address: guestProfile.address,
+            },
+          });
+          if (retryResult?.error) {
+            throw new Error(retryResult.error);
+          }
+          await sleepWithStop(1000);
+          continue;
+        }
+        if (state?.hostedVerificationVisible && !verificationSubmitted) {
+          await addLog('步骤 6：检测到 hosted checkout OpenAI 验证码弹窗，正在获取并填写验证码...', 'info');
+          const verificationCode = await pollHostedCheckoutVerificationCode();
+          const verifyResult = await sendTabMessageUntilStopped(tabId, PLUS_CHECKOUT_SOURCE, {
+            type: 'RUN_HOSTED_OPENAI_CHECKOUT_STEP',
+            source: 'background',
+            payload: {
+              verificationCode,
+            },
+          });
+          if (verifyResult?.error) {
+            throw new Error(verifyResult.error);
+          }
+          verificationSubmitted = true;
+        }
+        await sleepWithStop(500);
+      }
+
+      throw new Error('步骤 6：hosted checkout OpenAI/Stripe 页面提交后长时间未跳转到 PayPal 或成功页。');
+    }
+
+    async function runHostedCheckoutPayPalStep(tabId, payload = {}) {
+      await waitForTabCompleteUntilStopped(tabId);
+      await sleepWithStop(1000);
+      await ensureContentScriptReadyOnTabUntilStopped(PAYPAL_SOURCE, tabId, {
+        inject: PAYPAL_INJECT_FILES,
+        injectSource: PAYPAL_SOURCE,
+        logMessage: '步骤 6：PayPal hosted checkout 页面仍在加载，等待脚本就绪...',
+      });
+      const result = await sendTabMessageUntilStopped(tabId, PAYPAL_SOURCE, {
+        type: 'PAYPAL_RUN_HOSTED_CHECKOUT_STEP',
+        source: 'background',
+        payload,
+      });
+      throwIfStopped();
+      if (result?.error) {
+        throw new Error(result.error);
+      }
+      return result || {};
+    }
+
+    async function getHostedCheckoutPayPalState(tabId) {
+      await ensureContentScriptReadyOnTabUntilStopped(PAYPAL_SOURCE, tabId, {
+        inject: PAYPAL_INJECT_FILES,
+        injectSource: PAYPAL_SOURCE,
+        logMessage: '步骤 6：正在等待 PayPal hosted checkout 页面脚本就绪...',
+      });
+      const result = await sendTabMessageUntilStopped(tabId, PAYPAL_SOURCE, {
+        type: 'PAYPAL_HOSTED_GET_STATE',
+        source: 'background',
+        payload: {},
+      });
+      if (result?.error) {
+        throw new Error(result.error);
+      }
+      return result || {};
+    }
+
+    async function waitForHostedCheckoutPendingReturnResolution(tabId) {
+      await addLog('步骤 6：hosted checkout 已回流到 pending 页面，先等待状态落稳并检查 PLUS 是否已生效...', 'warn');
+      await sleepWithStop(HOSTED_CHECKOUT_PENDING_RETURN_SESSION_SETTLE_MS);
+      try {
+        const inspection = await refreshChatGptSessionAndInspectPlusActivation();
+        if (inspection?.active) {
+          await addLog(
+            `步骤 6：pending 页面未自动跳到支付成功页，但刷新 ChatGPT 会话后检测到 PLUS 已生效（planType=${inspection.planType || 'unknown'}），继续下一步。`,
+            'ok'
+          );
+          return {
+            resolved: true,
+            via: 'session_activation',
+            planType: inspection.planType || '',
+            tabId: inspection.tabId,
+          };
+        }
+        await addLog(
+          `步骤 6：pending 页面落稳后暂未检测到 PLUS 生效${inspection?.planType ? `（planType=${inspection.planType}）` : ''}，继续等待支付成功页回跳...`,
+          'info'
+        );
+      } catch (error) {
+        await addLog(
+          `步骤 6：pending 页面会话复核失败，继续等待支付成功页回跳。原因：${error?.message || String(error || '未知错误')}`,
+          'warn'
+        );
+      }
+
+      const successTab = await waitForUrlMatch(
+        tabId,
+        (url) => isPaymentsSuccessUrl(url) || isHostedCheckoutPendingUnexpectedChatGptReturnUrl(url),
+        HOSTED_CHECKOUT_SUCCESS_WAIT_TIMEOUT_MS,
+        500
+      );
+      const finalUrl = String(successTab?.url || '').trim();
+      if (isHostedCheckoutPendingUnexpectedChatGptReturnUrl(finalUrl)) {
+        try {
+          const inspection = await refreshChatGptSessionAndInspectPlusActivation();
+          if (inspection?.active) {
+            await addLog(
+              `步骤 6：pending 页面回流到了 ChatGPT 非成功页（${finalUrl}），但复核后检测到 PLUS 已生效（planType=${inspection.planType || 'unknown'}），继续下一步。`,
+              'ok'
+            );
+            return {
+              resolved: true,
+              via: 'session_activation_after_unexpected_chatgpt_return',
+              planType: inspection.planType || '',
+              tabId: inspection.tabId,
+            };
+          }
+        } catch (error) {
+          await addLog(
+            `步骤 6：pending 页面回流到 ChatGPT 非成功页后的 PLUS 复核失败。原因：${error?.message || String(error || '未知错误')}`,
+            'warn'
+          );
+        }
+        throw new Error(
+          `步骤 6：hosted checkout pending 页面回流到了 ChatGPT 非成功页（${finalUrl}），且未检测到 PLUS 生效，已停止当前支付链路，避免在同一支付结果内循环。`
+        );
+      }
+      if (!successTab?.url || !isPaymentsSuccessUrl(successTab.url)) {
+        throw new Error('步骤 6：hosted checkout 已离开 PayPal，但 pending 页面长时间未确认成功，也未检测到 PLUS 生效。');
+      }
+      await addLog('步骤 6：hosted checkout 已从 pending 页面回到 ChatGPT 支付成功页，等待扩展继续后续 OAuth 流程。', 'ok');
+      return {
+        resolved: true,
+        via: 'success_url',
+        tabId,
+      };
+    }
+
+    async function waitForHostedCheckoutPaymentsSuccess(tabId, completionPayload = {}, options = {}) {
+      const currentTab = await chrome?.tabs?.get?.(tabId).catch(() => null);
+      const currentUrl = String(currentTab?.url || '').trim();
+      if (isHostedCheckoutCompletionPageUrl(currentUrl)) {
+        const completionResolution = await tryResolveHostedCheckoutCompletionPageByPlusActivation(
+          tabId,
+          currentUrl,
+          completionPayload,
+          options,
+        );
+        if (completionResolution?.resolvedByPlusActivation) {
+          return completionResolution;
+        }
+        throw new Error('步骤 6：已进入 OpenAI 支付完成页，但复核后仍未检测到 PLUS 生效。');
+      }
+      const successTab = await waitForUrlMatch(
+        tabId,
+        (url) => isPaymentsSuccessUrl(url) || isHostedCheckoutPendingReturnUrl(url) || isHostedCheckoutCompletionPageUrl(url),
+        HOSTED_CHECKOUT_SUCCESS_WAIT_TIMEOUT_MS,
+        500
+      );
+      const matchedUrl = String(successTab?.url || '').trim();
+      if (isHostedCheckoutCompletionPageUrl(matchedUrl)) {
+        const completionResolution = await tryResolveHostedCheckoutCompletionPageByPlusActivation(
+          tabId,
+          matchedUrl,
+          completionPayload,
+          options,
+        );
+        if (completionResolution?.resolvedByPlusActivation) {
+          return completionResolution;
+        }
+        throw new Error('步骤 6：已进入 OpenAI 支付完成页，但复核后仍未检测到 PLUS 生效。');
+      }
+      if (isHostedCheckoutPendingReturnUrl(matchedUrl)) {
+        return waitForHostedCheckoutPendingReturnResolution(tabId);
+      }
+      if (!matchedUrl || !isPaymentsSuccessUrl(matchedUrl)) {
+        throw new Error('步骤 6：hosted checkout 已离开 PayPal，但长时间未回到 ChatGPT 支付成功页。');
+      }
+      await addLog('步骤 6：hosted checkout 已回到 ChatGPT 支付成功页，等待扩展继续后续 OAuth 流程。', 'ok');
+      return successTab;
+    }
+
+    async function runHostedCheckoutPayPalFlow(tabId, guestProfile, completionPayload = {}) {
+      const startedAt = Date.now();
+      let hostedVerificationResendAttempts = 0;
+      let hostedVerificationSubmitted = false;
+      let loggedWaitingForHostedVerificationResult = false;
+      let hostedVerificationLastSubmittedAt = 0;
+      let hostedGuestCardErrorRetries = 0;
+      let hostedGuestCardErrorRetrySettlingUntil = 0;
+      let hostedHermesStalledObservationCount = 0;
+      let hostedHermesStalledSignature = '';
+      let loggedHostedHermesRedirecting = false;
+      const hostedVerificationAttemptedCodes = new Set();
+      while (Date.now() - startedAt < HOSTED_CHECKOUT_PAYPAL_LOOP_TIMEOUT_MS) {
+        throwIfStopped();
+        const tab = await chrome?.tabs?.get?.(tabId).catch(() => null);
+        if (!tab) {
+          throw new Error('步骤 6：hosted checkout PayPal 标签页已关闭。');
+        }
+        const currentUrl = String(tab.url || '').trim();
+        if (!currentUrl) {
+          await sleepWithStop(500);
+          continue;
+        }
+        if (isPaymentsSuccessUrl(currentUrl)) {
+          await addLog('步骤 6：hosted checkout 已直接进入 ChatGPT 支付成功页。', 'ok');
+          return;
+        }
+        if (!isPayPalUrl(currentUrl)) {
+          if (isHostedCheckoutCompletionPageUrl(currentUrl)) {
+            const completionResolution = await tryResolveHostedCheckoutCompletionPageByPlusActivation(
+              tabId,
+              currentUrl,
+              completionPayload,
+              { sourceLabel: 'hosted checkout', allowDeferredCompletionOnSucceededRedirect: false },
+            );
+            if (completionResolution?.resolvedByPlusActivation) {
+              return completionResolution;
+            }
+          }
+          await addLog(`步骤 6：hosted checkout 已离开 PayPal（${currentUrl}），继续等待 ChatGPT 支付成功页...`, 'info');
+          await waitForHostedCheckoutPaymentsSuccess(tabId, completionPayload, { sourceLabel: 'hosted checkout' });
+          return;
+        }
+
+        const pageState = await getHostedCheckoutPayPalState(tabId);
+        if (pageState.hostedPhoneRejected || pageState.hostedStage === 'phone_rejected') {
+          const hostedPhoneErrorText = String(
+            pageState.hostedPhoneErrorText
+            || 'PayPal hosted checkout 拒绝当前电话号码，请尝试其他电话号码。'
+          ).trim();
+          await addLog(`步骤 6：检测到 PayPal hosted checkout 电话号码被拒绝：${hostedPhoneErrorText}`, 'warn');
+          await runHostedCheckoutPayPalStep(tabId, {
+            dismissPhoneError: true,
+          });
+          const nextRuntimeConfig = await rotateHostedCheckoutSmsEntryAfterPhoneReject(hostedPhoneErrorText);
+          await addLog('步骤 6：PayPal hosted checkout 号码被拒绝，已标记当前号码不可用并切换下一个号码。', 'warn');
+          hostedVerificationSubmitted = false;
+          loggedWaitingForHostedVerificationResult = false;
+          await sleepWithStop(500);
+          await runHostedCheckoutPayPalStep(tabId, {
+            ...guestProfile,
+            phone: String(nextRuntimeConfig?.phone || guestProfile.phone || '').trim(),
+          });
+          await sleepWithStop(1500);
+          continue;
+        }
+
+        if (pageState.hostedStage === 'blocked' || pageState.hostedBlocked) {
+          const blockedMessage = String(
+            pageState.hostedBlockedMessage
+            || 'PayPal 安全挑战加载失败，当前页面已被风控拦截。'
+          ).trim();
+          await addLog(`步骤 6：PayPal hosted checkout 检测到 blocked 页面，停止当前 PayPal 链路并回到 plus-checkout-create 重建 Checkout。原因：${blockedMessage}`, 'warn');
+          throw new Error(`${HOSTED_CHECKOUT_PAYPAL_BLOCKED_ERROR_PREFIX}${blockedMessage}`);
+        }
+        if (pageState.hostedStage === 'generic_error' || pageState.hostedGenericError) {
+          return requestHostedCheckoutGenericErrorChoice(tabId, pageState, completionPayload);
+        }
+        const hermesAssessment = assessHostedHermesRecoveryState(currentUrl, pageState, {
+          count: hostedHermesStalledObservationCount,
+          signature: hostedHermesStalledSignature,
+        });
+        if (hermesAssessment.isHermes) {
+          if (hermesAssessment.shouldWait || hermesAssessment.nextCount === 0) {
+            hostedHermesStalledObservationCount = 0;
+            hostedHermesStalledSignature = '';
+          } else {
+            hostedHermesStalledObservationCount = hermesAssessment.nextCount;
+            hostedHermesStalledSignature = hermesAssessment.signature;
+          }
+        } else {
+          hostedHermesStalledObservationCount = 0;
+          hostedHermesStalledSignature = '';
+        }
+
+        if (pageState.hostedStage === 'redirecting' || pageState.hostedRedirecting) {
+          hostedVerificationSubmitted = false;
+          loggedWaitingForHostedVerificationResult = false;
+          if (!loggedHostedHermesRedirecting) {
+            await addLog(
+              `步骤 6：PayPal Hermes 正在保存信息并回跳商户页，继续耐心等待 URL 变化。${pageState.hostedRedirectingMessage ? ` 文案：${pageState.hostedRedirectingMessage}` : ''}`,
+              'info'
+            );
+            loggedHostedHermesRedirecting = true;
+          }
+          await sleepWithStop(1000);
+          continue;
+        }
+        loggedHostedHermesRedirecting = false;
+
+        if (pageState.hostedGuestPhoneError) {
+          const phoneErrorMessage = String(
+            pageState.hostedGuestPhoneErrorMessage
+            || 'We’re unable to complete your request. Try a different phone number.'
+          ).trim();
+          const runtimeConfig = await getHostedCheckoutRuntimeConfig({
+            ensureCurrentSmsEntry: false,
+          });
+          if (
+            runtimeConfig?.hostedCheckoutUsesSmsPool
+            && runtimeConfig?.hostedCheckoutCurrentSmsEntry?.key
+            && runtimeConfig?.hostedCheckoutSmsPoolAutoDisableEnabled
+          ) {
+            const disableReason = `PayPal 提示号码不可用：${phoneErrorMessage}`;
+            const disableResult = await disableHostedCheckoutSmsPoolEntry(
+              runtimeConfig.hostedCheckoutCurrentSmsEntry,
+              disableReason,
+              { failureCount: HOSTED_CHECKOUT_SMS_POOL_DISABLE_THRESHOLD }
+            );
+            await addLog(`步骤 6：PayPal 接码池号码 ${runtimeConfig.hostedCheckoutCurrentSmsEntry.phone} 已立即自动禁用。原因：${disableReason}`, 'warn');
+            if (!disableResult?.nextEntry?.phone) {
+              throw new Error(`步骤 6：PayPal 提示当前号码不可用，且接码池已无其他启用号码：${phoneErrorMessage}`);
+            }
+            await addLog(`步骤 6：PayPal 接码池已切换到下一个启用号码 ${disableResult.nextEntry.phone}，准备重新填写 guest checkout。`, 'info');
+            guestProfile = {
+              ...guestProfile,
+              phone: String(disableResult.nextEntry.phone || '').trim(),
+            };
+            hostedVerificationSubmitted = false;
+            hostedVerificationLastSubmittedAt = 0;
+            loggedWaitingForHostedVerificationResult = false;
+            hostedVerificationAttemptedCodes.clear();
+            await runHostedCheckoutPayPalStep(tabId, {
+              ...guestProfile,
+              phone: guestProfile.phone,
+            });
+            await sleepWithStop(1500);
+            continue;
+          }
+          throw new Error(`步骤 6：PayPal 提示当前号码不可用：${phoneErrorMessage}`);
+        }
+
+        if (pageState.hostedGuestCardError) {
+          if (Date.now() < hostedGuestCardErrorRetrySettlingUntil) {
+            await sleepWithStop(1000);
+            continue;
+          }
+          if (hostedGuestCardErrorRetries >= HOSTED_CHECKOUT_CARD_ERROR_RETRY_MAX_ATTEMPTS) {
+            throw new Error(`步骤 6：PayPal 提示无法添加此卡，已连续更换资料重填 ${HOSTED_CHECKOUT_CARD_ERROR_RETRY_MAX_ATTEMPTS} 次仍失败：${pageState.hostedGuestCardErrorMessage || '未知卡片错误'}`);
+          }
+          hostedGuestCardErrorRetries += 1;
+          hostedVerificationSubmitted = false;
+          loggedWaitingForHostedVerificationResult = false;
+          const runtimeConfig = await getHostedCheckoutRuntimeConfig({
+            ensureCurrentSmsEntry: true,
+          });
+          const retryAddress = await fetchHostedCheckoutAddress({
+            countryCode: guestProfile?.address?.countryCode,
+          });
+          guestProfile = buildHostedCheckoutGuestProfile(retryAddress, {
+            ...runtimeConfig,
+            phone: String(runtimeConfig?.phone || guestProfile.phone || '').trim(),
+          });
+          await addLog(
+            `步骤 6：PayPal 提示无法添加此卡，正在更换资料后重新填写（${hostedGuestCardErrorRetries}/${HOSTED_CHECKOUT_CARD_ERROR_RETRY_MAX_ATTEMPTS}）。错误：${pageState.hostedGuestCardErrorMessage || '未知卡片错误'}`,
+            'warn'
+          );
+          await addLog(`步骤 6：PayPal 重填资料：${JSON.stringify({
+            phone: guestProfile.phone || '',
+            address: guestProfile.address || {},
+            cardTail: String(guestProfile.cardNumber || '').slice(-4),
+          })}`, 'info');
+          await runHostedCheckoutPayPalStep(tabId, {
+            ...guestProfile,
+          });
+          hostedGuestCardErrorRetrySettlingUntil = Date.now() + 8000;
+          await sleepWithStop(1500);
+          continue;
+        }
+
+        if (
+          pageState.hostedStage === 'verification'
+          && pageState.verificationInputsVisible
+          && (pageState.hostedVerificationInvalidCode || pageState.hostedVerificationBlankError)
+        ) {
+          if (
+            hostedVerificationSubmitted
+            && hostedVerificationLastSubmittedAt > 0
+            && Date.now() - hostedVerificationLastSubmittedAt < HOSTED_CHECKOUT_VERIFICATION_RESULT_SETTLE_MS
+          ) {
+            await sleepWithStop(1000);
+            continue;
+          }
+          const runtimeConfig = await getHostedCheckoutRuntimeConfig({
+            ensureCurrentSmsEntry: true,
+          });
+          const maxResendAttempts = normalizeHostedCheckoutVerificationResendMaxAttempts(
+            runtimeConfig?.verificationResendMaxAttempts
+          );
+          const subsequentWaitSeconds = normalizeHostedCheckoutResendWaitSeconds(
+            runtimeConfig?.subsequentResendWaitSeconds,
+            HOSTED_CHECKOUT_SUBSEQUENT_RESEND_WAIT_DEFAULT_SECONDS
+          );
+          if (hostedVerificationResendAttempts >= maxResendAttempts) {
+            const error = buildHostedCheckoutVerificationResendLimitError();
+            await addLog(error.message.replace(HOSTED_CHECKOUT_VERIFICATION_RESEND_LIMIT_PREFIX, ''), 'error');
+            throw error;
+          }
+          const resendReason = pageState.hostedVerificationInvalidCode
+            ? 'PayPal 提示验证码错误'
+            : 'PayPal 验证码提交后页面出现空错误态';
+          if (pageState.hostedVerificationBlankError) {
+            await addLog('步骤 6：PayPal 验证码页出现空错误提示，虽然没有返回具体文案，也按失败处理并触发 Resend。', 'warn');
+          }
+          hostedVerificationResendAttempts += 1;
+          const refillResult = await resendHostedCheckoutVerificationCodeAndRefill(
+            tabId,
+            guestProfile,
+            hostedVerificationResendAttempts,
+            maxResendAttempts,
+            subsequentWaitSeconds,
+            Array.from(hostedVerificationAttemptedCodes),
+            resendReason
+          );
+          if (refillResult?.verificationCode) {
+            hostedVerificationAttemptedCodes.add(String(refillResult.verificationCode));
+          }
+          hostedVerificationSubmitted = true;
+          hostedVerificationLastSubmittedAt = Date.now();
+          loggedWaitingForHostedVerificationResult = false;
+          await sleepWithStop(1000);
+          continue;
+        }
+
+        if (pageState.hostedStage === 'verification' && pageState.verificationInputsVisible) {
+          if (hostedVerificationSubmitted) {
+            if (!loggedWaitingForHostedVerificationResult) {
+              loggedWaitingForHostedVerificationResult = true;
+              await addLog('步骤 6：PayPal 验证码已提交，正在等待校验结果或错误提示...', 'info');
+            }
+            await sleepWithStop(1000);
+            continue;
+          }
+          await addLog('步骤 6：检测到 PayPal hosted checkout 验证码弹窗，正在获取并填写验证码...', 'info');
+          const verificationResult = await acquireHostedCheckoutPayPalVerificationCode(
+            tabId,
+            hostedVerificationResendAttempts
+          );
+          hostedVerificationResendAttempts = Math.max(
+            hostedVerificationResendAttempts,
+            Number(verificationResult?.resendAttemptsUsed) || 0
+          );
+          await runHostedCheckoutPayPalStep(tabId, {
+            ...guestProfile,
+            verificationCode: verificationResult.code,
+          });
+          await addLog(`步骤 6：已向 PayPal 授权页发送验证码填充指令：${String(verificationResult.code || '').trim()}。`, 'info');
+          hostedVerificationAttemptedCodes.add(String(verificationResult.code));
+          hostedVerificationSubmitted = true;
+          hostedVerificationLastSubmittedAt = Date.now();
+          loggedWaitingForHostedVerificationResult = false;
+          await sleepWithStop(1000);
+          continue;
+        }
+
+        if (pageState.hostedStage === 'account_create_email' || pageState.hostedAccountCreateEmail) {
+          hostedVerificationSubmitted = false;
+          loggedWaitingForHostedVerificationResult = false;
+          await addLog('步骤 6：检测到 PayPal 创建账户邮箱页，正在填写邮箱并继续付款...', 'info');
+          await runHostedCheckoutPayPalStep(tabId, {
+            ...guestProfile,
+          });
+          await sleepWithStop(1000);
+          continue;
+        }
+
+        if (pageState.hostedStage === 'pay_login') {
+          hostedVerificationSubmitted = false;
+          loggedWaitingForHostedVerificationResult = false;
+          await addLog('步骤 6：检测到 PayPal hosted checkout 登录页，正在填写邮箱并继续...', 'info');
+          await runHostedCheckoutPayPalStep(tabId, {
+            ...guestProfile,
+            email: guestProfile.email,
+          });
+          await sleepWithStop(1000);
+          continue;
+        }
+
+        if (pageState.hostedStage === 'guest_checkout') {
+          if (
+            hostedVerificationSubmitted
+            && hostedVerificationLastSubmittedAt > 0
+            && Date.now() - hostedVerificationLastSubmittedAt < HOSTED_CHECKOUT_VERIFICATION_RESULT_SETTLE_MS
+          ) {
+            if (!loggedWaitingForHostedVerificationResult) {
+              loggedWaitingForHostedVerificationResult = true;
+              await addLog('步骤 6：PayPal 验证码刚提交完成，当前 guest checkout 页面可能仍在回流，先等待校验结果再决定是否重填卡资料...', 'info');
+            }
+            await sleepWithStop(1000);
+            continue;
+          }
+          hostedVerificationSubmitted = false;
+          hostedVerificationLastSubmittedAt = 0;
+          loggedWaitingForHostedVerificationResult = false;
+          const runtimeConfig = await getHostedCheckoutRuntimeConfig({
+            ensureCurrentSmsEntry: true,
+          });
+          const configuredPhone = String(runtimeConfig?.phone || '').trim();
+          await addLog(`步骤 6：当前 hosted checkout 电话配置为 ${configuredPhone || '(空，将回退默认值)'}。`, 'info');
+          await addLog(`步骤 6：发送到 PayPal guest checkout 的 payload：${JSON.stringify({
+            phone: String(runtimeConfig?.phone || guestProfile.phone || '').trim(),
+            address: guestProfile.address || {},
+          })}`, 'info');
+          await addLog('步骤 6：检测到 PayPal hosted checkout 卡支付页，正在填写卡资料并提交...', 'info');
+          await runHostedCheckoutPayPalStep(tabId, {
+            ...guestProfile,
+            phone: String(runtimeConfig?.phone || guestProfile.phone || '').trim(),
+          });
+          await sleepWithStop(1500);
+          continue;
+        }
+
+        if (pageState.hostedStage === 'wallet_modal' || pageState.hostedWalletModalVisible) {
+          hostedVerificationSubmitted = false;
+          loggedWaitingForHostedVerificationResult = false;
+          await addLog('步骤 6：验证码后出现 PayPal 新支付方式弹窗，先关闭弹窗再回到同意页...', 'info');
+          await runHostedCheckoutPayPalStep(tabId, {
+            ...guestProfile,
+          });
+          await sleepWithStop(1000);
+          continue;
+        }
+
+        if (pageState.hostedStage === 'review_consent') {
+          hostedVerificationSubmitted = false;
+          loggedWaitingForHostedVerificationResult = false;
+          await addLog('步骤 6：检测到 PayPal hosted checkout 账单确认页，正在点击继续...', 'info');
+          await runHostedCheckoutPayPalStep(tabId, {
+            ...guestProfile,
+          });
+          await sleepWithStop(1000);
+          continue;
+        }
+
+        if (pageState.hostedStage === 'approval') {
+          if (hermesAssessment.shouldRecover) {
+            await addLog(
+              `步骤 6：PayPal 普通授权页已连续 ${hermesAssessment.nextCount} 轮无进展，准备关闭旧页并重建 Checkout。`,
+              'warn'
+            );
+            return requestHostedCheckoutApprovalBranchRecovery(tabId, 'PayPal 普通授权页', completionPayload);
+          }
+          await sleepWithStop(1000);
+          continue;
+        }
+
+        if (
+          hermesAssessment.isHermes
+          && hermesAssessment.stage === 'unknown'
+          && hermesAssessment.shouldRecover
+        ) {
+          await addLog(
+            `步骤 6：PayPal Hermes 复核页已连续 ${hermesAssessment.nextCount} 轮无进展（stage=unknown），准备关闭旧页并重建 Checkout。`,
+            'warn'
+          );
+          return requestHostedCheckoutApprovalBranchRecovery(tabId, 'PayPal Hermes 复核页', completionPayload);
+        }
+
+        await sleepWithStop(1000);
+      }
+      throw new Error('步骤 6：hosted checkout PayPal 自动化超时，长时间未完成支付链路。');
+    }
+
+    async function runHostedCheckoutAutomation(tabId, completionPayload = {}) {
+      const runtimeConfig = await getHostedCheckoutRuntimeConfig({
+        ensureCurrentSmsEntry: true,
+      });
+      const address = await fetchHostedCheckoutAddress({
+        countryCode: getHostedCheckoutAddressCountryCodeForMode(runtimeConfig?.plusCheckoutMode),
+      });
+      await addLog(`步骤 6：hosted checkout 配置快照：${JSON.stringify(runtimeConfig?.diagnostics || {})}`, 'info');
+      await addLog(`步骤 6：hosted checkout 初始电话配置为 ${runtimeConfig.phone || '(空)'}。`, 'info');
+      await addLog(`步骤 6：hosted checkout 地址数据：${JSON.stringify(address)}`, 'info');
+      let guestProfile = buildHostedCheckoutGuestProfile(address, runtimeConfig);
+      const openAiFlowResult = await runHostedCheckoutOpenAiFlow(tabId, guestProfile, runtimeConfig);
+      if (openAiFlowResult?.guestProfile) {
+        guestProfile = openAiFlowResult.guestProfile;
+      }
+
+      const transitionTab = await waitForUrlMatch(
+        tabId,
+        (url) => isPayPalUrl(url) || isPaymentsSuccessUrl(url),
+        HOSTED_CHECKOUT_TRANSITION_TIMEOUT_MS,
+        500
+      );
+      const transitionUrl = String(transitionTab?.url || '').trim();
+      if (!transitionUrl) {
+        throw new Error('步骤 6：hosted checkout 提交后长时间未跳转到 PayPal 或 ChatGPT 支付成功页。');
+      }
+      if (isPaymentsSuccessUrl(transitionUrl)) {
+        await addLog('步骤 6：hosted checkout 在提交后已直接进入 ChatGPT 支付成功页。', 'ok');
+        await refreshOAuthTimeoutWindowAfterHostedCheckoutSuccess();
+        await completePlusCheckoutCreate(completionPayload);
+        return;
+      }
+
+      await addLog('步骤 6：hosted checkout 已跳转到 PayPal，准备继续 guest/card 流自动化。', 'info');
+      const payPalFlowResult = await runHostedCheckoutPayPalFlow(tabId, guestProfile, completionPayload);
+      if (payPalFlowResult?.restarted || payPalFlowResult?.resolvedByPlusActivation || payPalFlowResult?.resolvedByAlreadyPaid) {
+        return;
+      }
+      await addLog('步骤 6：hosted checkout 支付链路已完成，准备进入下一步。', 'ok');
+      await refreshOAuthTimeoutWindowAfterHostedCheckoutSuccess();
+      await completePlusCheckoutCreate(completionPayload);
+    }
+
+    async function runPpBoomHostedCheckoutAutomation(tabId, completionPayload = {}) {
+      const runtimeConfig = await getHostedCheckoutRuntimeConfig({
+        ensureCurrentSmsEntry: true,
+      });
+      const address = await fetchHostedCheckoutAddress({
+        countryCode: getHostedCheckoutAddressCountryCodeForMode(runtimeConfig?.plusCheckoutMode),
+      });
+      await addLog(`步骤 6：PPBoom hosted checkout 配置快照：${JSON.stringify(runtimeConfig?.diagnostics || {})}`, 'info');
+      await addLog(`步骤 6：PPBoom hosted checkout 初始电话配置为 ${runtimeConfig.phone || '(空)'}。`, 'info');
+      await addLog(`步骤 6：PPBoom hosted checkout 地址数据：${JSON.stringify(address)}`, 'info');
+      const guestProfile = buildHostedCheckoutGuestProfile(address, runtimeConfig);
+
+      const currentTab = await chrome?.tabs?.get?.(tabId).catch(() => null);
+      const currentUrl = String(currentTab?.url || '').trim();
+      if (!currentUrl) {
+        throw new Error('步骤 6：PPBoom PayPal 标签页缺少有效 URL。');
+      }
+      if (isPaymentsSuccessUrl(currentUrl)) {
+        await addLog('步骤 6：PPBoom 已直接落到 ChatGPT 支付成功页。', 'ok');
+        await refreshOAuthTimeoutWindowAfterHostedCheckoutSuccess();
+        await completePlusCheckoutCreate(completionPayload);
+        return;
+      }
+      if (!isPayPalUrl(currentUrl)) {
+        throw new Error(`步骤 6：PPBoom 未落到 PayPal 页面，当前 URL：${currentUrl}`);
+      }
+
+      await addLog('步骤 6：PPBoom 已跳转到 PayPal，接入原本的 hosted checkout PayPal 自动化后半段。', 'info');
+      const payPalFlowResult = await runHostedCheckoutPayPalFlow(tabId, guestProfile, completionPayload);
+      if (payPalFlowResult?.restarted || payPalFlowResult?.resolvedByPlusActivation || payPalFlowResult?.resolvedByAlreadyPaid) {
+        return;
+      }
+      await addLog('步骤 6：PPBoom hosted checkout 支付链路已完成，准备进入下一步。', 'ok');
+      await refreshOAuthTimeoutWindowAfterHostedCheckoutSuccess();
+      await completePlusCheckoutCreate(completionPayload);
+    }
+
+    function startHostedCheckoutAutomation(tabId, completionPayload = {}) {
+      if (!enableHostedCheckoutAutomation) {
+        return;
+      }
+      void runHostedCheckoutAutomation(tabId, completionPayload)
+        .catch(async (error) => {
+          const message = error?.message || String(error || 'hosted checkout automation failed');
+          await maybeAutoDisableHostedCheckoutCurrentSmsEntry(error).catch(() => null);
+          if (isHostedCheckoutNonFreeTrialFailure(error)) {
+            const latestState = typeof getState === 'function'
+              ? await getState().catch(() => ({}))
+              : {};
+            const shouldRetryStep7Only = isSmsOauthCheckoutState(latestState);
+            const shouldRetryNonFreeTrial = Boolean(latestState?.autoRunRetryNonFreeTrial);
+            const stopReason = normalizeNonFreeTrialLogMessage(message, {
+              willRetry: shouldRetryNonFreeTrial || shouldRetryStep7Only,
+            });
+            const checkoutCreateStep = getCheckoutCreateDisplayStep(latestState);
+            await addLog(
+              shouldRetryStep7Only
+                ? `${stopReason} 先手机号注册 OAuth 将保留当前注册流程，直接回到第 ${checkoutCreateStep} 步重新创建 Checkout。`
+                : shouldRetryNonFreeTrial
+                ? `${stopReason} 无试用套餐自动重试已开启，将换新邮箱重走流程。`
+                : stopReason,
+              'warn'
+            );
+            if (shouldRetryStep7Only && typeof failNodeFromBackground === 'function') {
+              await failNodeFromBackground('plus-checkout-create', `PLUS_CHECKOUT_NON_FREE_TRIAL::${stopReason}`);
+              return;
+            }
+            if (shouldRetryNonFreeTrial && typeof failNodeFromBackground === 'function') {
+              await failNodeFromBackground('plus-checkout-create', `PLUS_CHECKOUT_NON_FREE_TRIAL::${stopReason}`);
+              return;
+            }
+            if (typeof requestStop === 'function') {
+              await requestStop({ logMessage: false });
+              return;
+            }
+          }
+          await addLog(`步骤 6：hosted checkout 自动化失败：${message}`, 'error');
+          if (typeof failNodeFromBackground === 'function') {
+            await failNodeFromBackground('plus-checkout-create', message);
+          }
+        })
+        .finally(async () => {
+          await clearHostedCheckoutCurrentSmsEntry();
+        });
+    }
+
+    function startPpBoomHostedCheckoutAutomation(tabId, completionPayload = {}) {
+      if (!enableHostedCheckoutAutomation) {
+        return;
+      }
+      void runPpBoomHostedCheckoutAutomation(tabId, completionPayload)
+        .catch(async (error) => {
+          const message = error?.message || String(error || 'ppboom hosted checkout automation failed');
+          await maybeAutoDisableHostedCheckoutCurrentSmsEntry(error).catch(() => null);
+          await addLog(`步骤 6：PPBoom hosted checkout 自动化失败：${message}`, 'error');
+          if (typeof failNodeFromBackground === 'function') {
+            await failNodeFromBackground('plus-checkout-create', message);
+          }
+        })
+        .finally(async () => {
+          await clearHostedCheckoutCurrentSmsEntry();
+        });
+    }
+
+    function normalizeHelperCountryCode(countryCode = '86') {
+      const digits = String(countryCode || '').replace(/\D/g, '');
+      return digits || '86';
+    }
+
+    function normalizeHelperPhoneNumber(phone = '', countryCode = '86') {
+      const cleaned = String(phone || '').replace(/\D/g, '');
+      const countryDigits = normalizeHelperCountryCode(countryCode);
+      if (countryDigits && cleaned.startsWith(countryDigits) && cleaned.length > countryDigits.length) {
+        return cleaned.slice(countryDigits.length);
+      }
+      return cleaned;
+    }
+
+    function normalizeGpcHelperPhoneMode(value = '') {
+      const rootScope = typeof self !== 'undefined' ? self : globalThis;
+      if (rootScope.GoPayUtils?.normalizeGpcHelperPhoneMode) {
+        return rootScope.GoPayUtils.normalizeGpcHelperPhoneMode(value);
+      }
+      const normalized = String(value || '').trim().toLowerCase();
+      return normalized === GPC_HELPER_PHONE_MODE_AUTO || normalized === 'builtin'
+        ? GPC_HELPER_PHONE_MODE_AUTO
+        : GPC_HELPER_PHONE_MODE_MANUAL;
+    }
+
+    function normalizeGpcOtpChannel(value = '') {
+      const rootScope = typeof self !== 'undefined' ? self : globalThis;
+      if (rootScope.GoPayUtils?.normalizeGpcOtpChannel) {
+        return rootScope.GoPayUtils.normalizeGpcOtpChannel(value);
+      }
+      return String(value || '').trim().toLowerCase() === 'sms' ? 'sms' : 'whatsapp';
+    }
+
+    function resolveGpcHelperApiKey(state = {}) {
+      const apiKey = String(
+        state?.gopayHelperApiKey
+        || state?.gpcApiKey
+        || state?.apiKey
+        || ''
+      ).trim();
+      if (!apiKey) {
+        throw new Error('创建 GPC 订单失败：缺少 API Key。');
+      }
+      return apiKey;
+    }
+
+    function normalizeGpcHelperBaseUrl(apiUrl = '') {
+      const rootScope = typeof self !== 'undefined' ? self : globalThis;
+      if (rootScope.GoPayUtils?.normalizeGpcHelperBaseUrl) {
+        return rootScope.GoPayUtils.normalizeGpcHelperBaseUrl(apiUrl);
+      }
+      let normalized = String(apiUrl || DEFAULT_GPC_HELPER_API_URL).trim().replace(/\/+$/g, '');
+      normalized = normalized.replace(/\/api\/checkout\/start$/i, '');
+      normalized = normalized.replace(/\/api\/gopay\/(?:otp|pin)$/i, '');
+      normalized = normalized.replace(/\/api\/gp\/tasks(?:\/[^/?#]+)?(?:\/(?:otp|pin|stop))?(?:\?.*)?$/i, '');
+      normalized = normalized.replace(/\/api\/gp\/balance(?:\?.*)?$/i, '');
+      normalized = normalized.replace(/\/api\/card\/balance(?:\?.*)?$/i, '');
+      normalized = normalized.replace(/\/api\/card\/redeem-api-key(?:\?.*)?$/i, '');
+      return normalized || DEFAULT_GPC_HELPER_API_URL;
+    }
+
+    function buildGpcHelperApiUrl(apiUrl = '', path = '') {
+      const rootScope = typeof self !== 'undefined' ? self : globalThis;
+      if (rootScope.GoPayUtils?.buildGpcHelperApiUrl) {
+        return rootScope.GoPayUtils.buildGpcHelperApiUrl(apiUrl, path);
+      }
+      const baseUrl = normalizeGpcHelperBaseUrl(apiUrl);
+      if (!baseUrl) {
+        return '';
+      }
+      const normalizedPath = String(path || '').startsWith('/') ? String(path || '') : `/${String(path || '')}`;
+      return `${baseUrl}${normalizedPath}`;
+    }
+
+    function buildGpcTaskCreateUrl(apiUrl = '') {
+      const rootScope = typeof self !== 'undefined' ? self : globalThis;
+      if (rootScope.GoPayUtils?.buildGpcTaskCreateUrl) {
+        return rootScope.GoPayUtils.buildGpcTaskCreateUrl(apiUrl);
+      }
+      return buildGpcHelperApiUrl(apiUrl, '/api/gp/tasks');
+    }
+
+    function buildGpcBalanceUrl(apiUrl = '') {
+      const rootScope = typeof self !== 'undefined' ? self : globalThis;
+      if (rootScope.GoPayUtils?.buildGpcApiKeyBalanceUrl) {
+        return rootScope.GoPayUtils.buildGpcApiKeyBalanceUrl(apiUrl);
+      }
+      if (rootScope.GoPayUtils?.buildGpcCardBalanceUrl) {
+        return rootScope.GoPayUtils.buildGpcCardBalanceUrl(apiUrl);
+      }
+      return buildGpcHelperApiUrl(apiUrl, '/api/gp/balance');
+    }
+
+    function unwrapGpcResponse(payload = {}) {
+      const rootScope = typeof self !== 'undefined' ? self : globalThis;
+      if (rootScope.GoPayUtils?.unwrapGpcResponse) {
+        return rootScope.GoPayUtils.unwrapGpcResponse(payload);
+      }
+      if (payload && typeof payload === 'object' && !Array.isArray(payload)
+        && Object.prototype.hasOwnProperty.call(payload, 'data')
+        && (Object.prototype.hasOwnProperty.call(payload, 'code') || Object.prototype.hasOwnProperty.call(payload, 'message'))) {
+        return payload.data ?? {};
+      }
+      return payload;
+    }
+
+    function isGpcUnifiedResponseOk(payload = {}) {
+      const rootScope = typeof self !== 'undefined' ? self : globalThis;
+      if (rootScope.GoPayUtils?.isGpcUnifiedResponseOk) {
+        return rootScope.GoPayUtils.isGpcUnifiedResponseOk(payload);
+      }
+      if (!payload || typeof payload !== 'object' || !Object.prototype.hasOwnProperty.call(payload, 'code')) {
+        return true;
+      }
+      const code = Number(payload.code);
+      return Number.isFinite(code) ? code >= 200 && code < 300 : String(payload.code || '').trim() === '200';
+    }
+
+    function getGpcResponseErrorDetail(payload = {}, status = 0) {
+      const rootScope = typeof self !== 'undefined' ? self : globalThis;
+      if (rootScope.GoPayUtils?.extractGpcResponseErrorDetail) {
+        return rootScope.GoPayUtils.extractGpcResponseErrorDetail(payload, status);
+      }
+      return payload?.data?.detail || payload?.detail || payload?.message || payload?.error || `HTTP ${status || 0}`;
+    }
+
+    function getGpcRemainingUses(payload = {}) {
+      const rootScope = typeof self !== 'undefined' ? self : globalThis;
+      if (rootScope.GoPayUtils?.getGpcBalanceRemainingUses) {
+        return rootScope.GoPayUtils.getGpcBalanceRemainingUses(payload);
+      }
+      const data = unwrapGpcResponse(payload);
+      const numeric = Number(data?.remaining_uses ?? data?.remainingUses ?? data?.balance ?? data?.remaining);
+      return Number.isFinite(numeric) ? Math.max(0, Math.floor(numeric)) : null;
+    }
+
+    function normalizeGpcAutoModePermissionValue(value) {
+      if (typeof value === 'boolean') {
+        return value;
+      }
+      if (typeof value === 'number') {
+        if (value === 1) return true;
+        if (value === 0) return false;
+      }
+      const normalized = String(value ?? '').trim().toLowerCase();
+      if (!normalized) {
+        return null;
+      }
+      if (['true', '1', 'yes', 'y', 'on', 'enabled', 'enable'].includes(normalized)) {
+        return true;
+      }
+      if (['false', '0', 'no', 'n', 'off', 'disabled', 'disable'].includes(normalized)) {
+        return false;
+      }
+      return null;
+    }
+
+    function getGpcAutoModePermission(payload = {}) {
+      const data = unwrapGpcResponse(payload);
+      if (!data || typeof data !== 'object' || Array.isArray(data)) {
+        return null;
+      }
+      return normalizeGpcAutoModePermissionValue(
+        data.auto_mode_enabled
+        ?? data.autoModeEnabled
+        ?? data.auto_enabled
+        ?? data.autoEnabled
+      );
+    }
+
+    function isGpcAutoModePermissionDenied(payload = {}) {
+      return getGpcAutoModePermission(payload) === false;
+    }
+
+    async function assertGpcApiKeyReadyForCreate(state = {}, phoneMode = GPC_HELPER_PHONE_MODE_MANUAL, apiKey = '') {
+      const apiUrl = buildGpcBalanceUrl(state?.gopayHelperApiUrl);
+      if (!apiUrl) {
+        throw new Error('创建 GPC 订单失败：缺少 API 地址。');
+      }
+      const { response, data } = await fetchJsonWithTimeout(apiUrl, {
+        method: 'GET',
+        headers: {
+          Accept: 'application/json',
+          'X-API-Key': apiKey,
+        },
+      }, 30000);
+      if (!response?.ok || !isGpcUnifiedResponseOk(data)) {
+        const detail = getGpcResponseErrorDetail(data, response?.status || 0);
+        throw new Error(`创建 GPC 订单失败：API Key 校验失败：${detail}`);
+      }
+      const balanceData = unwrapGpcResponse(data);
+      const remainingUses = getGpcRemainingUses(balanceData);
+      const status = String(balanceData?.status || balanceData?.card_status || balanceData?.cardStatus || '').trim().toLowerCase();
+      if (status && status !== 'active') {
+        throw new Error(`创建 GPC 订单失败：API Key 状态不可用（${status}）。`);
+      }
+      if (remainingUses !== null && remainingUses <= 0) {
+        throw new Error('创建 GPC 订单失败：API Key 剩余次数不足。');
+      }
+      if (phoneMode === GPC_HELPER_PHONE_MODE_AUTO && isGpcAutoModePermissionDenied(balanceData)) {
+        throw new Error('创建 GPC 订单失败：当前 GPC API Key 未开通自动模式。');
+      }
+    }
+
+    async function fetchJsonWithTimeout(url, options = {}, timeoutMs = 30000) {
+      const fetcher = typeof fetchImpl === 'function'
+        ? fetchImpl
+        : (typeof fetch === 'function' ? fetch.bind(globalThis) : null);
+      if (typeof fetcher !== 'function') {
+        throw new Error('当前运行环境不支持 fetch，无法调用 GPC API。');
+      }
+      const controller = typeof AbortController === 'function' ? new AbortController() : null;
+      const effectiveTimeoutMs = Math.max(1000, Number(timeoutMs) || 30000);
+      let didTimeout = false;
+      let timer = null;
+      const buildTimeoutError = () => new Error(`GPC API 请求超时（>${Math.round(effectiveTimeoutMs / 1000)} 秒）：${url}`);
+      const timeoutPromise = new Promise((_, reject) => {
+        timer = setTimeout(() => {
+          didTimeout = true;
+          reject(buildTimeoutError());
+          if (controller) {
+            controller.abort();
+          }
+        }, effectiveTimeoutMs);
+      });
+      try {
+        const response = await Promise.race([
+          fetcher(url, { ...options, ...(controller ? { signal: controller.signal } : {}) }),
+          timeoutPromise,
+        ]);
+        const data = await Promise.race([
+          response.json().catch(() => ({})),
+          timeoutPromise,
+        ]);
+        return { response, data };
+      } catch (error) {
+        if (didTimeout || error?.name === 'AbortError') {
+          throw buildTimeoutError();
+        }
+        throw error;
+      } finally {
+        if (timer) clearTimeout(timer);
+      }
+    }
+
+    async function fetchPpBoomJson(path, options = {}, timeoutMs = PPBOOM_REQUEST_TIMEOUT_MS) {
+      const url = buildPpBoomApiUrl(path);
+      try {
+        return await fetchJsonWithTimeout(url, {
+          method: options?.method || 'GET',
+          headers: {
+            Accept: 'application/json',
+            ...(options?.body ? { 'Content-Type': 'application/json' } : {}),
+            ...(options?.headers && typeof options.headers === 'object' ? options.headers : {}),
+          },
+          ...(options?.body ? { body: options.body } : {}),
+        }, timeoutMs);
+      } catch (error) {
+        throw new Error(formatPpBoomRequestError(url, error));
+      }
+    }
+
+    async function ensurePpBoomHealthy() {
+      const { response, data } = await fetchPpBoomJson('/health');
+      if (!response?.ok || data?.ok !== true) {
+        throw new Error(`PPBoom 健康检查失败：${data?.detail || data?.message || `HTTP ${response?.status || 0}`}`);
+      }
+      return data;
+    }
+
+    function getPpBoomHelperLogLevel(level = '') {
+      const normalized = String(level || '').trim().toLowerCase();
+      if (normalized === 'warn' || normalized === 'warning') {
+        return 'warn';
+      }
+      if (normalized === 'error') {
+        return 'error';
+      }
+      return 'info';
+    }
+
+    async function flushPpBoomLogs(jobStatus = {}) {
+      const logs = Array.isArray(jobStatus?.logs) ? jobStatus.logs : [];
+      const latestState = await getState();
+      const currentIndex = Math.max(0, Number(latestState?.ppBoomLastLogIndex) || 0);
+      if (currentIndex >= logs.length) {
+        return currentIndex;
+      }
+      for (let index = currentIndex; index < logs.length; index += 1) {
+        const entry = logs[index] || {};
+        const attemptNo = Math.max(0, Number(entry?.attemptNo) || 0);
+        const message = String(entry?.message || '').trim();
+        if (!message) {
+          continue;
+        }
+        await addLog(`${PPBOOM_HELPER_LOG_PREFIX}${message}`, getPpBoomHelperLogLevel(entry?.level), {
+          attemptNo,
+        });
+      }
+      return logs.length;
+    }
+
+    async function syncPpBoomJobState(jobStatus = {}, extraState = {}) {
+      const nextLogIndex = await flushPpBoomLogs(jobStatus);
+      const result = jobStatus?.result && typeof jobStatus.result === 'object' ? jobStatus.result : null;
+      return await setPpBoomRuntimeState({
+        ppBoomJobId: String(jobStatus?.jobId || '').trim(),
+        ppBoomJobStatus: String(jobStatus?.status || '').trim(),
+        ppBoomCurrentAttempt: Math.max(0, Number(jobStatus?.currentAttempt) || 0),
+        ppBoomPauseRequested: Boolean(jobStatus?.pauseRequested),
+        ppBoomLastLogIndex: nextLogIndex,
+        ppBoomStripeRedirectUrl: String(result?.stripeRedirectUrl || '').trim(),
+        ppBoomProviderRedirectUrl: String(result?.providerRedirectUrl || '').trim(),
+        ppBoomStripeHostedUrl: String(result?.stripeHostedUrl || '').trim(),
+        ppBoomPaymentMethodId: String(result?.paymentMethodId || '').trim(),
+        ppBoomAttemptsUsed: Math.max(0, Number(result?.attemptsUsed) || 0),
+        ppBoomProviderError: String(result?.providerError || '').trim(),
+        ppBoomBillingCountry: String(result?.billingCountry || '').trim(),
+        ppBoomCurrency: String(result?.currency || '').trim(),
+        ...(extraState && typeof extraState === 'object' ? extraState : {}),
+      });
+    }
+
+    async function readPpBoomAccessTokenWithRetry(tabId) {
+      let lastError = null;
+      for (let attempt = 1; attempt <= CLOUD_CHECKOUT_ACCESS_TOKEN_MAX_ATTEMPTS; attempt += 1) {
+        try {
+          const accessToken = await readAccessTokenFromChatGptSessionTab(tabId);
+          if (accessToken) {
+            return accessToken;
+          }
+          throw new Error('步骤 6：PPBoom 未获取到可用 accessToken。');
+        } catch (error) {
+          lastError = error;
+          if (attempt >= CLOUD_CHECKOUT_ACCESS_TOKEN_MAX_ATTEMPTS) {
+            break;
+          }
+          await addLog(
+            `步骤 6 [PPBoom]：第 ${attempt}/${CLOUD_CHECKOUT_ACCESS_TOKEN_MAX_ATTEMPTS} 次读取 accessToken 失败：${error?.message || String(error || '未知错误')}；正在刷新当前会话页后重试一次...`,
+            'warn'
+          );
+          if (chrome?.tabs?.reload) {
+            await chrome.tabs.reload(tabId).catch(() => {});
+          }
+          await waitForTabCompleteUntilStopped(tabId);
+          await sleepWithStop(1000);
+        }
+      }
+      throw lastError || new Error('步骤 6：PPBoom 未获取到可用 accessToken。');
+    }
+
+    async function createPpBoomJob(accessToken = '', state = {}) {
+      const token = String(accessToken || '').trim();
+      if (!token) {
+        throw new Error('步骤 6：PPBoom 缺少 accessToken。');
+      }
+      await ensurePpBoomHealthy();
+      const payload = {
+        accessToken: token,
+        stripePublishableKey: String(state?.ppBoomStripePublishableKey || '').trim(),
+        deviceId: String(state?.ppBoomDeviceId || '').trim(),
+        userAgent: String(state?.ppBoomUserAgent || '').trim(),
+        maxAttempts: normalizePpBoomMaxAttempts(state?.ppBoomMaxAttempts, 10),
+        paymentLocale: normalizePpBoomPaymentLocale(state?.ppBoomPaymentLocale || 'en'),
+        defaultProxy: String(state?.ppBoomDefaultProxy || state?.ppBoomProxy || '').trim(),
+        providerProxy: String(state?.ppBoomProviderProxy || '').trim(),
+      };
+      const { response, data } = await fetchPpBoomJson('/api/paypal-link/jobs', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }, 45000);
+      if (!response?.ok || !data?.jobId) {
+        throw new Error(`PPBoom 任务创建失败：${data?.detail || data?.message || `HTTP ${response?.status || 0}`}`);
+      }
+      await addLog(`步骤 6 [PPBoom]：任务已创建（jobId: ${data.jobId}），开始轮询结果。`, 'info');
+      await syncPpBoomJobState(data);
+      return data;
+    }
+
+    async function pollPpBoomJobUntilFinished(jobId = '') {
+      const normalizedJobId = String(jobId || '').trim();
+      if (!normalizedJobId) {
+        throw new Error('PPBoom 轮询失败：缺少 jobId。');
+      }
+      while (true) {
+        throwIfStopped();
+        const { response, data } = await fetchPpBoomJson(`/api/paypal-link/jobs/${encodeURIComponent(normalizedJobId)}`);
+        if (!response?.ok) {
+          throw new Error(`PPBoom 任务查询失败：HTTP ${response?.status || 0}`);
+        }
+        await syncPpBoomJobState(data);
+        const status = String(data?.status || '').trim().toLowerCase();
+        if (status === 'succeeded' || status === 'failed') {
+          return data;
+        }
+        await sleepWithStop(PPBOOM_JOB_POLL_INTERVAL_MS);
+      }
+    }
+
+    async function runPpBoomCheckout(accessToken = '', state = {}) {
+      const job = await createPpBoomJob(accessToken, state);
+      const finalStatus = await pollPpBoomJobUntilFinished(job?.jobId || '');
+      const result = finalStatus?.result && typeof finalStatus.result === 'object'
+        ? finalStatus.result
+        : null;
+      const attemptErrors = Array.isArray(result?.attempts)
+        ? result.attempts.map((item) => String(item?.error || '').trim()).filter(Boolean)
+        : [];
+      const alreadyPaidDetail = [
+        String(result?.providerError || '').trim(),
+        String(finalStatus?.message || '').trim(),
+        ...attemptErrors,
+      ].find((item) => isCheckoutAlreadyPaidMessage(item));
+      if (alreadyPaidDetail) {
+        return {
+          checkoutSource: PPBOOM_PLUS_CHECKOUT_SOURCE,
+          country: String(result?.billingCountry || 'DE').trim() || 'DE',
+          currency: String(result?.currency || 'EUR').trim() || 'EUR',
+          alreadyPaid: true,
+          alreadyPaidDetail,
+          attemptsUsed: Math.max(0, Number(result?.attemptsUsed) || 0),
+          jobStatus: finalStatus,
+        };
+      }
+      if (!result?.ok || !String(result?.stripeRedirectUrl || '').trim()) {
+        throw new Error(String(
+          result?.providerError
+          || finalStatus?.message
+          || 'PPBoom 未返回可用的 Stripe Redirect URL。'
+        ).trim() || 'PPBoom 未返回可用的 Stripe Redirect URL。');
+      }
+      return {
+        stripeRedirectUrl: String(result.stripeRedirectUrl || '').trim(),
+        providerRedirectUrl: String(result.providerRedirectUrl || '').trim(),
+        stripeHostedUrl: String(result.stripeHostedUrl || '').trim(),
+        paymentMethodId: String(result.paymentMethodId || '').trim(),
+        attemptsUsed: Math.max(0, Number(result.attemptsUsed) || 0),
+        providerError: String(result.providerError || '').trim(),
+        country: String(result.billingCountry || 'DE').trim() || 'DE',
+        currency: String(result.currency || 'EUR').trim() || 'EUR',
+        jobStatus: finalStatus,
+      };
+    }
+
+    async function openPpBoomRedirectUrlInAdsPower(state = {}, stripeRedirectUrl = '') {
+      const browserConfig = getPpBoomBrowserBackendConfig(state);
+      const { backend, label, apiBase, apiKey, profileId } = browserConfig;
+      if (backend === 'roxybrowser' && !apiKey) {
+        throw new Error('步骤 6：已启用 PPBoom RoxyBrowser 模式，但缺少 RoxyBrowser API Key。');
+      }
+      if (backend === 'roxybrowser' && /^\d+$/.test(profileId || '')) {
+        throw new Error('步骤 6：RoxyBrowser窗口ID 不是 workspaceId。请在 RoxyBrowser-全部窗口-右键窗口-窗口操作-复制窗口ID。');
+      }
+      if (backend !== 'local' && !profileId) {
+        throw new Error(`步骤 6：已启用 PPBoom ${label} 模式，但缺少${label}窗口ID。`);
+      }
+      const targetUrl = String(stripeRedirectUrl || '').trim();
+      if (!targetUrl) {
+        throw new Error(`步骤 6：${label} 接管失败：缺少 Stripe Redirect URL。`);
+      }
+      await ensurePpBoomHealthy();
+      const payload = {
+        browserBackend: backend,
+        adsPowerApiBase: apiBase,
+        adsPowerApiKey: apiKey,
+        roxyBrowserApiBase: apiBase,
+        roxyBrowserApiKey: apiKey,
+        adsPowerProfileId: profileId,
+        targetUrl,
+      };
+      const { response, data } = await fetchPpBoomJson('/api/adspower/open-url', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }, 60000);
+      if (!response?.ok || data?.ok !== true) {
+        throw new Error(`${label} 打开 Stripe Redirect URL 失败：${data?.detail || data?.message || `HTTP ${response?.status || 0}`}`);
+      }
+      await addLog(`步骤 6：已将 Stripe Redirect URL 交给 ${label}（profile: ${profileId || '(空)'}），当前页面：${String(data?.pageUrl || '').trim() || targetUrl}`, 'info');
+      return {
+        ok: true,
+        profileId,
+        pageUrl: String(data?.pageUrl || '').trim(),
+        pageTitle: String(data?.pageTitle || '').trim(),
+      };
+    }
+
+    async function continuePpBoomAdsPowerHostedCheckoutWithCode(state = {}, adsPowerProfileId = '', guestProfile = {}, verificationCode = '') {
+      const browserConfig = getPpBoomBrowserBackendConfig(state);
+      const { backend, label, apiBase, apiKey, profileId } = browserConfig;
+      const code = String(verificationCode || '').replace(/\D+/g, '').slice(0, 6);
+      if (code.length !== 6) {
+        throw new Error(`步骤 6：${label} PayPal 验证码无效。`);
+      }
+      const payload = {
+        browserBackend: backend,
+        adsPowerApiBase: apiBase,
+        adsPowerApiKey: apiKey,
+        roxyBrowserApiBase: apiBase,
+        roxyBrowserApiKey: apiKey,
+        adsPowerProfileId: profileId,
+        guestProfile,
+        verificationCode: code,
+        timeoutSeconds: HOSTED_CHECKOUT_PAYPAL_LOOP_TIMEOUT_MS / 1000,
+      };
+      const { response, data } = await fetchPpBoomJson('/api/adspower/continue-hosted-checkout', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }, 600000);
+      if (!response?.ok) {
+        throw new Error(`${label} 填入 PayPal 验证码失败：${data?.detail || data?.message || `HTTP ${response?.status || 0}`}`);
+      }
+      return data;
+    }
+
+    async function clickPpBoomAdsPowerHostedCheckoutVerificationResend(state = {}, adsPowerProfileId = '', attempt = 1, maxAttempts = 1, reason = '') {
+      const browserConfig = getPpBoomBrowserBackendConfig(state);
+      const { backend, label, apiBase, apiKey, profileId } = browserConfig;
+      const reasonText = reason ? `${reason}，` : '';
+      await addLog(`步骤 6：${reasonText}正在让 ${label} 点击 PayPal 验证码 Resend（${attempt}/${maxAttempts}）...`, 'warn');
+      const payload = {
+        browserBackend: backend,
+        adsPowerApiBase: apiBase,
+        adsPowerApiKey: apiKey,
+        roxyBrowserApiBase: apiBase,
+        roxyBrowserApiKey: apiKey,
+        adsPowerProfileId: profileId,
+      };
+      const { response, data } = await fetchPpBoomJson('/api/adspower/resend-hosted-checkout-verification', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }, 60000);
+      if (!response?.ok) {
+        throw new Error(`${label} 点击 PayPal 验证码 Resend 失败：${data?.detail || data?.message || `HTTP ${response?.status || 0}`}`);
+      }
+      if (!data?.resendClicked) {
+        await addLog(`步骤 6：${label} 未点击到 PayPal 验证码 Resend（当前阶段：${data?.status || 'unknown'}，原因：${data?.reason || 'unknown'}）。`, 'warn');
+      } else {
+        await addLog(`步骤 6：${label} 已点击 PayPal 验证码 Resend。`, 'info');
+      }
+      return data;
+    }
+
+    function isPpBoomHostedCheckoutProfileRetryResult(data = {}) {
+      const reason = String(data?.reason || data?.status || '').trim().toLowerCase();
+      const body = String(data?.bodyText || '').trim();
+      return reason === 'card_linked'
+        || reason === 'card_linked_error'
+        || /このカードはすでに別のPayPalアカウントに追加されています/i.test(body)
+        || /別のPayPalアカウントからカードを削除するか、別の支払方法をお試しください/i.test(body)
+        || /already\s+(?:been\s+)?(?:added|linked)\s+to\s+(?:another|a\s+different)\s+paypal\s+account/i.test(body);
+    }
+
+    function summarizePpBoomHostedCheckoutGuestProfile(guestProfile = {}) {
+      return {
+        email: String(guestProfile?.email || '').trim(),
+        phone: String(guestProfile?.phone || '').trim(),
+        address: guestProfile?.address || {},
+        cardTail: String(guestProfile?.cardNumber || '').slice(-4),
+      };
+    }
+
+    async function completePpBoomAdsPowerExternalVerificationFlow(state = {}, initialData = {}, guestProfile = {}, runtimeConfig = {}) {
+      const browserConfig = getPpBoomBrowserBackendConfig(state);
+      const { label, profileId } = browserConfig;
+      const maxResendAttempts = normalizeHostedCheckoutVerificationResendMaxAttempts(
+        runtimeConfig?.verificationResendMaxAttempts
+      );
+      const firstWaitSeconds = normalizeHostedCheckoutResendWaitSeconds(
+        runtimeConfig?.firstResendWaitSeconds,
+        HOSTED_CHECKOUT_FIRST_RESEND_WAIT_DEFAULT_SECONDS
+      );
+      const subsequentWaitSeconds = normalizeHostedCheckoutResendWaitSeconds(
+        runtimeConfig?.subsequentResendWaitSeconds,
+        HOSTED_CHECKOUT_SUBSEQUENT_RESEND_WAIT_DEFAULT_SECONDS
+      );
+      const pollOptions = {
+        pollAttempts: runtimeConfig?.verificationPollAttempts,
+        pollIntervalSeconds: runtimeConfig?.verificationPollIntervalSeconds,
+      };
+      const attemptedCodes = new Set();
+      let usedResendAttempts = 0;
+      let currentData = initialData;
+
+      const waitForCode = async (label, waitSeconds, options = {}) => {
+        const code = await waitForHostedCheckoutVerificationCodeWindow(waitSeconds, {
+          label,
+          ...pollOptions,
+          excludedCodes: Array.from(attemptedCodes),
+          ...options,
+        });
+        if (code) {
+          attemptedCodes.add(String(code));
+        }
+        return code;
+      };
+
+      const submitCode = async (code) => {
+        await addLog(`步骤 6：扩展侧已获取 PayPal 验证码，正在交给 ${label} 填入并继续。`, 'info');
+        currentData = await continuePpBoomAdsPowerHostedCheckoutWithCode(
+          state,
+          profileId,
+          guestProfile,
+          code
+        );
+        if (currentData?.status === 'success') {
+          return currentData;
+        }
+        if (isPpBoomHostedCheckoutProfileRetryResult(currentData)) {
+          return currentData;
+        }
+        if (currentData?.status !== 'verification_required') {
+          throw new Error(`${label} 填码后未进入支付成功态：${currentData?.reason || currentData?.status || 'unknown'}`);
+        }
+        await addLog(`步骤 6：${label} 填码后 PayPal 仍停留在验证码页，将按接码策略尝试重发/换码。`, 'warn');
+        return null;
+      };
+
+      let code = '';
+      if (runtimeConfig?.firstDirectResendEnabled && usedResendAttempts < maxResendAttempts) {
+        await addLog(`步骤 6：${label} PayPal 验证码页已触发，按配置先直接点击 Resend。`, 'warn');
+        await sleepWithStop(HOSTED_CHECKOUT_FIRST_DIRECT_RESEND_DELAY_MS);
+        usedResendAttempts += 1;
+        await clickPpBoomAdsPowerHostedCheckoutVerificationResend(
+          state,
+          profileId,
+          usedResendAttempts,
+          maxResendAttempts,
+          '首次直接重发'
+        );
+        code = await waitForCode(`${label} PayPal 首次重发验证码`, firstWaitSeconds);
+      } else {
+        code = await waitForCode(`${label} PayPal 首次验证码`, firstWaitSeconds);
+      }
+
+      while (true) {
+        throwIfStopped();
+        if (code) {
+          const result = await submitCode(code);
+          if (result?.status === 'success') {
+            return result;
+          }
+        }
+        if (usedResendAttempts >= maxResendAttempts) {
+          throw buildHostedCheckoutVerificationResendLimitError();
+        }
+        usedResendAttempts += 1;
+        await clickPpBoomAdsPowerHostedCheckoutVerificationResend(
+          state,
+          profileId,
+          usedResendAttempts,
+          maxResendAttempts,
+          '等待窗口内未获取到有效验证码或验证码未通过'
+        );
+        code = await waitForCode(`${label} PayPal 重发验证码`, subsequentWaitSeconds, {
+          allowImmediateResendOnNonCode: false,
+        });
+      }
+    }
+
+    async function runPpBoomAdsPowerRedirectFlow(state = {}, stripeRedirectUrl = '') {
+      const browserConfig = getPpBoomBrowserBackendConfig(state);
+      const { backend, label, apiBase, apiKey, profileId } = browserConfig;
+      if (backend === 'roxybrowser' && !apiKey) {
+        throw new Error('步骤 6：已启用 PPBoom RoxyBrowser 模式，但缺少 RoxyBrowser API Key。');
+      }
+      if (backend === 'roxybrowser' && /^\d+$/.test(profileId || '')) {
+        throw new Error('步骤 6：RoxyBrowser窗口ID 不是 workspaceId。请在 RoxyBrowser-全部窗口-右键窗口-窗口操作-复制窗口ID。');
+      }
+      if (backend !== 'local' && !profileId) {
+        throw new Error(`步骤 6：已启用 PPBoom ${label} 模式，但缺少${label}窗口ID。`);
+      }
+      const targetUrl = String(stripeRedirectUrl || '').trim();
+      if (!targetUrl) {
+        throw new Error(`步骤 6：${label} 接管失败：缺少 Stripe Redirect URL。`);
+      }
+      await ensurePpBoomHealthy();
+      const runtimeConfig = await getHostedCheckoutRuntimeConfig({
+        ensureCurrentSmsEntry: true,
+      });
+      const maxProfileRetries = HOSTED_CHECKOUT_CARD_ERROR_RETRY_MAX_ATTEMPTS;
+      let lastProfileRetryData = null;
+      for (let profileRetryIndex = 0; profileRetryIndex <= maxProfileRetries; profileRetryIndex += 1) {
+        const address = await fetchHostedCheckoutAddress({
+          countryCode: getHostedCheckoutAddressCountryCodeForMode(runtimeConfig?.plusCheckoutMode),
+        });
+        const guestProfile = buildHostedCheckoutGuestProfile(address, runtimeConfig);
+        if (profileRetryIndex > 0) {
+          await addLog(
+            `步骤 6：${label} 已更换 PayPal guest checkout 资料（${profileRetryIndex}/${maxProfileRetries}）：${JSON.stringify(summarizePpBoomHostedCheckoutGuestProfile(guestProfile))}`,
+            'info'
+          );
+        }
+        const payload = {
+          browserBackend: backend,
+          adsPowerApiBase: apiBase,
+          adsPowerApiKey: apiKey,
+          roxyBrowserApiBase: apiBase,
+          roxyBrowserApiKey: apiKey,
+          adsPowerProfileId: profileId,
+          targetUrl,
+          guestProfile,
+          verificationUrl: String(runtimeConfig?.verificationUrl || '').trim(),
+          verificationResendMaxAttempts: normalizeHostedCheckoutVerificationResendMaxAttempts(runtimeConfig?.verificationResendMaxAttempts),
+          verificationPollAttempts: normalizeHostedCheckoutVerificationPollAttempts(runtimeConfig?.verificationPollAttempts),
+          verificationPollIntervalSeconds: normalizeHostedCheckoutVerificationPollIntervalSeconds(runtimeConfig?.verificationPollIntervalSeconds),
+          externalVerification: true,
+          timeoutSeconds: HOSTED_CHECKOUT_PAYPAL_LOOP_TIMEOUT_MS / 1000,
+        };
+        const { response, data } = await fetchPpBoomJson('/api/adspower/run-hosted-checkout', {
+          method: 'POST',
+          body: JSON.stringify(payload),
+        }, 600000);
+        if (!response?.ok) {
+          throw new Error(`${label} 运行 Stripe Redirect URL 失败：${data?.detail || data?.message || `HTTP ${response?.status || 0}`}`);
+        }
+        let finalData = data;
+        if (finalData?.status === 'verification_required') {
+          await addLog(`步骤 6：${label} 已到 PayPal 验证码页，验证码获取改由扩展侧接码逻辑处理。`, 'info');
+          finalData = await completePpBoomAdsPowerExternalVerificationFlow(
+            state,
+            finalData,
+            guestProfile,
+            runtimeConfig
+          );
+        }
+        if (finalData?.status === 'success') {
+          await addLog(
+            `步骤 6：${label} 已将 Stripe Redirect URL 跑到完成态（${finalData?.pageTitle || finalData?.pageUrl || targetUrl}）。`,
+            'ok'
+          );
+          return {
+            ok: true,
+            status: 'success',
+            pageUrl: String(finalData?.pageUrl || '').trim(),
+            pageTitle: String(finalData?.pageTitle || '').trim(),
+            reason: String(finalData?.reason || '').trim(),
+            bodyText: String(finalData?.bodyText || '').trim(),
+          };
+        }
+        if (isPpBoomHostedCheckoutProfileRetryResult(finalData)) {
+          lastProfileRetryData = finalData;
+          if (profileRetryIndex >= maxProfileRetries) {
+            break;
+          }
+          await addLog(
+            `步骤 6：${label} 检测到 PayPal 提示当前卡已绑定/不可添加，准备更换资料后重试（${profileRetryIndex + 1}/${maxProfileRetries}）。`,
+            'warn'
+          );
+          await sleepWithStop(1500);
+          continue;
+        }
+        const history = Array.isArray(finalData?.history) ? finalData.history : [];
+        const lastHistory = history.length ? history[history.length - 1] : null;
+        const detailParts = [
+          finalData?.reason || finalData?.status || 'unknown',
+          finalData?.pageUrl ? `url=${finalData.pageUrl}` : '',
+          finalData?.pageTitle ? `title=${finalData.pageTitle}` : '',
+          lastHistory?.stage ? `lastStage=${lastHistory.stage}` : '',
+          lastHistory?.url ? `lastUrl=${lastHistory.url}` : '',
+        ].filter(Boolean);
+        throw new Error(`${label} 未进入支付成功态：${detailParts.join(' | ')}`);
+      }
+      throw new Error(
+        `${label} PayPal 提示当前卡已绑定其他账号/不可添加，已更换资料重试 ${maxProfileRetries} 次仍失败：${String(lastProfileRetryData?.bodyText || lastProfileRetryData?.reason || 'card_linked').slice(0, 240)}`
+      );
+    }
+
+    async function readChatGptSessionStateFromTab(tabId) {
+      await waitForTabCompleteUntilStopped(tabId);
+      await sleepWithStop(1000);
+      await ensureContentScriptReadyOnTabUntilStopped(PLUS_CHECKOUT_SOURCE, tabId, {
+        inject: PLUS_CHECKOUT_INJECT_FILES,
+        injectSource: PLUS_CHECKOUT_SOURCE,
+        logMessage: '步骤 6：正在等待 ChatGPT 页面完成加载，再继续获取 accessToken...',
+      });
+
+      const sessionResult = await sendTabMessageUntilStopped(tabId, PLUS_CHECKOUT_SOURCE, {
+        type: 'PLUS_CHECKOUT_GET_STATE',
+        source: 'background',
+        payload: {
+          includeSession: true,
+          includeAccessToken: true,
+        },
+      });
+      if (sessionResult?.error) {
+        throw new Error(sessionResult.error);
+      }
+      return {
+        session: sessionResult?.session && typeof sessionResult.session === 'object' ? sessionResult.session : null,
+        accessToken: normalizeString(sessionResult?.accessToken || sessionResult?.session?.accessToken),
+      };
+    }
+
+    async function readAccessTokenFromChatGptSessionTab(tabId) {
+      const sessionState = await readChatGptSessionStateFromTab(tabId);
+      return normalizeString(sessionState?.accessToken);
+    }
+
+    async function refreshChatGptSessionAndInspectPlusActivation() {
+      const tabId = await openFreshChatGptTabForCheckoutCreate();
+      await waitForTabCompleteUntilStopped(tabId);
+      await addLog('步骤 6：已打开 ChatGPT，等待 5 秒后刷新会话并检查 PLUS 状态。', 'info');
+      await sleepWithStop(PAYPAL_GENERIC_ERROR_SESSION_SETTLE_WAIT_MS);
+      if (chrome?.tabs?.reload) {
+        await chrome.tabs.reload(tabId).catch(() => {});
+      }
+      const sessionState = await readChatGptSessionStateFromTab(tabId);
+      return {
+        tabId,
+        session: sessionState?.session || null,
+        accessToken: normalizeString(sessionState?.accessToken),
+        ...inspectPlusActivationFromSession(sessionState?.session || null),
+      };
+    }
+
+    async function generateCloudCheckoutFromApi(accessToken = '', paymentMethod = PLUS_PAYMENT_METHOD_PAYPAL, state = {}) {
+      const token = String(accessToken || '').trim();
+      if (!token) {
+        throw new Error('步骤 6：云端支付转换缺少 accessToken。');
+      }
+
+      const apiUrl = normalizePlusCheckoutCloudConversionApiUrl(
+        state?.plusCheckoutCloudConversionApiUrl || BUILTIN_PLUS_CHECKOUT_CLOUD_CONVERSION_API_URL
+      );
+      if (!apiUrl) {
+        throw new Error('步骤 6：已启用云端支付转换，但未配置云端服务地址。');
+      }
+      try {
+        const parsed = new URL(apiUrl);
+        if (!/^https?:$/i.test(String(parsed.protocol || ''))) {
+          throw new Error('unsupported protocol');
+        }
+      } catch {
+        throw new Error('步骤 6：云端支付转换服务地址不是有效的 HTTP/HTTPS URL。');
+      }
+
+      const billingDetails = getCheckoutBillingDetailsForPaymentMethod(paymentMethod);
+      const headers = {
+        Accept: 'application/json',
+        'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+        'Content-Type': 'application/json',
+      };
+      const apiKey = String(state?.plusCheckoutCloudConversionApiKey || BUILTIN_PLUS_CHECKOUT_CLOUD_CONVERSION_API_KEY).trim();
+      if (apiKey) {
+        headers['X-API-Key'] = apiKey;
+      }
+
+      let response;
+      let data;
+      try {
+        ({ response, data } = await fetchJsonWithTimeout(apiUrl, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            accessToken: token,
+            paymentMethod: normalizePlusPaymentMethod(paymentMethod),
+            country: billingDetails.country,
+            currency: billingDetails.currency,
+          }),
+        }, 45000));
+      } catch (error) {
+        const detail = formatCloudCheckoutErrorDetail(error?.message || error, '请求云端服务失败');
+        throw buildCloudCheckoutError(detail, {
+          retryable: isCloudCheckoutTransportError(error),
+          reason: 'transport_error',
+        });
+      }
+
+      const targetCheckoutUrl = String(
+        data?.preferredCheckoutUrl
+        || data?.hostedCheckoutUrl
+        || data?.convertedCheckoutUrl
+        || data?.chatgptCheckoutUrl
+        || data?.checkoutUrl
+        || ''
+      ).trim();
+      if (!response?.ok || !targetCheckoutUrl) {
+        const detail = formatCloudCheckoutErrorDetail(
+          data?.detail || data?.message || data?.error || data,
+          `HTTP ${response?.status || 0}`
+        );
+        if (isCloudCheckoutAlreadyPaidMessage(detail)) {
+          return {
+            checkoutUrl: '',
+            chatgptCheckoutUrl: '',
+            checkoutSessionId: String(data?.checkoutSessionId || '').trim(),
+            processorEntity: String(data?.processorEntity || '').trim(),
+            hostedCheckoutUrl: '',
+            convertedCheckoutUrl: '',
+            preferredCheckoutUrl: '',
+            country: String(data?.country || billingDetails.country).trim() || billingDetails.country,
+            currency: String(data?.currency || billingDetails.currency).trim() || billingDetails.currency,
+            checkoutSource: CLOUD_CHECKOUT_ALREADY_PAID_SOURCE,
+            alreadyPaid: true,
+            alreadyPaidDetail: detail,
+          };
+        }
+        throw buildCloudCheckoutError(detail, {
+          httpStatus: response?.status || 0,
+          retryable: !response?.ok
+            ? isCloudCheckoutRetryableHttpStatus(response?.status || 0)
+            : !targetCheckoutUrl,
+          responsePayload: data && typeof data === 'object' ? data : null,
+          reason: targetCheckoutUrl ? 'http_error' : 'missing_checkout_url',
+        });
+      }
+
+      return {
+        checkoutUrl: String(data?.checkoutUrl || '').trim(),
+        chatgptCheckoutUrl: String(data?.chatgptCheckoutUrl || '').trim(),
+        checkoutSessionId: String(data?.checkoutSessionId || '').trim(),
+        processorEntity: String(data?.processorEntity || '').trim(),
+        hostedCheckoutUrl: String(data?.hostedCheckoutUrl || '').trim(),
+        convertedCheckoutUrl: String(data?.chatgptCheckoutUrl || data?.convertedCheckoutUrl || '').trim(),
+        preferredCheckoutUrl: targetCheckoutUrl,
+        country: String(data?.country || billingDetails.country).trim() || billingDetails.country,
+        currency: String(data?.currency || billingDetails.currency).trim() || billingDetails.currency,
+        checkoutSource: 'cloud-converted-checkout',
+      };
+    }
+
+    async function readCloudCheckoutAccessTokenWithRetry(tabId) {
+      let lastError = null;
+      for (let attempt = 1; attempt <= CLOUD_CHECKOUT_ACCESS_TOKEN_MAX_ATTEMPTS; attempt += 1) {
+        try {
+          const accessToken = await readAccessTokenFromChatGptSessionTab(tabId);
+          if (accessToken) {
+            return accessToken;
+          }
+          throw new Error('步骤 6：云端支付转换未获取到可用 accessToken。');
+        } catch (error) {
+          lastError = error;
+          if (attempt >= CLOUD_CHECKOUT_ACCESS_TOKEN_MAX_ATTEMPTS) {
+            break;
+          }
+          await addLog(
+            `步骤 6：第 ${attempt}/${CLOUD_CHECKOUT_ACCESS_TOKEN_MAX_ATTEMPTS} 次读取 accessToken 失败：${error?.message || String(error || '未知错误')}；正在刷新当前会话页后重试一次...`,
+            'warn'
+          );
+          if (chrome?.tabs?.reload) {
+            await chrome.tabs.reload(tabId).catch(() => {});
+          }
+          await waitForTabCompleteUntilStopped(tabId);
+          await sleepWithStop(1000);
+        }
+      }
+      throw lastError || new Error('步骤 6：云端支付转换未获取到可用 accessToken。');
+    }
+
+    async function generateCloudCheckoutFromApiWithRetry(accessToken = '', paymentMethod = PLUS_PAYMENT_METHOD_PAYPAL, state = {}) {
+      let lastError = null;
+      const maxAttempts = 1 + CLOUD_CHECKOUT_REQUEST_MAX_RETRIES;
+      for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+        try {
+          return await generateCloudCheckoutFromApi(accessToken, paymentMethod, state);
+        } catch (error) {
+          lastError = error;
+          if (!isCloudCheckoutRetryableError(error) || attempt >= maxAttempts) {
+            throw error;
+          }
+          const waitMs = CLOUD_CHECKOUT_RETRY_DELAYS_MS[Math.min(attempt - 1, CLOUD_CHECKOUT_RETRY_DELAYS_MS.length - 1)];
+          await addLog(
+            `步骤 6：云端支付转换第 ${attempt}/${maxAttempts} 次请求失败：${error?.message || String(error || '未知错误')}；${Math.round(waitMs / 1000)} 秒后自动重试...`,
+            'warn'
+          );
+          await sleepWithStop(waitMs);
+        }
+      }
+      throw lastError || new Error('步骤 6：云端支付转换失败。');
+    }
+
+    async function generateGpcCheckoutFromApi(accessToken = '', state = {}) {
+      const token = String(accessToken || '').trim();
+      if (!token) {
+        throw new Error('创建 GPC 订单失败：缺少 accessToken。');
+      }
+      const apiUrl = buildGpcTaskCreateUrl(state?.gopayHelperApiUrl);
+      if (!apiUrl) {
+        throw new Error('创建 GPC 订单失败：缺少 API 地址。');
+      }
+      const phoneMode = normalizeGpcHelperPhoneMode(state?.gopayHelperPhoneMode || state?.phoneMode);
+      const isAutoMode = phoneMode === GPC_HELPER_PHONE_MODE_AUTO;
+      const phoneNumber = String(state?.gopayHelperPhoneNumber || '').trim();
+      const countryCode = normalizeHelperCountryCode(state?.gopayHelperCountryCode || '86');
+      const pin = String(state?.gopayHelperPin || '').trim();
+      const apiKey = resolveGpcHelperApiKey(state);
+      if (!isAutoMode && !phoneNumber) {
+        throw new Error('创建 GPC 订单失败：手动模式缺少手机号。');
+      }
+      if (!isAutoMode && !pin) {
+        throw new Error('创建 GPC 订单失败：手动模式缺少 PIN。');
+      }
+
+      throwIfStopped();
+      await assertGpcApiKeyReadyForCreate(state, phoneMode, apiKey);
+      throwIfStopped();
+      const payload = {
+        access_token: token,
+        phone_mode: phoneMode,
+      };
+      if (!isAutoMode) {
+        payload.country_code = countryCode;
+        payload.phone_number = normalizeHelperPhoneNumber(phoneNumber, countryCode);
+        payload.otp_channel = normalizeGpcOtpChannel(state?.gopayHelperOtpChannel);
+      }
+
+      const orderCreatedAt = Date.now();
+      const { response, data } = await fetchJsonWithTimeout(apiUrl, {
+        method: 'POST',
+        headers: {
+          Accept: '*/*',
+          'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+          'Content-Type': 'application/json',
+          'X-API-Key': apiKey,
+        },
+        body: JSON.stringify(payload),
+      }, 30000);
+
+      const taskData = unwrapGpcResponse(data);
+      const taskId = String(taskData?.task_id || taskData?.taskId || '').trim();
+
+      if (!response?.ok || !isGpcUnifiedResponseOk(data) || !taskId) {
+        const detail = getGpcResponseErrorDetail(data, response?.status || 0);
+        throw new Error(`创建 GPC 订单失败：${detail}`);
+      }
+
+      return {
+        taskId,
+        taskStatus: String(taskData?.status || '').trim(),
+        statusText: String(taskData?.status_text || taskData?.statusText || '').trim(),
+        remoteStage: String(taskData?.remote_stage || taskData?.remoteStage || '').trim(),
+        orderCreatedAt,
+        responsePayload: taskData && typeof taskData === 'object' && !Array.isArray(taskData) ? taskData : null,
+        phoneMode: normalizeGpcHelperPhoneMode(taskData?.phone_mode || taskData?.phoneMode || phoneMode),
+        country: 'ID',
+        currency: 'IDR',
+        checkoutSource: PLUS_PAYMENT_METHOD_GPC_HELPER,
+      };
+    }
+
+    async function executeGpcCheckoutCreate(state = {}) {
+      let accessToken = String(state?.contributionAccessToken || state?.accessToken || state?.chatgptAccessToken || '').trim();
+      if (!accessToken) {
+        await addLog('步骤 6：正在获取 accessToken...', 'info');
+        const tokenTabId = await openFreshChatGptTabForCheckoutCreate();
+        try {
+          accessToken = await readAccessTokenFromChatGptSessionTab(tokenTabId);
+        } finally {
+          if (chrome?.tabs?.remove && Number.isInteger(tokenTabId)) {
+            await chrome.tabs.remove(tokenTabId).catch(() => {});
+          }
+        }
+      }
+      if (!accessToken) {
+        throw new Error('步骤 6：GPC 模式获取 accessToken 失败。');
+      }
+
+      await addLog('步骤 6：正在调用 GPC 接口创建订单...', 'info');
+      const result = await generateGpcCheckoutFromApi(accessToken, state);
+      await setState({
+        plusCheckoutTabId: null,
+        plusCheckoutUrl: '',
+        plusCheckoutCountry: result.country || 'ID',
+        plusCheckoutCurrency: result.currency || 'IDR',
+        plusCheckoutSource: result.checkoutSource,
+        gopayHelperTaskId: result.taskId,
+        gopayHelperTaskStatus: result.taskStatus,
+        gopayHelperStatusText: result.statusText,
+        gopayHelperRemoteStage: result.remoteStage,
+        gopayHelperTaskPayload: result.responsePayload,
+        gopayHelperTaskProgressSignature: '',
+        gopayHelperTaskProgressAt: 0,
+        gopayHelperTaskProgressTaskId: result.taskId,
+        gopayHelperReferenceId: '',
+        gopayHelperGoPayGuid: '',
+        gopayHelperRedirectUrl: '',
+        gopayHelperNextAction: '',
+        gopayHelperFlowId: '',
+        gopayHelperChallengeId: '',
+        gopayHelperStartPayload: null,
+        gopayHelperOrderCreatedAt: result.orderCreatedAt || Date.now(),
+      });
+      await addLog(`步骤 6：GPC ${result.phoneMode === GPC_HELPER_PHONE_MODE_AUTO ? '自动' : '手动'}模式任务已创建（task_id: ${result.taskId}），准备继续下一步。`, 'info');
+      await completePlusCheckoutCreate({
+        plusCheckoutCountry: result.country || 'ID',
+        plusCheckoutCurrency: result.currency || 'IDR',
+        plusCheckoutSource: result.checkoutSource,
+      });
+    }
+
+    async function preparePlusCheckoutSession(state = {}, paymentMethod = PLUS_PAYMENT_METHOD_PAYPAL, options = {}) {
+      const resetSmsEntry = options?.resetSmsEntry !== false;
+      const usePpBoomCheckout = isPpBoomEnabled(state, paymentMethod);
+      await setState({
+        plusActivatedByAdsPowerCheckout: false,
+      });
+      if (resetSmsEntry) {
+        await clearHostedCheckoutCurrentSmsEntry();
+      }
+      if (!isPpBoomEnabled(state, paymentMethod)) {
+        await clearPpBoomRuntimeState();
+      }
+      let checkoutScopedProxySnapshot = null;
+      try {
+        if (!usePpBoomCheckout) {
+          checkoutScopedProxySnapshot = await maybeApplyCheckoutConversionProxy(state, paymentMethod);
+        }
+
+        const paymentMethodLabel = getPlusPaymentMethodLabel(paymentMethod);
+        const checkoutModeLabel = getCheckoutModeLabel(state);
+        const openingMessage = String(options?.openingMessage || '').trim()
+          || `步骤 6：正在打开新的 ChatGPT 会话，准备创建${checkoutModeLabel}...`;
+        await addLog(openingMessage, 'info');
+        const tabId = await openFreshChatGptTabForCheckoutCreate();
+
+        await waitForTabCompleteUntilStopped(tabId);
+        await sleepWithStop(1000);
+        await ensureContentScriptReadyOnTabUntilStopped(PLUS_CHECKOUT_SOURCE, tabId, {
+          inject: PLUS_CHECKOUT_INJECT_FILES,
+          injectSource: PLUS_CHECKOUT_SOURCE,
+          logMessage: '步骤 6：正在等待 ChatGPT 页面完成加载，再继续创建订阅页...',
+        });
+
+        const useCloudCheckoutConversion = isPlusCheckoutCloudConversionEnabled(state, paymentMethod);
+        let result = null;
+        if (usePpBoomCheckout) {
+          const backendLabel = getPpBoomBrowserBackendLabel(state?.ppBoomBrowserBackend);
+          await addLog(
+            isPpBoomAdsPowerBackendEnabled(state)
+              ? `步骤 6：已启用 PP爆破模式 ${backendLabel} 后端，当前浏览器负责读取 accessToken 并创建 Stripe Redirect URL，${backendLabel} 负责接管后续支付页面。`
+              : '步骤 6：已启用 PP爆破模式，正在读取 accessToken 并请求本地 PPBoom helper...',
+            'info'
+          );
+          await clearPpBoomRuntimeState();
+          const accessToken = await readPpBoomAccessTokenWithRetry(tabId);
+          result = await runPpBoomCheckout(accessToken, state);
+        } else if (useCloudCheckoutConversion) {
+          await addLog('步骤 6：已启用云端支付转换，正在读取 accessToken 并请求云端服务生成订阅链接...', 'info');
+          const accessToken = await readCloudCheckoutAccessTokenWithRetry(tabId);
+          result = await generateCloudCheckoutFromApiWithRetry(accessToken, paymentMethod, state);
+        } else {
+          await addLog(
+            paymentMethod === PLUS_PAYMENT_METHOD_PAYPAL
+              ? '步骤 6：正在由扩展内部直连生成美国 US Stripe/外部支付链接...'
+              : `步骤 6：正在由扩展内部创建${checkoutModeLabel}...`,
+            'info'
+          );
+          result = await sendTabMessageUntilStopped(tabId, PLUS_CHECKOUT_SOURCE, {
+            type: 'CREATE_PLUS_CHECKOUT',
+            source: 'background',
+            payload: { paymentMethod },
+          });
+
+          if (result?.error) {
+            throw new Error(result.error);
+          }
+        }
+
+        if (result?.alreadyPaid) {
+          return {
+            alreadyPaid: true,
+            tabId,
+            result,
+          };
+        }
+
+        const targetCheckoutUrl = String(
+          result?.stripeRedirectUrl
+          || result?.preferredCheckoutUrl
+          || result?.hostedCheckoutUrl
+          || result?.hostedCheckoutBaseUrl
+          || result?.convertedCheckoutUrl
+          || result?.chatgptCheckoutUrl
+          || result?.checkoutUrl
+          || ''
+        ).trim();
+        if (!targetCheckoutUrl) {
+          throw new Error(`步骤 6：${checkoutModeLabel}未返回可用的订阅链接。`);
+        }
+
+        await addLog(
+          usePpBoomCheckout
+            ? `步骤 6：PPBoom 已完成，第 ${result?.attemptsUsed || 0} 次命中，正在打开支付跳转链接...`
+            : `步骤 6：${checkoutModeLabel}已创建，正在打开订阅页面...`,
+          'ok'
+        );
+        if (usePpBoomCheckout && isPpBoomAdsPowerBackendEnabled(state)) {
+          const backendLabel = getPpBoomBrowserBackendLabel(state?.ppBoomBrowserBackend);
+          const adsPowerCheckoutUrl = String(result?.providerRedirectUrl || targetCheckoutUrl).trim();
+          if (result?.providerRedirectUrl) {
+            await addLog(`步骤 6：${backendLabel} 模式将优先打开 PayPal Provider URL，跳过 Stripe 中转页。`, 'info');
+          }
+          const completionPayloadForAdsPower = {
+            plusCheckoutCountry: result?.country || 'DE',
+            plusCheckoutCurrency: result?.currency || 'EUR',
+          };
+          const adsPowerResult = await runPpBoomAdsPowerRedirectFlow(state, adsPowerCheckoutUrl);
+          const activationResolution = await confirmPlusActivationAfterExternalBrowserCheckout(
+            `${backendLabel} / PPBoom`,
+            completionPayloadForAdsPower,
+            adsPowerResult,
+          );
+          if (!activationResolution?.resolvedByPlusActivation) {
+            throw new Error(
+              `步骤 6：${backendLabel} 已落到支付完成页候选，但复核后仍未检测到 PLUS 生效：${String(adsPowerResult?.pageTitle || adsPowerResult?.pageUrl || adsPowerResult?.bodyText || 'unknown').trim()}`
+            );
+          }
+          await setState({
+            plusCheckoutTabId: null,
+            plusCheckoutUrl: adsPowerCheckoutUrl,
+            plusCheckoutCountry: completionPayloadForAdsPower.plusCheckoutCountry,
+            plusCheckoutCurrency: completionPayloadForAdsPower.plusCheckoutCurrency,
+            plusReturnUrl: '',
+            plusCheckoutSource: 'ppboom-adspower-redirect',
+            plusActivatedByAdsPowerCheckout: true,
+          });
+          await completePlusCheckoutCreate(completionPayloadForAdsPower);
+          return {
+            resolvedByPlusActivation: true,
+            tabId: null,
+            paymentMethod,
+            completionPayload: completionPayloadForAdsPower,
+            usedPpBoomCheckout: true,
+            usedAdsPowerCheckout: true,
+            adsPowerResult,
+          };
+        }
+        await chrome.tabs.update(tabId, { url: targetCheckoutUrl, active: true });
+        let landedTab = null;
+        if (usePpBoomCheckout) {
+          landedTab = await waitForUrlMatch(
+            tabId,
+            (url) => isPayPalUrl(url) || isPaymentsSuccessUrl(url) || isHostedCheckoutCompletionPageUrl(url),
+            60000,
+            500
+          );
+          if (!landedTab) {
+            throw new Error('步骤 6：PPBoom 已返回 Stripe Redirect URL，但标签页未能进入 PayPal 页面或 OpenAI 支付完成页。');
+          }
+          const landedUrl = String(landedTab?.url || '').trim();
+          if (isPaymentsSuccessUrl(landedUrl)) {
+            await addLog('步骤 6：PPBoom 已直接落到 ChatGPT 支付成功页。', 'ok');
+            await refreshOAuthTimeoutWindowAfterHostedCheckoutSuccess();
+            await completePlusCheckoutCreate({
+              plusCheckoutCountry: result?.country || 'DE',
+              plusCheckoutCurrency: result?.currency || 'EUR',
+            });
+            return {
+              resolvedByPlusActivation: true,
+              tabId,
+              paymentMethod,
+              completionPayload: {
+                plusCheckoutCountry: result?.country || 'DE',
+                plusCheckoutCurrency: result?.currency || 'EUR',
+              },
+              usedPpBoomCheckout: true,
+            };
+          }
+          if (isHostedCheckoutCompletionPageUrl(landedUrl)) {
+            const completionPayloadForPpBoom = {
+              plusCheckoutCountry: result?.country || 'DE',
+              plusCheckoutCurrency: result?.currency || 'EUR',
+            };
+            const completionResolution = await tryResolveHostedCheckoutCompletionPageByPlusActivation(
+              tabId,
+              landedUrl,
+              completionPayloadForPpBoom,
+              { sourceLabel: 'PPBoom', allowDeferredCompletionOnSucceededRedirect: true },
+            );
+            if (completionResolution?.resolvedByPlusActivation) {
+              return {
+                resolvedByPlusActivation: true,
+                tabId: completionResolution.tabId || tabId,
+                paymentMethod,
+                completionPayload: completionPayloadForPpBoom,
+                usedPpBoomCheckout: true,
+              };
+            }
+            if (completionResolution?.deferToReturnConfirm) {
+              const deferred = await completePpBoomCheckoutViaDeferredCompletionPage(
+                tabId,
+                landedUrl,
+                completionPayloadForPpBoom,
+              );
+              return {
+                resolvedByDeferredCompletion: true,
+                tabId: deferred?.tabId || tabId,
+                paymentMethod,
+                completionPayload: completionPayloadForPpBoom,
+                usedPpBoomCheckout: true,
+              };
+            }
+            throw new Error('步骤 6：PPBoom 已落到 OpenAI 支付完成页，但复核后仍未检测到 PLUS 生效。');
+          }
+          if (typeof registerTab === 'function') {
+            await registerTab(PAYPAL_SOURCE, tabId);
+          }
+          await addLog(`步骤 6：PPBoom 已在当前标签页打开 PayPal 页面：${landedTab.url || targetCheckoutUrl}`, 'info');
+        } else {
+          await waitForTabCompleteUntilStopped(tabId);
+          landedTab = await waitForCheckoutSurface(tabId);
+          if (landedTab?.url && landedTab.url !== targetCheckoutUrl) {
+            await addLog(`步骤 6：订阅页已继续跳转到 ${landedTab.url}，准备进入自动填写。`, 'info');
+          }
+        }
+
+        if (checkoutScopedProxySnapshot?.applied) {
+          try {
+            await maybeRestoreCheckoutConversionProxy(checkoutScopedProxySnapshot);
+          } catch (restoreError) {
+            await addLog(`步骤 6：支付转换代理释放失败：${restoreError?.message || String(restoreError || '未知错误')}`, 'warn');
+          } finally {
+            checkoutScopedProxySnapshot = null;
+          }
+        }
+
+        if (!usePpBoomCheckout) {
+          await sleepWithStop(1000);
+          await ensureContentScriptReadyOnTabUntilStopped(PLUS_CHECKOUT_SOURCE, tabId, {
+            inject: PLUS_CHECKOUT_INJECT_FILES,
+            injectSource: PLUS_CHECKOUT_SOURCE,
+            logMessage: '步骤 6：正在等待订阅页面完成加载...',
+          });
+        }
+
+        const finalCheckoutUrl = String((landedTab?.url || targetCheckoutUrl || '')).trim();
+        const completionPayload = {
+          plusCheckoutCountry: result.country || 'DE',
+          plusCheckoutCurrency: result.currency || 'EUR',
+        };
+        await setState({
+          plusCheckoutTabId: tabId,
+          plusCheckoutUrl: finalCheckoutUrl,
+          plusCheckoutCountry: completionPayload.plusCheckoutCountry,
+          plusCheckoutCurrency: completionPayload.plusCheckoutCurrency,
+          plusReturnUrl: '',
+          plusCheckoutSource: usePpBoomCheckout
+            ? PPBOOM_PLUS_CHECKOUT_SOURCE
+            : (targetCheckoutUrl === String(result?.convertedCheckoutUrl || '').trim()
+              ? 'converted-chatgpt-checkout'
+              : ''),
+        });
+
+        await addLog(
+          `步骤 6：Plus Checkout 页面已就绪（${paymentMethodLabel} / ${completionPayload.plusCheckoutCountry} ${completionPayload.plusCheckoutCurrency}），准备继续下一步。`,
+          'info'
+        );
+
+        return {
+          alreadyPaid: false,
+          tabId,
+          result,
+          paymentMethod,
+          completionPayload,
+          usedPpBoomCheckout: usePpBoomCheckout,
+        };
+      } finally {
+        if (checkoutScopedProxySnapshot?.applied) {
+          try {
+            await maybeRestoreCheckoutConversionProxy(checkoutScopedProxySnapshot);
+          } catch (restoreError) {
+            await addLog(`步骤 6：支付转换代理释放失败：${restoreError?.message || String(restoreError || '未知错误')}`, 'warn');
+          }
+        }
+      }
+    }
+
+    async function executePlusCheckoutCreate(state = {}) {
+      activeVisibleStep = getCheckoutCreateDisplayStep(state);
+      const paymentMethod = normalizePlusPaymentMethod(state?.plusPaymentMethod);
+      if (paymentMethod === PLUS_PAYMENT_METHOD_PAYPAL) {
+        const checkoutProfileState = resolveActivePlusCheckoutProfile(state, state);
+        await addLog(`步骤 6：当前 PayPal hosted checkout 模式为 ${checkoutProfileState.modeLabel}。`, 'info');
+      }
+      await maybeClearPayPalSessionCookiesBeforeCheckoutCreate(state, paymentMethod);
+      if (paymentMethod === PLUS_PAYMENT_METHOD_GPC_HELPER) {
+        await executeGpcCheckoutCreate(state);
+        return;
+      }
+      const preparedSession = await preparePlusCheckoutSession(state, paymentMethod);
+      if (preparedSession?.alreadyPaid) {
+        await completeCloudCheckoutAlreadyPaid(preparedSession.tabId, preparedSession.result, state);
+        return;
+      }
+      if (preparedSession?.resolvedByPlusActivation) {
+        return;
+      }
+      if (preparedSession?.resolvedByDeferredCompletion) {
+        return;
+      }
+      if (preparedSession?.usedPpBoomCheckout) {
+        await addLog('步骤 6：PPBoom 已将流程推进到 PayPal，继续接入原本的 hosted checkout 后半段自动化，待 Plus 成功后再视为第 6 步完成。', 'info');
+        startPpBoomHostedCheckoutAutomation(preparedSession.tabId, preparedSession.completionPayload);
+        return;
+      }
+      if (shouldWaitForHostedCheckoutSuccess(state, paymentMethod)) {
+        await addLog('步骤 6：当前 hosted checkout 流程将等待支付成功页出现后，再继续 OAuth 流程。', 'info');
+        startHostedCheckoutAutomation(preparedSession.tabId, preparedSession.completionPayload);
+        return;
+      }
+      await completePlusCheckoutCreate(preparedSession.completionPayload);
+    }
+
+    async function pausePpBoomJob() {
+      const state = await getState();
+      const jobId = String(state?.ppBoomJobId || '').trim();
+      if (!jobId) {
+        throw new Error('当前没有可暂停的 PPBoom 任务。');
+      }
+      const { response, data } = await fetchPpBoomJson(`/api/paypal-link/jobs/${encodeURIComponent(jobId)}/pause`, {
+        method: 'POST',
+      });
+      if (!response?.ok) {
+        throw new Error(`PPBoom 暂停失败：${data?.detail || data?.message || `HTTP ${response?.status || 0}`}`);
+      }
+      await syncPpBoomJobState(data);
+      return await getState();
+    }
+
+    async function resumePpBoomJob() {
+      const state = await getState();
+      const jobId = String(state?.ppBoomJobId || '').trim();
+      if (!jobId) {
+        throw new Error('当前没有可继续的 PPBoom 任务。');
+      }
+      const { response, data } = await fetchPpBoomJson(`/api/paypal-link/jobs/${encodeURIComponent(jobId)}/resume`, {
+        method: 'POST',
+      });
+      if (!response?.ok) {
+        throw new Error(`PPBoom 继续失败：${data?.detail || data?.message || `HTTP ${response?.status || 0}`}`);
+      }
+      await syncPpBoomJobState(data);
+      return await getState();
+    }
+
+    return {
+      executePlusCheckoutCreate,
+      fetchHostedCheckoutVerificationCodeManually,
+      pausePpBoomJob,
+      resumePpBoomJob,
+      testCheckoutConversionProxy,
+      __test: {
+        HOSTED_HERMES_STALL_OBSERVATION_LIMIT,
+        PAYPAL_APPROVAL_BRANCH_RECOVERY_MAX_ATTEMPTS,
+        PAYPAL_GENERIC_ERROR_RECOVERY_MAX_ATTEMPTS,
+        assessHostedHermesRecoveryState,
+        buildHostedHermesObservationSignature,
+        fetchHostedCheckoutAddress,
+        generateHostedCheckoutDateOfBirth,
+        generateCloudCheckoutFromApiWithRetry,
+        getHostedCheckoutAddressCountryCodeForMode,
+        getPayPalApprovalBranchRecoveryCount,
+        getPayPalGenericErrorRecoveryCount,
+        isHostedCheckoutPendingUnexpectedChatGptReturnUrl,
+        isHostedCheckoutPendingReturnUrl,
+        isCloudCheckoutRetryableError,
+        getHostedCheckoutRuntimeConfig,
+        readCloudCheckoutAccessTokenWithRetry,
+        refreshOAuthTimeoutWindowAfterHostedCheckoutSuccess,
+        resolveActivePlusCheckoutProfile,
+        pollHostedCheckoutVerificationCode,
+        shouldAutoRecoverPayPalApprovalBranch,
+        shouldAutoRecoverPayPalGenericError,
+        shouldClearPayPalSessionCookie,
+        shouldClearPayPalSessionCookiesBeforeCheckoutCreate,
+        waitForHostedCheckoutVerificationCodeWindow,
+      },
+    };
+  }
+
+  return {
+    createPlusCheckoutCreateExecutor,
+  };
+});
