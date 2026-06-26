@@ -11,6 +11,7 @@
     const UPI_ACCOUNT_INELIGIBLE_ERROR_PREFIX = 'UPI_ACCOUNT_INELIGIBLE::';
     const UPI_REDEEM_BACKEND_FAILED_ERROR_PREFIX = 'UPI_REDEEM_BACKEND_FAILED::';
     const UPI_REDEEM_AUTH_ERROR_PREFIX = 'UPI_REDEEM_AUTH_ERROR::';
+    const UPI_REDEEM_DUPLICATE_CDK_ERROR_PREFIX = 'UPI_REDEEM_DUPLICATE_CDK::';
     const UPI_ACCESS_TOKEN_EXPIRED_ERROR_PREFIX = 'UPI_ACCESS_TOKEN_EXPIRED::';
     const CHATGPT_SESSION_API_URL = 'https://chatgpt.com/api/auth/session';
     const DEFAULT_UPI_REDEEM_API_BASE_URL = 'https://chong.nerver.cc';
@@ -140,7 +141,7 @@
 
     function getErrorMessage(error) {
       return normalizeString(error?.message || error)
-        .replace(new RegExp(`^(?:${UPI_ACCOUNT_INELIGIBLE_ERROR_PREFIX}|${UPI_REDEEM_BACKEND_FAILED_ERROR_PREFIX}|${UPI_REDEEM_AUTH_ERROR_PREFIX}|${UPI_ACCESS_TOKEN_EXPIRED_ERROR_PREFIX}|PIX_ACCOUNT_INELIGIBLE::)`, 'i'), '');
+        .replace(new RegExp(`^(?:${UPI_ACCOUNT_INELIGIBLE_ERROR_PREFIX}|${UPI_REDEEM_BACKEND_FAILED_ERROR_PREFIX}|${UPI_REDEEM_AUTH_ERROR_PREFIX}|${UPI_REDEEM_DUPLICATE_CDK_ERROR_PREFIX}|${UPI_ACCESS_TOKEN_EXPIRED_ERROR_PREFIX}|PIX_ACCOUNT_INELIGIBLE::)`, 'i'), '');
     }
 
     function addStepLog(step, message, level = 'info') {
@@ -1308,6 +1309,17 @@
       return /(?:UPI\s*)?(?:卡密|兑换|redeem|cdkey|cdk)[\s\S]*(?:失败|failed|failure|timeout|超时|not_found|不存在|未找到)|(?:失败|failed|failure|timeout|超时|not_found|不存在|未找到)[\s\S]*(?:UPI\s*)?(?:卡密|兑换|redeem|cdkey|cdk)/i.test(message);
     }
 
+    function isUpiRedeemDuplicateCdkeyMessage(message = '') {
+      const text = normalizeString(message);
+      return /(?:CDK|CDKEY|卡密)[\s\S]*(?:不可重复提交|重复提交|已提交|already\s+submitted|duplicate\s+submit|duplicate\s+submission|already\s+redeemed|already\s+used)|(?:不可重复提交|重复提交|已提交|already\s+submitted|duplicate\s+submit|duplicate\s+submission|already\s+redeemed|already\s+used)[\s\S]*(?:CDK|CDKEY|卡密)/i.test(text);
+    }
+
+    function isUpiRedeemDuplicateCdkeyError(error) {
+      const rawMessage = normalizeString(error?.message || error);
+      return rawMessage.startsWith(UPI_REDEEM_DUPLICATE_CDK_ERROR_PREFIX)
+        || isUpiRedeemDuplicateCdkeyMessage(getErrorMessage(error));
+    }
+
     function isUpiRedeemApiAuthError(error) {
       const rawMessage = normalizeString(error?.message || error);
       const message = getErrorMessage(error);
@@ -1585,6 +1597,9 @@
         if (isUpiRedeemApiAuthError(error)) {
           throw error;
         }
+        if (isUpiRedeemDuplicateCdkeyError(error)) {
+          throw new Error(`${UPI_REDEEM_DUPLICATE_CDK_ERROR_PREFIX}${getErrorMessage(error) || 'UPI 卡密已提交过，等待远端状态刷新。'}`);
+        }
         if (isUpiRedeemBackendFailureMessage(error)) {
           throw new Error(`${UPI_REDEEM_BACKEND_FAILED_ERROR_PREFIX}${getErrorMessage(error) || 'UPI 卡密兑换失败。'}`);
         }
@@ -1592,6 +1607,9 @@
       }
       const itemFailure = getRedeemItemFailureMessage(payload, cdkey);
       if (itemFailure) {
+        if (isUpiRedeemDuplicateCdkeyMessage(itemFailure)) {
+          throw new Error(`${UPI_REDEEM_DUPLICATE_CDK_ERROR_PREFIX}UPI 兑换接口返回重复提交：${itemFailure}`);
+        }
         throw new Error(`${UPI_REDEEM_BACKEND_FAILED_ERROR_PREFIX}UPI 兑换接口返回错误：${itemFailure}`);
       }
       return payload;
@@ -2194,6 +2212,40 @@
           });
           throw error;
         }
+        if (isUpiRedeemDuplicateCdkeyError(error)) {
+          const pendingReason = `${message || '后端提示卡密已提交过'}；已标记为等待远端状态刷新，不计入账号失败次数`;
+          await addStepLog(
+            visibleStep,
+            `UPI 备份账号补兑：后端提示卡密重复提交，已按处理中记录并等待远端状态：${email || 'unknown'} -> ${cdkey}：${message}`,
+            'warn'
+          );
+          await updateCdkeyUsage(cdkey, (entry) => ({
+            ...entry,
+            email,
+            usedAt: 0,
+            lastAttemptAt: attemptAt,
+            lastError: '',
+            remoteStatus: 'submitted',
+            remoteMessage: pendingReason,
+            remoteCheckedAt: attemptAt,
+            retrying: false,
+            retryError: '',
+          }));
+          return {
+            cdkey,
+            accessToken,
+            active: false,
+            planType: '',
+            pendingRemoteConfirmation: true,
+            subscriptionCheckedAt: '',
+            reason: pendingReason,
+            subscription: {
+              active: false,
+              pendingRemoteConfirmation: true,
+              reason: pendingReason,
+            },
+          };
+        }
         await addStepLog(
           visibleStep,
           `UPI 备份账号补兑：session+卡密提交失败：${email || 'unknown'} -> ${cdkey}：${message}`,
@@ -2335,6 +2387,7 @@
 
       const attemptAt = Math.max(1, Math.floor(Number(now()) || Date.now()));
       const latestForSubscription = await getMergedState({});
+      let duplicateCdkeyPending = false;
       let currentEmail = resolveCurrentRedeemEmail({
         ...runtimeState,
         ...latestForSubscription,
@@ -2638,6 +2691,36 @@
           });
           throw error;
         }
+        if (isUpiRedeemDuplicateCdkeyError(error)) {
+          duplicateCdkeyPending = true;
+          const pendingReason = `${message || '后端提示卡密已提交过'}；已标记为等待远端状态刷新`;
+          await addStepLog(
+            visibleStep,
+            `UPI 后端提示卡密重复提交，已按处理中记录并等待远端状态：${currentEmail || 'unknown'} -> ${cdkey}：${message}`,
+            'warn'
+          );
+          await updateCdkeyUsage(cdkey, (entry) => ({
+            ...entry,
+            email: currentEmail,
+            usedAt: 0,
+            lastAttemptAt: attemptAt,
+            lastError: '',
+            remoteStatus: 'submitted',
+            remoteMessage: pendingReason,
+            remoteCheckedAt: attemptAt,
+            retrying: false,
+            retryError: '',
+          }));
+          await setState({
+            upiRedeemSuccess: false,
+            upiRedeemCdkey: cdkey,
+            upiRedeemAccessToken: sessionState.accessToken,
+            upiRedeemSubscriptionActive: false,
+            upiRedeemSubscriptionPlanType: '',
+            upiRedeemSubscriptionCheckedAt: '',
+            upiRedeemSubscriptionReason: pendingReason,
+          }).catch(() => {});
+        } else {
         await addStepLog(
           visibleStep,
           `UPI ChatGPT session+卡密提交失败：${currentEmail || 'unknown'} -> ${cdkey}：${message}`,
@@ -2656,9 +2739,12 @@
           retryError: message,
         }));
         throw error;
+        }
       }
 
       if (
+        !duplicateCdkeyPending
+        &&
         shouldMarkRegistrationAccountUsedAfterRedeem(runtimeState)
         && typeof markCurrentRegistrationAccountUsed === 'function'
       ) {
@@ -2681,10 +2767,12 @@
         }
       }
 
-      const successMessage = shouldMarkRegistrationAccountUsedAfterRedeem(runtimeState)
+      const successMessage = duplicateCdkeyPending
+        ? 'UPI 卡密已提交过，已等待远端状态刷新，暂不判定账号成功或失败。'
+        : shouldMarkRegistrationAccountUsedAfterRedeem(runtimeState)
         ? 'UPI 卡密兑换成功，已停止后续 OAuth 后链。'
         : 'UPI 卡密兑换成功，继续 OAuth 后链。';
-      await addStepLog(visibleStep, successMessage, 'success');
+      await addStepLog(visibleStep, successMessage, duplicateCdkeyPending ? 'warn' : 'success');
       const completionLatestState = await getMergedState({});
       await completeNodeFromBackground(state?.nodeId || 'upi-redeem', {
         cdkey,
