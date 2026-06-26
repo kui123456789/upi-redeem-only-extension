@@ -299,10 +299,16 @@ const inputUpiRedeemCdkeyPool = document.getElementById('input-upi-redeem-cdkey-
 const upiRedeemCdkeyPoolSummary = document.getElementById('upi-redeem-cdkey-pool-summary');
 const btnShowUpiCredentialBackups = document.getElementById('btn-show-upi-credential-backups');
 const btnExportUpiCredentialBackups = document.getElementById('btn-export-upi-credential-backups');
+const btnCheckUpiCredentialMembershipLocal = document.getElementById('btn-check-upi-credential-membership-local');
+const btnImportUpiCredentialMembershipTxt = document.getElementById('btn-import-upi-credential-membership-txt');
+const btnImportUpiCredentialMembershipFreeTxt = document.getElementById('btn-import-upi-credential-membership-free-txt');
+const btnStopUpiCredentialMembershipCheck = document.getElementById('btn-stop-upi-credential-membership-check');
+const inputUpiCredentialMembershipTxt = document.getElementById('input-upi-credential-membership-txt');
 const btnExportUpiRedeemSuccessRecords = document.getElementById('btn-export-upi-redeem-success-records');
 const btnUpiRedeemCdkeyStatusRefresh = document.getElementById('btn-upi-redeem-cdkey-status-refresh');
 const upiCredentialBackupPreviewWrap = document.getElementById('upi-credential-backup-preview-wrap');
 const upiCredentialBackupPreview = document.getElementById('upi-credential-backup-preview');
+const upiCredentialMembershipCheckResults = document.getElementById('upi-credential-membership-check-results');
 const upiRedeemCdkeyStatusList = document.getElementById('upi-redeem-cdkey-status-list');
 const rowGoPayCountryCode = document.getElementById('row-gopay-country-code');
 const selectGoPayCountryCode = document.getElementById('select-gopay-country-code');
@@ -18264,6 +18270,11 @@ const accountRecordsManager = window.SidepanelAccountRecordsManager?.createAccou
     btnExportSuccessAccountRecords,
     btnShowUpiCredentialBackups,
     btnExportUpiCredentialBackups,
+    btnCheckUpiCredentialMembershipLocal,
+    btnImportUpiCredentialMembershipTxt,
+    btnImportUpiCredentialMembershipFreeTxt,
+    btnStopUpiCredentialMembershipCheck,
+    inputUpiCredentialMembershipTxt,
     inputUpiCredentialMembershipTotpApiBaseUrl,
     inputUpiCredentialMembershipTotpLookupKey,
     inputUpiRedeemExternalApiKey,
@@ -18272,6 +18283,7 @@ const accountRecordsManager = window.SidepanelAccountRecordsManager?.createAccou
     btnExportUpiRedeemSuccessRecords,
     upiCredentialBackupPreviewWrap,
     upiCredentialBackupPreview,
+    upiCredentialMembershipCheckResults,
     btnCloseAccountRecords,
     btnOpenAccountRecords,
     btnToggleAccountRecordsSelection,

@@ -638,13 +638,19 @@
             <div id="upi-redeem-cdkey-pool-summary" class="icloud-summary">总数 0 / 已用 0 / 可用 0</div>
             <button id="btn-show-upi-credential-backups" class="btn btn-ghost btn-xs" type="button">查看全部已存密码2FA</button>
             <button id="btn-export-upi-credential-backups" class="btn btn-ghost btn-xs" type="button">导出当前卡密成功密码2FA</button>
+            <button id="btn-check-upi-credential-membership-local" class="btn btn-ghost btn-xs" type="button">核验启用已存备份</button>
+            <button id="btn-import-upi-credential-membership-txt" class="btn btn-ghost btn-xs" type="button">导入备份TXT并核验</button>
+            <button id="btn-import-upi-credential-membership-free-txt" class="btn btn-ghost btn-xs" type="button">导入无会员TXT</button>
+            <button id="btn-stop-upi-credential-membership-check" class="btn btn-ghost btn-xs" type="button" hidden>停止核验</button>
             <button id="btn-export-upi-redeem-success-records" class="btn btn-ghost btn-xs" type="button" disabled>导出已开通会员密码2FA</button>
             <button id="btn-upi-redeem-cdkey-status-refresh" class="btn btn-ghost btn-xs" type="button">刷新状态</button>
+            <input type="file" id="input-upi-credential-membership-txt" accept=".txt,text/plain" hidden />
           </div>
           <div id="upi-credential-backup-preview-wrap" hidden>
             <textarea id="upi-credential-backup-preview" class="data-textarea mono" rows="4" readonly
               placeholder="点击“查看全部已存密码2FA”后显示：邮箱---GPT密码---2FA密钥"></textarea>
           </div>
+          <div id="upi-credential-membership-check-results" class="upi-credential-membership-check-results" hidden></div>
           <div class="upi-redeem-cdkey-status-header">
             <span>启用</span>
             <span>卡密</span>
