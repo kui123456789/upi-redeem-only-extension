@@ -1850,15 +1850,9 @@
       const exportRows = buildUpiRedeemSuccessEmailExportRows(allRecords);
       setNodeDisabled(dom.btnClearAccountRecords, totalRecords === 0);
       setNodeDisabled(dom.btnExportSuccessAccountRecords, exportRows.length === 0);
-      setNodeDisabled(dom.btnShowUpiCredentialBackups, false);
-      setNodeDisabled(dom.btnExportUpiCredentialBackups, false);
-      setNodeDisabled(dom.btnExportUpiRedeemSuccessRecords, exportRows.length === 0);
       setNodeDisabled(dom.btnToggleAccountRecordsSelection, totalRecords === 0);
       setNodeHidden(dom.btnClearAccountRecords, selectionMode);
       setNodeHidden(dom.btnExportSuccessAccountRecords, selectionMode);
-      setNodeHidden(dom.btnShowUpiCredentialBackups, selectionMode);
-      setNodeHidden(dom.btnExportUpiCredentialBackups, selectionMode);
-      setNodeHidden(dom.upiCredentialBackupPreviewWrap, selectionMode || !upiCredentialBackupPreviewVisible);
       toggleNodeClass(dom.btnToggleAccountRecordsSelection, 'is-active', selectionMode);
       setNodeAttr(dom.btnToggleAccountRecordsSelection, 'aria-pressed', selectionMode ? 'true' : 'false');
       setNodeText(dom.btnToggleAccountRecordsSelection, selectionMode ? '取消多选' : '多选');
@@ -2117,20 +2111,6 @@
 
     function setExportButtonsBusy(busy) {
       setNodeDisabled(dom.btnExportSuccessAccountRecords, busy);
-      setNodeDisabled(dom.btnShowUpiCredentialBackups, busy);
-      setNodeDisabled(dom.btnExportUpiCredentialBackups, busy);
-      const membershipBusy = upiCredentialMembershipCheckBusy || upiCredentialMembershipRedeemBusy;
-      setNodeDisabled(dom.btnCheckUpiCredentialMembershipLocal, busy || membershipBusy);
-      setNodeDisabled(dom.btnImportUpiCredentialMembershipTxt, busy || membershipBusy);
-      setNodeDisabled(dom.btnImportUpiCredentialMembershipFreeTxt, busy || membershipBusy);
-      setNodeDisabled(dom.btnExportUpiRedeemSuccessRecords, busy);
-      setNodeText(dom.btnExportUpiRedeemSuccessRecords, busy ? '查询中' : '导出已开通会员密码2FA');
-      setNodeText(dom.btnShowUpiCredentialBackups, busy ? '读取中' : '查看全部已存密码2FA');
-      setNodeText(dom.btnExportUpiCredentialBackups, busy ? '查询中' : '导出当前卡密成功密码2FA');
-      setNodeText(dom.btnCheckUpiCredentialMembershipLocal, membershipBusy ? (upiCredentialMembershipRedeemBusy ? '补兑中' : '核验中') : '核验启用已存备份');
-      setNodeText(dom.btnImportUpiCredentialMembershipTxt, membershipBusy ? (upiCredentialMembershipRedeemBusy ? '补兑中' : '核验中') : '导入备份TXT并核验');
-      setNodeText(dom.btnImportUpiCredentialMembershipFreeTxt, membershipBusy ? (upiCredentialMembershipRedeemBusy ? '补兑中' : '核验中') : '导入无会员TXT');
-      setNodeHidden(dom.btnStopUpiCredentialMembershipCheck, !upiCredentialMembershipCheckBusy);
     }
 
     function setUpiCredentialBackupPreviewText(content = '') {
@@ -3125,35 +3105,11 @@
       dom.btnExportSuccessAccountRecords?.addEventListener('click', () => {
         exportUpiRedeemSuccessEmailTextFile();
       });
-      dom.btnShowUpiCredentialBackups?.addEventListener('click', () => {
-        showUpiCredentialBackupText();
-      });
-      dom.btnExportUpiCredentialBackups?.addEventListener('click', async () => {
-        await exportUpiRedeemSuccessEmailTextFile();
-      });
-      dom.btnCheckUpiCredentialMembershipLocal?.addEventListener('click', () => {
-        startLocalUpiCredentialMembershipCheck();
-      });
-      dom.btnImportUpiCredentialMembershipTxt?.addEventListener('click', () => {
-        openUpiCredentialMembershipTxtImport('check');
-      });
-      dom.btnImportUpiCredentialMembershipFreeTxt?.addEventListener('click', () => {
-        openUpiCredentialMembershipTxtImport('free');
-      });
-      dom.inputUpiCredentialMembershipTxt?.addEventListener('change', (event) => {
-        handleUpiCredentialMembershipTxtSelected(event);
-      });
-      dom.btnStopUpiCredentialMembershipCheck?.addEventListener('click', () => {
-        stopUpiCredentialMembershipCheck();
-      });
       dom.upiCredentialMembershipCheckResults?.addEventListener('click', (event) => {
         handleUpiCredentialMembershipCheckResultsClick(event);
       });
       dom.upiCredentialMembershipCheckResults?.addEventListener('change', (event) => {
         handleUpiCredentialMembershipCheckResultsChange(event);
-      });
-      dom.btnExportUpiRedeemSuccessRecords?.addEventListener('click', () => {
-        exportUpiRedeemSuccessEmailTextFile();
       });
       dom.btnClearAccountRecords?.addEventListener('click', async () => {
         try {

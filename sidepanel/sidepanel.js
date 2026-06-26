@@ -297,12 +297,7 @@ const inputUpiRedeemStopAfterRedeem = document.getElementById('input-upi-redeem-
 const rowUpiRedeemCdkeyPool = document.getElementById('row-upi-redeem-cdkey-pool');
 const inputUpiRedeemCdkeyPool = document.getElementById('input-upi-redeem-cdkey-pool');
 const upiRedeemCdkeyPoolSummary = document.getElementById('upi-redeem-cdkey-pool-summary');
-const btnShowUpiCredentialBackups = document.getElementById('btn-show-upi-credential-backups');
-const btnExportUpiCredentialBackups = document.getElementById('btn-export-upi-credential-backups');
-const btnExportUpiRedeemSuccessRecords = document.getElementById('btn-export-upi-redeem-success-records');
 const btnUpiRedeemCdkeyStatusRefresh = document.getElementById('btn-upi-redeem-cdkey-status-refresh');
-const upiCredentialBackupPreviewWrap = document.getElementById('upi-credential-backup-preview-wrap');
-const upiCredentialBackupPreview = document.getElementById('upi-credential-backup-preview');
 const upiRedeemCdkeyStatusList = document.getElementById('upi-redeem-cdkey-status-list');
 const rowGoPayCountryCode = document.getElementById('row-gopay-country-code');
 const selectGoPayCountryCode = document.getElementById('select-gopay-country-code');
@@ -18262,16 +18257,11 @@ const accountRecordsManager = window.SidepanelAccountRecordsManager?.createAccou
     btnClearAccountRecords,
     btnDeleteSelectedAccountRecords,
     btnExportSuccessAccountRecords,
-    btnShowUpiCredentialBackups,
-    btnExportUpiCredentialBackups,
     inputUpiCredentialMembershipTotpApiBaseUrl,
     inputUpiCredentialMembershipTotpLookupKey,
     inputUpiRedeemExternalApiKey,
     inputUpiRedeemClientId,
     inputUpiRedeemCdkeyPool,
-    btnExportUpiRedeemSuccessRecords,
-    upiCredentialBackupPreviewWrap,
-    upiCredentialBackupPreview,
     btnCloseAccountRecords,
     btnOpenAccountRecords,
     btnToggleAccountRecordsSelection,
