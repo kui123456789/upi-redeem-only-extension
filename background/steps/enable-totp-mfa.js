@@ -364,6 +364,7 @@
       getState = async () => ({}),
       getTabId,
       isTabAlive,
+      markCurrentRegistrationAccountUsed = null,
       now = () => Date.now(),
       registerTab,
       setState = async () => {},
@@ -995,6 +996,27 @@
           `第 7 步账号已开通 2FA，但写入账号记录失败：${getErrorMessage(recordError)}`,
           'warn'
         );
+      }
+      if (typeof markCurrentRegistrationAccountUsed === 'function') {
+        try {
+          await markCurrentRegistrationAccountUsed({
+            ...runtimeState,
+            ...patch,
+            email: accountEmail || runtimeState.email,
+            accountIdentifierType: runtimeState.accountIdentifierType || 'email',
+            accountIdentifier: runtimeState.accountIdentifier || accountEmail || runtimeState.email,
+          }, {
+            logPrefix: '第 7 步 2FA 已完成',
+            level: 'ok',
+            preferProvidedState: true,
+          });
+        } catch (markError) {
+          await addStepLog(
+            visibleStep,
+            `第 7 步 2FA 已完成，但标记当前注册邮箱已用失败：${getErrorMessage(markError)}`,
+            'warn'
+          );
+        }
       }
       if (typeof checkRegistrationUpiTrialEligibility === 'function') {
         await checkRegistrationUpiTrialEligibility({

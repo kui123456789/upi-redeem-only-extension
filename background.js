@@ -3329,10 +3329,16 @@ async function markCurrentCustomEmailPoolEntryUsed(state = {}, options = {}) {
 async function markCurrentRegistrationAccountUsed(state = {}, options = {}) {
   const providedState = state && typeof state === 'object' ? state : {};
   const currentState = await getState();
-  const latestState = {
-    ...providedState,
-    ...(currentState && typeof currentState === 'object' ? currentState : {}),
-  };
+  const currentStatePatch = currentState && typeof currentState === 'object' ? currentState : {};
+  const latestState = options.preferProvidedState === true
+    ? {
+      ...currentStatePatch,
+      ...providedState,
+    }
+    : {
+      ...providedState,
+      ...currentStatePatch,
+    };
   const reasonPrefix = String(options.logPrefix || '').trim() || '当前账号';
   let updated = false;
 
@@ -16924,6 +16930,7 @@ const totpMfaExecutor = self.MultiPageBackgroundEnableTotpMfa?.createEnableTotpM
   getState,
   getTabId,
   isTabAlive,
+  markCurrentRegistrationAccountUsed,
   registerTab,
   setState,
   sleepWithStop,
