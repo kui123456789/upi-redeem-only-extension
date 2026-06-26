@@ -12,6 +12,7 @@
     const UPI_REDEEM_BACKEND_FAILED_ERROR_PREFIX = 'UPI_REDEEM_BACKEND_FAILED::';
     const UPI_REDEEM_AUTH_ERROR_PREFIX = 'UPI_REDEEM_AUTH_ERROR::';
     const UPI_REDEEM_DUPLICATE_CDK_ERROR_PREFIX = 'UPI_REDEEM_DUPLICATE_CDK::';
+    const UPI_REDEEM_NOT_ACCEPTED_ERROR_PREFIX = 'UPI_REDEEM_NOT_ACCEPTED::';
     const UPI_ACCESS_TOKEN_EXPIRED_ERROR_PREFIX = 'UPI_ACCESS_TOKEN_EXPIRED::';
     const CHATGPT_SESSION_API_URL = 'https://chatgpt.com/api/auth/session';
     const DEFAULT_UPI_REDEEM_API_BASE_URL = 'https://chong.nerver.cc';
@@ -141,7 +142,7 @@
 
     function getErrorMessage(error) {
       return normalizeString(error?.message || error)
-        .replace(new RegExp(`^(?:${UPI_ACCOUNT_INELIGIBLE_ERROR_PREFIX}|${UPI_REDEEM_BACKEND_FAILED_ERROR_PREFIX}|${UPI_REDEEM_AUTH_ERROR_PREFIX}|${UPI_REDEEM_DUPLICATE_CDK_ERROR_PREFIX}|${UPI_ACCESS_TOKEN_EXPIRED_ERROR_PREFIX}|PIX_ACCOUNT_INELIGIBLE::)`, 'i'), '');
+        .replace(new RegExp(`^(?:${UPI_ACCOUNT_INELIGIBLE_ERROR_PREFIX}|${UPI_REDEEM_BACKEND_FAILED_ERROR_PREFIX}|${UPI_REDEEM_AUTH_ERROR_PREFIX}|${UPI_REDEEM_DUPLICATE_CDK_ERROR_PREFIX}|${UPI_REDEEM_NOT_ACCEPTED_ERROR_PREFIX}|${UPI_ACCESS_TOKEN_EXPIRED_ERROR_PREFIX}|PIX_ACCOUNT_INELIGIBLE::)`, 'i'), '');
     }
 
     function addStepLog(step, message, level = 'info') {
@@ -611,6 +612,35 @@
         lastError: '',
         remoteStatus: 'dispatching',
         remoteMessage: normalizeString(message) || '正在提交到兑换后端，等待远端接收',
+        remoteCheckedAt: timestamp,
+        retrying: false,
+        retryError: '',
+      }));
+    }
+
+    async function releaseCdkeyForUnacceptedSubmission({
+      cdkey = '',
+      reason = '',
+      attemptAt = 0,
+    } = {}) {
+      const normalizedCdkey = normalizeString(cdkey);
+      if (!normalizedCdkey) {
+        return;
+      }
+      const timestamp = Math.max(1, Math.floor(Number(attemptAt) || Number(now()) || Date.now()));
+      const releaseReason = normalizeString(reason) || '兑换接口未确认接收当前卡密，后端没有兑换记录。';
+      await updateCdkeyUsage(normalizedCdkey, (entry) => ({
+        ...entry,
+        usedAt: 0,
+        lastAttemptAt: timestamp,
+        lastError: '',
+        enabled: entry.enabled !== false,
+        email: '',
+        releasedEmail: '',
+        releaseReason: '',
+        releasedAt: 0,
+        remoteStatus: 'not_found',
+        remoteMessage: `${releaseReason} 卡密已释放，可重新提交。`,
         remoteCheckedAt: timestamp,
         retrying: false,
         retryError: '',
@@ -1374,7 +1404,7 @@
 
     function isUpiRedeemBackendFailureMessage(error) {
       const message = getErrorMessage(error);
-      return /(?:UPI\s*)?(?:卡密|兑换|redeem|cdkey|cdk)[\s\S]*(?:失败|failed|failure|timeout|超时|not_found|不存在|未找到)|(?:失败|failed|failure|timeout|超时|not_found|不存在|未找到)[\s\S]*(?:UPI\s*)?(?:卡密|兑换|redeem|cdkey|cdk)/i.test(message);
+      return /(?:UPI\s*)?(?:卡密|兑换|redeem|cdkey|cdk)[\s\S]*(?:失败|failed|failure|timeout|超时)|(?:失败|failed|failure|timeout|超时)[\s\S]*(?:UPI\s*)?(?:卡密|兑换|redeem|cdkey|cdk)/i.test(message);
     }
 
     function isUpiRedeemDuplicateCdkeyMessage(message = '') {
@@ -1386,6 +1416,10 @@
       const rawMessage = normalizeString(error?.message || error);
       return rawMessage.startsWith(UPI_REDEEM_DUPLICATE_CDK_ERROR_PREFIX)
         || isUpiRedeemDuplicateCdkeyMessage(getErrorMessage(error));
+    }
+
+    function isUpiRedeemNotAcceptedError(error) {
+      return normalizeString(error?.message || error).startsWith(UPI_REDEEM_NOT_ACCEPTED_ERROR_PREFIX);
     }
 
     function isUpiRedeemApiAuthError(error) {
@@ -1462,6 +1496,127 @@
         || status
         || 'UPI 兑换接口返回失败。'
       );
+    }
+
+    function getPayloadCdkeyItem(payload, cdkey = '') {
+      const target = normalizeString(cdkey).toLowerCase();
+      if (!target) {
+        return null;
+      }
+      const items = getPayloadItems(payload);
+      const matchedItem = items.find((item) => {
+        const itemCdkey = normalizeString(item?.cdkey || item?.cdk).toLowerCase();
+        return itemCdkey && itemCdkey === target;
+      });
+      if (matchedItem) {
+        return matchedItem;
+      }
+      const directCdkey = normalizeString(payload?.cdkey || payload?.cdk || payload?.data?.cdkey || payload?.data?.cdk).toLowerCase();
+      if (directCdkey && directCdkey === target) {
+        return payload?.data && typeof payload.data === 'object' && !Array.isArray(payload.data)
+          ? payload.data
+          : payload;
+      }
+      return null;
+    }
+
+    function isRedeemAcceptedStatus(status = '') {
+      const normalized = normalizeUpiRedeemRemoteStatus(status);
+      if (!normalized) {
+        return true;
+      }
+      return !['not_found', 'unused', 'available', 'new', 'ready', 'invalid'].includes(normalized)
+        && !isFailureStatus(normalized);
+    }
+
+    function isRedeemPayloadItemAccepted(item = {}) {
+      if (!item || typeof item !== 'object' || Array.isArray(item)) {
+        return false;
+      }
+      const status = item.status || item.state || item.result || item.external_status || item.externalStatus;
+      if (isApproveBlockedRemoteResult(item, status, getRemoteStatusMessage(item, status))) {
+        return false;
+      }
+      if (item.error || item.error_code || item.errorCode) {
+        return false;
+      }
+      return isRedeemAcceptedStatus(status);
+    }
+
+    function getPositiveRedeemAcceptedCount(payload = {}) {
+      const source = payload && typeof payload === 'object' && !Array.isArray(payload) ? payload : {};
+      const data = source.data && typeof source.data === 'object' && !Array.isArray(source.data) ? source.data : {};
+      const candidates = [
+        source.accepted,
+        source.acceptedCount,
+        source.accepted_count,
+        source.submitted,
+        source.submittedCount,
+        source.submitted_count,
+        source.created,
+        source.createdCount,
+        source.created_count,
+        source.queued,
+        source.queuedCount,
+        source.queued_count,
+        data.accepted,
+        data.acceptedCount,
+        data.accepted_count,
+        data.submitted,
+        data.submittedCount,
+        data.submitted_count,
+        data.created,
+        data.createdCount,
+        data.created_count,
+        data.queued,
+        data.queuedCount,
+        data.queued_count,
+      ];
+      return candidates.reduce((maxCount, value) => Math.max(maxCount, Math.floor(Number(value) || 0)), 0);
+    }
+
+    async function confirmUpiRedeemSubmissionAccepted({ payload = null, externalApiKey = '', clientId = '', cdkey = '' } = {}) {
+      const responseItem = getPayloadCdkeyItem(payload, cdkey);
+      if (responseItem && isRedeemPayloadItemAccepted(responseItem)) {
+        return { confirmed: true, source: 'redeem-response', item: responseItem };
+      }
+      const positiveAcceptedCount = getPositiveRedeemAcceptedCount(payload);
+      const statusUrl = buildUpiRedeemStatusApiUrl();
+      let lastReason = responseItem
+        ? '兑换接口响应包含当前卡密，但状态不是已接收。'
+        : '兑换接口响应没有返回当前卡密。';
+      for (const delayMs of [1000, 2000, 3000]) {
+        await sleepWithStop(delayMs);
+        let statusPayload = null;
+        try {
+          statusPayload = await postUPIJson({
+            apiUrl: statusUrl,
+            externalApiKey,
+            clientId,
+            body: { cdkeys: [cdkey] },
+          });
+        } catch (error) {
+          lastReason = `状态确认请求失败：${getErrorMessage(error) || error}`;
+          continue;
+        }
+        const statusItem = getPayloadCdkeyItem(statusPayload, cdkey);
+        if (statusItem) {
+          const remoteStatus = normalizeUpiRedeemRemoteStatus(statusItem.status || statusItem.state || statusItem.result);
+          const remoteMessage = getRemoteStatusMessage(statusItem, remoteStatus);
+          if (isRedeemAcceptedStatus(remoteStatus)) {
+            return { confirmed: true, source: 'status', item: statusItem };
+          }
+          lastReason = remoteMessage || `状态查询返回 ${remoteStatus || 'unknown'}`;
+        } else {
+          lastReason = '状态查询未找到当前卡密记录。';
+        }
+      }
+      return {
+        confirmed: false,
+        reason: positiveAcceptedCount > 0
+          ? `${lastReason} 兑换接口只返回汇总数量 ${positiveAcceptedCount}，但状态接口未确认落库。`
+          : lastReason,
+      };
     }
 
     function getResponseContentType(response) {
@@ -1679,6 +1834,15 @@
           throw new Error(`${UPI_REDEEM_DUPLICATE_CDK_ERROR_PREFIX}UPI 兑换接口返回重复提交：${itemFailure}`);
         }
         throw new Error(`${UPI_REDEEM_BACKEND_FAILED_ERROR_PREFIX}UPI 兑换接口返回错误：${itemFailure}`);
+      }
+      const acceptance = await confirmUpiRedeemSubmissionAccepted({
+        payload,
+        externalApiKey,
+        clientId,
+        cdkey,
+      });
+      if (!acceptance.confirmed) {
+        throw new Error(`${UPI_REDEEM_NOT_ACCEPTED_ERROR_PREFIX}UPI 兑换接口未确认接收当前卡密，后端没有兑换记录：${acceptance.reason || '状态接口未找到记录'}`);
       }
       return payload;
     }
@@ -2317,6 +2481,19 @@
           });
           throw error;
         }
+        if (isUpiRedeemNotAcceptedError(error)) {
+          await addStepLog(
+            visibleStep,
+            `UPI 备份账号补兑：兑换接口未确认接收，后端没有兑换记录，已释放卡密：${email || 'unknown'} -> ${cdkey}：${message}`,
+            'warn'
+          );
+          await releaseCdkeyForUnacceptedSubmission({
+            cdkey,
+            reason: message,
+            attemptAt,
+          });
+          throw error;
+        }
         if (isUpiRedeemDuplicateCdkeyError(error)) {
           const pendingReason = `${message || '后端提示卡密已提交过'}；已标记为等待远端状态刷新，不计入账号失败次数`;
           await addStepLog(
@@ -2802,6 +2979,28 @@
               email: currentEmail || latestForSubscription.email || runtimeState.email,
             },
           });
+          throw error;
+        }
+        if (isUpiRedeemNotAcceptedError(error)) {
+          await addStepLog(
+            visibleStep,
+            `UPI 兑换接口未确认接收，后端没有兑换记录，已释放卡密：${currentEmail || 'unknown'} -> ${cdkey}：${message}`,
+            'warn'
+          );
+          await releaseCdkeyForUnacceptedSubmission({
+            cdkey,
+            reason: message,
+            attemptAt,
+          });
+          await setState({
+            upiRedeemSuccess: false,
+            upiRedeemCdkey: '',
+            upiRedeemAccessToken: '',
+            upiRedeemSubscriptionActive: false,
+            upiRedeemSubscriptionPlanType: '',
+            upiRedeemSubscriptionCheckedAt: '',
+            upiRedeemSubscriptionReason: message,
+          }).catch(() => {});
           throw error;
         }
         if (isUpiRedeemDuplicateCdkeyError(error)) {
