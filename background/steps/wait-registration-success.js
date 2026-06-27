@@ -13,7 +13,7 @@
     'auth.openai.com',
     'auth0.openai.com',
     'accounts.openai.com',
-    'paypal.com',
+    'legacyWallet.com',
     'stripe.com',
     'checkout.stripe.com',
     'meiguodizhi.com',
@@ -28,8 +28,8 @@
     'https://auth0.openai.com',
     'https://accounts.openai.com',
     'https://openai.com',
-    'https://www.paypal.com',
-    'https://paypal.com',
+    'https://www.legacyWallet.com',
+    'https://legacyWallet.com',
     'https://checkout.stripe.com',
     'https://www.meiguodizhi.com',
     'https://meiguodizhi.com',
@@ -126,7 +126,7 @@
       getTabId = async () => null,
       normalizeHotmailLocalBaseUrl = (value) => String(value || '').trim(),
       registrationSuccessWaitMs = DEFAULT_REGISTRATION_SUCCESS_WAIT_MS,
-      sessionExportInjectFiles = ['content/utils.js', 'content/operation-delay.js', 'content/plus-checkout.js'],
+      sessionExportInjectFiles = ['content/utils.js', 'content/operation-delay.js', 'content/chatgpt-session-reader.js'],
       sendToContentScriptResilient = null,
       sleepWithStop = async (ms) => new Promise((resolve) => setTimeout(resolve, Math.max(0, Number(ms) || 0))),
     } = deps;
@@ -214,19 +214,19 @@
         const tabId = Number(tab?.id);
         if (Number.isInteger(tabId) && tabId > 0) {
           return {
-            source: 'plus-checkout',
+            source: 'chatgpt-session-reader',
             tabId,
             temporary: true,
           };
         }
       }
 
-      const fallbackTabId = Number(state?.plusCheckoutTabId || await getTabId('plus-checkout') || await getTabId('signup-page'));
+      const fallbackTabId = Number(state?.chatgptSessionReaderTabId || await getTabId('chatgpt-session-reader') || await getTabId('signup-page'));
       if (!Number.isInteger(fallbackTabId) || fallbackTabId <= 0) {
         throw new Error('未找到可读取 ChatGPT 会话的标签页，无法导出本地 CPA JSON 无RT。');
       }
       return {
-        source: 'plus-checkout',
+        source: 'chatgpt-session-reader',
         tabId: fallbackTabId,
         temporary: false,
       };
@@ -257,7 +257,7 @@
         });
 
         const sessionResult = await sendToContentScriptResilient(tabInfo.source, {
-          type: 'PLUS_CHECKOUT_GET_STATE',
+          type: 'READ_CHATGPT_SESSION',
           step: visibleStep,
           source: 'background',
           payload: {
@@ -374,7 +374,7 @@
       if (!isLocalCpaJsonNoRtMode(state)) {
         throw new Error('当前不是本地CPA JSON 无RT 模式，不能执行无RT导出节点。');
       }
-      await addLog('步骤 7：Plus Checkout 已完成，等待 5 秒后导出本地 CPA JSON 无RT...', 'info');
+      await addLog('步骤 7：ChatGPT 会话已就绪，等待 5 秒后导出本地 CPA JSON 无RT...', 'info');
       await sleepWithStop(5000);
       const completionPayload = await exportLocalCpaJsonNoRt(state, { visibleStep: 7 });
       await completeNodeFromBackground(LOCAL_CPA_JSON_EXPORT_NODE_ID, completionPayload);
@@ -388,3 +388,6 @@
 
   return { createStep6Executor };
 });
+
+
+

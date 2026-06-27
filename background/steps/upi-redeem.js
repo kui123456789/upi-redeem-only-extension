@@ -1,8 +1,8 @@
 (function attachBackgroundUpiRedeem(root, factory) {
   root.MultiPageBackgroundUpiRedeem = factory();
 })(typeof self !== 'undefined' ? self : globalThis, function createBackgroundUpiRedeemModule() {
-  const CHATGPT_SOURCE = 'plus-checkout';
-  const CHATGPT_INJECT_FILES = ['content/utils.js', 'content/operation-delay.js', 'content/plus-checkout.js'];
+  const CHATGPT_SOURCE = 'chatgpt-session-reader';
+  const CHATGPT_INJECT_FILES = ['content/utils.js', 'content/operation-delay.js', 'content/chatgpt-session-reader.js'];
   const SESSION_TAB_COMPLETE_TIMEOUT_MS = 60000;
   const SESSION_CONTENT_READY_TIMEOUT_MS = 45000;
   const SESSION_READ_MESSAGE_TIMEOUT_MS = 30000;
@@ -968,7 +968,7 @@
         }
       }
 
-      const storedTabId = Number(state?.plusCheckoutTabId) || 0;
+      const storedTabId = Number(state?.chatgptSessionReaderTabId) || 0;
       const storedTab = await readSupportedSessionTab(storedTabId);
       if (storedTab?.id) {
         if (typeof registerTab === 'function') {
@@ -1004,7 +1004,7 @@
         return null;
       }
       const sessionResult = await sendTabMessageUntilStopped(tabId, CHATGPT_SOURCE, {
-        type: 'PLUS_CHECKOUT_GET_STATE',
+        type: 'READ_CHATGPT_SESSION',
         source: 'background',
         payload: {
           includeSession: true,
@@ -3471,3 +3471,6 @@
     createUpiRedeemExecutor,
   };
 });
+
+
+

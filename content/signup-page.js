@@ -3918,6 +3918,13 @@ function getSignupAuthRetryPathPatterns() {
 
 function getLoginAuthRetryPathPatterns() {
   return [
+    /^\/(?:[?#]|$)/i,
+    /\/auth\/(?:login|authorize)(?:[/?#]|$)/i,
+    /\/authorize(?:[/?#]|$)/i,
+    /\/oauth\/authorize(?:[/?#]|$)/i,
+    /\/sign-in-with-chatgpt(?:[/?#]|$)/i,
+    /\/u\/login(?:[/?#]|$)/i,
+    /\/login(?:[/?#]|$)/i,
     /\/log-in(?:[/?#]|$)/i,
     /\/email-verification(?:[/?#]|$)/i,
   ];
@@ -5896,6 +5903,33 @@ async function waitForSetGptPasswordPageState(predicate, timeout = 15000) {
   return snapshot;
 }
 
+async function waitForSetGptPasswordInteractiveReady(visibleStep, label, timeout = 15000, acceptedStates = []) {
+  const accepted = new Set(Array.isArray(acceptedStates) ? acceptedStates : []);
+  const start = Date.now();
+  let snapshot = getSetGptPasswordPageState();
+
+  while (Date.now() - start < timeout) {
+    throwIfStopped();
+    snapshot = getSetGptPasswordPageState();
+    if (accepted.has(snapshot.state)) {
+      if (!isDocumentLoadComplete()) {
+        log(
+          `${label}当前 readyState=${getDocumentReadyStateSnapshot()}，但页面关键控件已就绪，继续执行。`,
+          'warn',
+          { step: visibleStep, stepKey: 'set-gpt-password' }
+        );
+      }
+      return snapshot;
+    }
+    if (isDocumentLoadComplete()) {
+      return snapshot;
+    }
+    await sleep(150);
+  }
+
+  throw new Error(`${label}长时间未完成加载，当前 readyState=${getDocumentReadyStateSnapshot()}，页面状态 ${snapshot.state}。URL: ${snapshot.url || location.href}`);
+}
+
 function isChatGptHostForSettings() {
   return /^(?:www\.)?chatgpt\.com$/i.test(location.hostname || '')
     || /^chat\.openai\.com$/i.test(location.hostname || '');
@@ -6005,13 +6039,20 @@ async function startSetGptPasswordResetFlow(payload = {}) {
 
 async function prepareSetGptPasswordFlow(payload = {}) {
   const visibleStep = resolveVisibleStep(payload, 6);
-  await waitForDocumentLoadComplete(15000, `步骤 ${visibleStep}：设置 GPT 密码页`);
-  const snapshot = await waitForSetGptPasswordPageState(
-    (state) => state.state === 'email_verification_page'
-      || state.state === 'new_password_page'
-      || state.state === 'email_already_verified_page',
-    15000
+  const readySnapshot = await waitForSetGptPasswordInteractiveReady(
+    visibleStep,
+    `步骤 ${visibleStep}：设置 GPT 密码页`,
+    15000,
+    ['email_verification_page', 'new_password_page', 'email_already_verified_page']
   );
+  const snapshot = ['email_verification_page', 'new_password_page', 'email_already_verified_page'].includes(readySnapshot.state)
+    ? readySnapshot
+    : await waitForSetGptPasswordPageState(
+        (state) => state.state === 'email_verification_page'
+          || state.state === 'new_password_page'
+          || state.state === 'email_already_verified_page',
+        15000
+      );
 
   if (snapshot.state === 'new_password_page') {
     log(`步骤 ${visibleStep}：已在设置新密码页，准备直接填写 GPT 密码。`, 'info', { step: visibleStep, stepKey: 'set-gpt-password' });
@@ -6101,7 +6142,27 @@ async function submitSetGptPasswordVerificationCode(payload = {}) {
     };
   }
 
-  await waitForDocumentLoadComplete(15000, `步骤 ${visibleStep}：设置 GPT 密码邮箱验证码页`);
+  const readySnapshot = await waitForSetGptPasswordInteractiveReady(
+    visibleStep,
+    `步骤 ${visibleStep}：设置 GPT 密码邮箱验证码页`,
+    15000,
+    ['email_verification_page', 'new_password_page', 'email_already_verified_page']
+  );
+  if (readySnapshot.state === 'new_password_page') {
+    return {
+      success: true,
+      alreadyOnNewPasswordPage: true,
+      url: readySnapshot.url || location.href,
+    };
+  }
+  if (readySnapshot.state === 'email_already_verified_page') {
+    return {
+      success: true,
+      emailAlreadyVerified: true,
+      requiresNewPasswordNavigation: true,
+      url: readySnapshot.url || location.href,
+    };
+  }
   const performOperationWithDelay = typeof getOperationDelayRunner === 'function'
     ? getOperationDelayRunner()
     : async (_metadata, operation) => operation();
@@ -6202,8 +6263,15 @@ async function setGptPasswordOnResetPage(payload = {}) {
     throw new Error(`步骤 ${visibleStep}：缺少 GPT 密码，无法设置 OpenAI 登录密码。`);
   }
 
-  await waitForDocumentLoadComplete(15000, `步骤 ${visibleStep}：OpenAI 新密码页`);
-  const snapshot = await waitForSetGptPasswordPageState((state) => state.state === 'new_password_page', 15000);
+  const readySnapshot = await waitForSetGptPasswordInteractiveReady(
+    visibleStep,
+    `步骤 ${visibleStep}：OpenAI 新密码页`,
+    15000,
+    ['new_password_page']
+  );
+  const snapshot = readySnapshot.state === 'new_password_page'
+    ? readySnapshot
+    : await waitForSetGptPasswordPageState((state) => state.state === 'new_password_page', 15000);
   if (snapshot.state !== 'new_password_page') {
     throw new Error(`步骤 ${visibleStep}：未进入 /reset-password/new-password 设置密码页，当前状态 ${snapshot.state}。URL: ${snapshot.url}`);
   }

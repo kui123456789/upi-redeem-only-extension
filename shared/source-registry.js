@@ -123,13 +123,13 @@
       driverId: 'content/sub2api-panel',
       cleanupScopes: [],
     },
-    'plus-checkout': {
+    'chatgpt-session-reader': {
       flowId: 'openai',
       kind: 'flow-page',
-      label: 'Plus Checkout',
+      label: 'ChatGPT 会话读取',
       readyPolicy: 'top-frame-only',
-      family: 'plus-checkout-family',
-      driverId: 'content/plus-checkout',
+      family: 'chatgpt-session-reader-family',
+      driverId: 'content/chatgpt-session-reader',
       cleanupScopes: [],
     },
     'unknown-source': {
@@ -195,9 +195,9 @@
       sourceId: 'platform-panel',
       commands: ['platform-verify', 'fetch-oauth-url'],
     },
-    'content/plus-checkout': {
-      sourceId: 'plus-checkout',
-      commands: ['plus-checkout-create', 'plus-checkout-billing', 'plus-checkout-return'],
+    'content/chatgpt-session-reader': {
+      sourceId: 'chatgpt-session-reader',
+      commands: ['read-chatgpt-session'],
     },
   });
 
@@ -213,7 +213,7 @@
     'gmail-mail',
     'mail-2925',
     'inbucket-mail',
-    'plus-checkout',
+    'chatgpt-session-reader',
   ]);
 
   function createSourceRegistry() {
@@ -361,9 +361,8 @@
               || candidate.pathname === '/admin'
               || candidate.pathname === '/'
             );
-        case 'plus-checkout':
-          return candidate.hostname === 'chatgpt.com'
-            && candidate.pathname.startsWith('/checkout/');
+        case 'chatgpt-session-reader':
+          return candidate.hostname === 'chatgpt.com' || candidate.hostname === 'chat.openai.com';
         default:
           return false;
       }
@@ -386,7 +385,6 @@
       if (normalizedHostname === 'www.icloud.com' || normalizedHostname === 'www.icloud.com.cn') return 'icloud-mail';
       if (normalizedUrl.includes('duckduckgo.com/email/settings/autofill')) return 'duck-mail';
       if (normalizedUrl.includes('2925.com')) return 'mail-2925';
-      if (normalizedHostname === 'pay.openai.com' || normalizedHostname === 'checkout.stripe.com') return 'plus-checkout';
       if (isSignupEntryHost(normalizedHostname)) return 'chatgpt';
       return 'unknown-source';
     }
@@ -428,3 +426,4 @@
     createSourceRegistry,
   };
 });
+

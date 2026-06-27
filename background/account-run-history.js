@@ -412,7 +412,6 @@
         || record.contributionCallbackUrl
         || record.verificationUrl
         || record.plusReturnUrl
-        || record.plusCheckoutUrl
         || record.finalUrl
       );
     }
@@ -980,3 +979,5 @@
     createAccountRunHistoryHelpers,
   };
 });
+
+

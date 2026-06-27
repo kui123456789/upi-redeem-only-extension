@@ -1,7 +1,7 @@
 (function attachBackgroundEnableTotpMfa(root, factory) {
   root.MultiPageBackgroundEnableTotpMfa = factory();
 })(typeof self !== 'undefined' ? self : globalThis, function createBackgroundEnableTotpMfaModule() {
-  const CHATGPT_SOURCE = 'plus-checkout';
+  const CHATGPT_SOURCE = 'chatgpt-session-reader';
   const CHATGPT_SECURITY_URL = 'https://chatgpt.com/#settings/Security';
   const DEFAULT_TOTP_API_BASE_URL = 'https://cha.nerver.cc';
   const SESSION_TAB_COMPLETE_TIMEOUT_MS = 60000;
@@ -560,7 +560,7 @@
         }
       }
 
-      const storedTabId = Number(state?.plusCheckoutTabId) || 0;
+      const storedTabId = Number(state?.chatgptSessionReaderTabId) || 0;
       const storedTab = await readSupportedSessionTab(storedTabId);
       if (storedTab?.id) {
         if (typeof registerTab === 'function') {
@@ -1074,3 +1074,5 @@
     normalizeTotpSecret,
   };
 });
+
+

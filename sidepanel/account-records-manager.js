@@ -188,7 +188,6 @@
         || record.callbackUrl
         || record.contributionCallbackUrl
         || record.plusReturnUrl
-        || record.plusCheckoutUrl
         || record.finalUrl
         || ''
       ).trim();
@@ -3733,3 +3732,5 @@
     createAccountRecordsManager,
   };
 })(typeof window !== 'undefined' ? window : globalThis);
+
+

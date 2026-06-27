@@ -63,7 +63,7 @@ if (!window.__MULTIPAGE_UTILS_LISTENER_READY__) {
       sendResponse({
         ok: true,
         source: getRuntimeScriptSource(),
-        plusCheckoutReady: Boolean(window.__MULTIPAGE_PLUS_CHECKOUT_READY__),
+        chatgptSessionReaderReady: Boolean(window.__MULTIPAGE_CHATGPT_SESSION_READER_READY__),
       });
     }
   });
@@ -576,7 +576,7 @@ function shouldReportReadyForFrame(source, isChildFrame) {
     'gmail-mail',
     'mail-2925',
     'inbucket-mail',
-    'plus-checkout',
+    'chatgpt-session-reader',
     'unknown-source',
   ].includes(source);
 }
@@ -586,3 +586,4 @@ function shouldReportReadyForFrame(source, isChildFrame) {
 if (shouldReportReadyForFrame(getRuntimeScriptSource(), window !== window.top)) {
   reportReady();
 }
+

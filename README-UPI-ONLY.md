@@ -1,35 +1,42 @@
 # UPI Redeem Only
 
-这是从原扩展单独剥离出来的 UPI 专用副本，原插件目录不删除、不移动。
-
-## 加载目录
-
-推荐使用脱敏发布包：
-
-`release-artifacts/upi-redeem-only-0.2.0-sanitized.zip`
-
-解压后在 Chrome 扩展管理页选择“加载已解压的扩展”，目录选择解压出来的文件夹。
+这是 UPI 专用副本。原插件目录不需要删除或移动，本目录只保留 UPI 注册、2FA、AT、Free/Plus 分组和卡密兑换能力。
 
 ## 配置使用说明
 
 见 [docs/CONFIG-USAGE.md](docs/CONFIG-USAGE.md)。
 
+## 加载目录
+
+推荐加载脱敏发布包解压后的目录；开发调试时也可以直接加载本项目根目录。
+
+```text
+chrome://extensions/
+```
+
+开启“开发者模式”，点击“加载已解压的扩展程序”。
+
 ## 保留能力
 
-- 邮箱注册与验证码获取
-- 创建/设置 GPT 登录密码
-- 开通 TOTP 2FA
-- UPI 试用资格检测
-- Free / Plus 分组管理
-- Free 分组补 AT
-- Free 分组识别 Plus
-- Free 分组 AT + 卡密兑换
-- 远端确认成功后进入 Plus
-- Free / Plus 分组导出
+- 邮箱注册与邮箱验证码获取。
+- 创建并保存 GPT 登录密码。
+- 开通 TOTP 2FA。
+- 读取 access token。
+- UPI 试用资格检测。
+- Free / Plus 分组管理。
+- Free 补 AT、识别 Plus、AT + 卡密兑换。
+- 远端成功后进入 Plus。
+- Free / Plus 导入导出。
+
+## 已清理范围
+
+已移除旧支付流程、旧外部钱包支付、旧网络切换、手机验证取码、本地支付 helper 和对应隐藏 UI。
+
+邮箱取码不是 取码，注册流程仍保留邮箱 provider。
 
 ## 脱敏打包
 
-发布包会排除本地秘钥和开发数据：
+发布包应排除本地密钥和开发数据：
 
 - `manifest.json` 中的 `key`
 - `config.json`
@@ -37,10 +44,7 @@
 - `.codegraph`
 - `_metadata`
 - `release-artifacts`
-- 本地运行历史和日志
+- 本地运行历史、日志和缓存
 
-源码目录可以保留本地开发配置；对外使用发布包时，请使用 `sanitized` 压缩包。
 
-## 处理方式
 
-这个副本默认使用 UPI 流程。PayPal、GoPay、代理、接码等非 UPI 入口已经隐藏或移除。为了保证 UPI 注册、取码、2FA、会员核验能继续工作，必要的共享底层文件会保留在副本中。

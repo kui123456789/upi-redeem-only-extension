@@ -9,10 +9,6 @@
     'auth.openai.com',
     'auth0.openai.com',
     'accounts.openai.com',
-    'paypal.com',
-    'stripe.com',
-    'checkout.stripe.com',
-    'meiguodizhi.com',
     'mail-api.yuecheng.shop',
     'yuecheng.shop',
   ];
@@ -24,11 +20,6 @@
     'https://auth0.openai.com',
     'https://accounts.openai.com',
     'https://openai.com',
-    'https://www.paypal.com',
-    'https://paypal.com',
-    'https://checkout.stripe.com',
-    'https://www.meiguodizhi.com',
-    'https://meiguodizhi.com',
     'https://mail-api.yuecheng.shop',
   ];
 
@@ -161,3 +152,5 @@
 
   return { createStep1Executor };
 });
+
+

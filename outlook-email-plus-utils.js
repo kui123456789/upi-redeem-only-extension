@@ -124,22 +124,22 @@
     return `${parts.baseLocal}+${sanitizedTag}@${parts.domain}`;
   }
 
-  function buildOutlookEmailPlusPayPalAliasAddress(baseAddress = '', index = 1) {
+  function buildOutlookEmailPlusAliasNumberAddress(baseAddress = '', index = 1) {
     const parts = parseOutlookEmailPlusAddressParts(baseAddress);
     const numericIndex = Math.max(1, Math.floor(Number(index) || 1));
     if (!parts?.baseLocal || !parts.domain) {
       return '';
     }
-    return `${parts.baseLocal}+PayPal${numericIndex}@${parts.domain}`;
+    return `${parts.baseLocal}+Alias${numericIndex}@${parts.domain}`;
   }
 
-  function getOutlookEmailPlusPayPalAliasIndex(aliasAddress = '', baseAddress = '') {
+  function getOutlookEmailPlusAliasNumberIndex(aliasAddress = '', baseAddress = '') {
     const aliasParts = parseOutlookEmailPlusAddressParts(aliasAddress);
     const baseParts = parseOutlookEmailPlusAddressParts(baseAddress);
     if (!aliasParts || !baseParts || aliasParts.domain !== baseParts.domain) {
       return null;
     }
-    const prefix = `${baseParts.baseLocal}+paypal`;
+    const prefix = `${baseParts.baseLocal}+alias`;
     if (!aliasParts.local.startsWith(prefix)) {
       return null;
     }
@@ -280,10 +280,10 @@
     DEFAULT_OUTLOOK_EMAIL_PLUS_BASE_URL,
     buildOutlookEmailPlusAliasAddress,
     buildOutlookEmailPlusHeaders,
-    buildOutlookEmailPlusPayPalAliasAddress,
+    buildOutlookEmailPlusAliasNumberAddress,
     deriveOutlookEmailPlusBaseAddress,
     generateOutlookEmailPlusTag,
-    getOutlookEmailPlusPayPalAliasIndex,
+    getOutlookEmailPlusAliasNumberIndex,
     isOutlookEmailPlusTaggedAlias,
     joinOutlookEmailPlusUrl,
     normalizeOutlookEmailPlusAddress,
@@ -299,3 +299,6 @@
     unwrapOutlookEmailPlusResponse,
   };
 });
+
+
+

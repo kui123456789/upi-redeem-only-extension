@@ -4,7 +4,6 @@ importScripts(
   'shared/source-registry.js',
   'shared/flow-capabilities.js',
   'shared/session-to-json-converter.js',
-  'background/local-cli-proxy-api.js',
   'managed-alias-utils.js',
   'mail2925-utils.js',
   'background/account-run-history.js',
@@ -24,7 +23,6 @@ importScripts(
   'background/upi-credential-membership-checker.js',
   'background/verification-flow.js',
   'background/auto-run-controller.js',
-  'background/plus-success-session-upload.js',
   'background/tab-runtime.js',
   'background/navigation-utils.js',
   'background/logging-status.js',
@@ -68,127 +66,17 @@ importScripts(
 
 const DEFAULT_ACTIVE_FLOW_ID = 'openai';
 const PLUS_ACCOUNT_ACCESS_STRATEGY_OAUTH = 'oauth';
-const PLUS_ACCOUNT_ACCESS_STRATEGY_SMS_OAUTH = 'sms_oauth';
-const PLUS_ACCOUNT_ACCESS_STRATEGY_PHONE_BIND_OAUTH = 'phone_bind_oauth';
 const PLUS_ACCOUNT_ACCESS_STRATEGY_SUB2API_CODEX_SESSION = 'sub2api_codex_session';
 const PLUS_ACCOUNT_ACCESS_STRATEGY_CPA_CODEX_SESSION = 'cpa_codex_session';
 const NORMAL_STEP_DEFINITIONS = self.MultiPageStepDefinitions?.getSteps?.({
   activeFlowId: DEFAULT_ACTIVE_FLOW_ID,
   plusModeEnabled: false,
 }) || [];
-const NORMAL_PHONE_STEP_DEFINITIONS = self.MultiPageStepDefinitions?.getSteps?.({
-  activeFlowId: DEFAULT_ACTIVE_FLOW_ID,
-  plusModeEnabled: false,
-  signupMethod: 'phone',
-}) || NORMAL_STEP_DEFINITIONS;
-const NORMAL_PHONE_BOUND_EMAIL_RELOGIN_STEP_DEFINITIONS = self.MultiPageStepDefinitions?.getSteps?.({
-  activeFlowId: DEFAULT_ACTIVE_FLOW_ID,
-  plusModeEnabled: false,
-  signupMethod: 'phone',
-  phoneSignupReloginAfterBindEmailEnabled: true,
-}) || NORMAL_PHONE_STEP_DEFINITIONS;
-const PLUS_PAYPAL_STEP_DEFINITIONS = self.MultiPageStepDefinitions?.getSteps?.({
-  activeFlowId: DEFAULT_ACTIVE_FLOW_ID,
-  plusModeEnabled: true,
-  plusPaymentMethod: 'paypal',
-}) || NORMAL_STEP_DEFINITIONS;
-const PLUS_PAYPAL_SMS_OAUTH_STEP_DEFINITIONS = self.MultiPageStepDefinitions?.getSteps?.({
-  activeFlowId: DEFAULT_ACTIVE_FLOW_ID,
-  plusModeEnabled: true,
-  plusPaymentMethod: 'paypal',
-  plusAccountAccessStrategy: PLUS_ACCOUNT_ACCESS_STRATEGY_SMS_OAUTH,
-  signupMethod: 'phone',
-}) || PLUS_PAYPAL_STEP_DEFINITIONS;
-const PLUS_PAYPAL_SUB2API_SESSION_STEP_DEFINITIONS = self.MultiPageStepDefinitions?.getSteps?.({
-  activeFlowId: DEFAULT_ACTIVE_FLOW_ID,
-  plusModeEnabled: true,
-  plusPaymentMethod: 'paypal',
-  plusAccountAccessStrategy: PLUS_ACCOUNT_ACCESS_STRATEGY_SUB2API_CODEX_SESSION,
-}) || PLUS_PAYPAL_STEP_DEFINITIONS;
-const PLUS_PAYPAL_CPA_SESSION_STEP_DEFINITIONS = self.MultiPageStepDefinitions?.getSteps?.({
-  activeFlowId: DEFAULT_ACTIVE_FLOW_ID,
-  plusModeEnabled: true,
-  plusPaymentMethod: 'paypal',
-  plusAccountAccessStrategy: PLUS_ACCOUNT_ACCESS_STRATEGY_CPA_CODEX_SESSION,
-}) || PLUS_PAYPAL_STEP_DEFINITIONS;
-const PLUS_PAYPAL_PHONE_STEP_DEFINITIONS = self.MultiPageStepDefinitions?.getSteps?.({
-  activeFlowId: DEFAULT_ACTIVE_FLOW_ID,
-  plusModeEnabled: true,
-  plusPaymentMethod: 'paypal',
-  signupMethod: 'phone',
-}) || PLUS_PAYPAL_STEP_DEFINITIONS;
-const PLUS_PAYPAL_PHONE_BOUND_EMAIL_RELOGIN_STEP_DEFINITIONS = self.MultiPageStepDefinitions?.getSteps?.({
-  activeFlowId: DEFAULT_ACTIVE_FLOW_ID,
-  plusModeEnabled: true,
-  plusPaymentMethod: 'paypal',
-  signupMethod: 'phone',
-  phoneSignupReloginAfterBindEmailEnabled: true,
-}) || PLUS_PAYPAL_PHONE_STEP_DEFINITIONS;
-const PLUS_GOPAY_STEP_DEFINITIONS = self.MultiPageStepDefinitions?.getSteps?.({
-  activeFlowId: DEFAULT_ACTIVE_FLOW_ID,
-  plusModeEnabled: true,
-  plusPaymentMethod: 'gopay',
-}) || PLUS_PAYPAL_STEP_DEFINITIONS;
-const PLUS_GOPAY_SUB2API_SESSION_STEP_DEFINITIONS = self.MultiPageStepDefinitions?.getSteps?.({
-  activeFlowId: DEFAULT_ACTIVE_FLOW_ID,
-  plusModeEnabled: true,
-  plusPaymentMethod: 'gopay',
-  plusAccountAccessStrategy: PLUS_ACCOUNT_ACCESS_STRATEGY_SUB2API_CODEX_SESSION,
-}) || PLUS_GOPAY_STEP_DEFINITIONS;
-const PLUS_GOPAY_CPA_SESSION_STEP_DEFINITIONS = self.MultiPageStepDefinitions?.getSteps?.({
-  activeFlowId: DEFAULT_ACTIVE_FLOW_ID,
-  plusModeEnabled: true,
-  plusPaymentMethod: 'gopay',
-  plusAccountAccessStrategy: PLUS_ACCOUNT_ACCESS_STRATEGY_CPA_CODEX_SESSION,
-}) || PLUS_GOPAY_STEP_DEFINITIONS;
-const PLUS_GOPAY_PHONE_STEP_DEFINITIONS = self.MultiPageStepDefinitions?.getSteps?.({
-  activeFlowId: DEFAULT_ACTIVE_FLOW_ID,
-  plusModeEnabled: true,
-  plusPaymentMethod: 'gopay',
-  signupMethod: 'phone',
-}) || PLUS_GOPAY_STEP_DEFINITIONS;
-const PLUS_GOPAY_PHONE_BOUND_EMAIL_RELOGIN_STEP_DEFINITIONS = self.MultiPageStepDefinitions?.getSteps?.({
-  activeFlowId: DEFAULT_ACTIVE_FLOW_ID,
-  plusModeEnabled: true,
-  plusPaymentMethod: 'gopay',
-  signupMethod: 'phone',
-  phoneSignupReloginAfterBindEmailEnabled: true,
-}) || PLUS_GOPAY_PHONE_STEP_DEFINITIONS;
-const PLUS_GPC_STEP_DEFINITIONS = self.MultiPageStepDefinitions?.getSteps?.({
-  activeFlowId: DEFAULT_ACTIVE_FLOW_ID,
-  plusModeEnabled: true,
-  plusPaymentMethod: 'gpc-helper',
-}) || PLUS_GOPAY_STEP_DEFINITIONS;
-const PLUS_GPC_SUB2API_SESSION_STEP_DEFINITIONS = self.MultiPageStepDefinitions?.getSteps?.({
-  activeFlowId: DEFAULT_ACTIVE_FLOW_ID,
-  plusModeEnabled: true,
-  plusPaymentMethod: 'gpc-helper',
-  plusAccountAccessStrategy: PLUS_ACCOUNT_ACCESS_STRATEGY_SUB2API_CODEX_SESSION,
-}) || PLUS_GPC_STEP_DEFINITIONS;
-const PLUS_GPC_CPA_SESSION_STEP_DEFINITIONS = self.MultiPageStepDefinitions?.getSteps?.({
-  activeFlowId: DEFAULT_ACTIVE_FLOW_ID,
-  plusModeEnabled: true,
-  plusPaymentMethod: 'gpc-helper',
-  plusAccountAccessStrategy: PLUS_ACCOUNT_ACCESS_STRATEGY_CPA_CODEX_SESSION,
-}) || PLUS_GPC_STEP_DEFINITIONS;
-const PLUS_GPC_PHONE_STEP_DEFINITIONS = self.MultiPageStepDefinitions?.getSteps?.({
-  activeFlowId: DEFAULT_ACTIVE_FLOW_ID,
-  plusModeEnabled: true,
-  plusPaymentMethod: 'gpc-helper',
-  signupMethod: 'phone',
-}) || PLUS_GPC_STEP_DEFINITIONS;
-const PLUS_GPC_PHONE_BOUND_EMAIL_RELOGIN_STEP_DEFINITIONS = self.MultiPageStepDefinitions?.getSteps?.({
-  activeFlowId: DEFAULT_ACTIVE_FLOW_ID,
-  plusModeEnabled: true,
-  plusPaymentMethod: 'gpc-helper',
-  signupMethod: 'phone',
-  phoneSignupReloginAfterBindEmailEnabled: true,
-}) || PLUS_GPC_PHONE_STEP_DEFINITIONS;
 const PLUS_UPI_STEP_DEFINITIONS = self.MultiPageStepDefinitions?.getSteps?.({
   activeFlowId: DEFAULT_ACTIVE_FLOW_ID,
   plusModeEnabled: true,
   plusPaymentMethod: 'upi',
-}) || PLUS_GPC_STEP_DEFINITIONS;
+}) || NORMAL_STEP_DEFINITIONS;
 const PLUS_UPI_SUB2API_SESSION_STEP_DEFINITIONS = self.MultiPageStepDefinitions?.getSteps?.({
   activeFlowId: DEFAULT_ACTIVE_FLOW_ID,
   plusModeEnabled: true,
@@ -201,19 +89,6 @@ const PLUS_UPI_CPA_SESSION_STEP_DEFINITIONS = self.MultiPageStepDefinitions?.get
   plusPaymentMethod: 'upi',
   plusAccountAccessStrategy: PLUS_ACCOUNT_ACCESS_STRATEGY_CPA_CODEX_SESSION,
 }) || PLUS_UPI_STEP_DEFINITIONS;
-const PLUS_UPI_PHONE_STEP_DEFINITIONS = self.MultiPageStepDefinitions?.getSteps?.({
-  activeFlowId: DEFAULT_ACTIVE_FLOW_ID,
-  plusModeEnabled: true,
-  plusPaymentMethod: 'upi',
-  signupMethod: 'phone',
-}) || PLUS_UPI_STEP_DEFINITIONS;
-const PLUS_UPI_PHONE_BOUND_EMAIL_RELOGIN_STEP_DEFINITIONS = self.MultiPageStepDefinitions?.getSteps?.({
-  activeFlowId: DEFAULT_ACTIVE_FLOW_ID,
-  plusModeEnabled: true,
-  plusPaymentMethod: 'upi',
-  signupMethod: 'phone',
-  phoneSignupReloginAfterBindEmailEnabled: true,
-}) || PLUS_UPI_PHONE_STEP_DEFINITIONS;
 const PLUS_UPI_REDEEM_ONLY_STEP_DEFINITIONS = self.MultiPageStepDefinitions?.getSteps?.({
   activeFlowId: DEFAULT_ACTIVE_FLOW_ID,
   plusModeEnabled: true,
@@ -224,34 +99,15 @@ const LOCAL_CPA_JSON_NO_RT_STEP_DEFINITIONS = self.MultiPageStepDefinitions?.get
   activeFlowId: DEFAULT_ACTIVE_FLOW_ID,
   panelMode: 'local-cpa-json-no-rt',
   plusModeEnabled: true,
-}) || PLUS_PAYPAL_STEP_DEFINITIONS.slice(0, 6);
-const PLUS_STEP_DEFINITIONS = PLUS_PAYPAL_STEP_DEFINITIONS;
+}) || PLUS_UPI_STEP_DEFINITIONS.slice(0, 6);
+const PLUS_STEP_DEFINITIONS = PLUS_UPI_STEP_DEFINITIONS;
 const ALL_STEP_DEFINITIONS = self.MultiPageStepDefinitions?.getAllSteps?.({
   activeFlowId: DEFAULT_ACTIVE_FLOW_ID,
 }) || [
   ...NORMAL_STEP_DEFINITIONS,
-  ...NORMAL_PHONE_STEP_DEFINITIONS,
-  ...NORMAL_PHONE_BOUND_EMAIL_RELOGIN_STEP_DEFINITIONS,
-  ...PLUS_PAYPAL_STEP_DEFINITIONS,
-  ...PLUS_PAYPAL_SUB2API_SESSION_STEP_DEFINITIONS,
-  ...PLUS_PAYPAL_CPA_SESSION_STEP_DEFINITIONS,
-  ...PLUS_PAYPAL_PHONE_STEP_DEFINITIONS,
-  ...PLUS_PAYPAL_PHONE_BOUND_EMAIL_RELOGIN_STEP_DEFINITIONS,
-  ...PLUS_GOPAY_STEP_DEFINITIONS,
-  ...PLUS_GOPAY_SUB2API_SESSION_STEP_DEFINITIONS,
-  ...PLUS_GOPAY_CPA_SESSION_STEP_DEFINITIONS,
-  ...PLUS_GOPAY_PHONE_STEP_DEFINITIONS,
-  ...PLUS_GOPAY_PHONE_BOUND_EMAIL_RELOGIN_STEP_DEFINITIONS,
-  ...PLUS_GPC_STEP_DEFINITIONS,
-  ...PLUS_GPC_SUB2API_SESSION_STEP_DEFINITIONS,
-  ...PLUS_GPC_CPA_SESSION_STEP_DEFINITIONS,
-  ...PLUS_GPC_PHONE_STEP_DEFINITIONS,
-  ...PLUS_GPC_PHONE_BOUND_EMAIL_RELOGIN_STEP_DEFINITIONS,
   ...PLUS_UPI_STEP_DEFINITIONS,
   ...PLUS_UPI_SUB2API_SESSION_STEP_DEFINITIONS,
   ...PLUS_UPI_CPA_SESSION_STEP_DEFINITIONS,
-  ...PLUS_UPI_PHONE_STEP_DEFINITIONS,
-  ...PLUS_UPI_PHONE_BOUND_EMAIL_RELOGIN_STEP_DEFINITIONS,
 ];
 const STEP_IDS = Array.from(new Set(ALL_STEP_DEFINITIONS
   .map((definition) => Number(definition?.id))
@@ -266,28 +122,13 @@ const NORMAL_STEP_IDS = NORMAL_STEP_DEFINITIONS
   .map((definition) => Number(definition?.id))
   .filter(Number.isFinite)
   .sort((left, right) => left - right);
-const PLUS_PAYPAL_STEP_IDS = PLUS_PAYPAL_STEP_DEFINITIONS
-  .map((definition) => Number(definition?.id))
-  .filter(Number.isFinite)
-  .sort((left, right) => left - right);
-const PLUS_GOPAY_STEP_IDS = PLUS_GOPAY_STEP_DEFINITIONS
-  .map((definition) => Number(definition?.id))
-  .filter(Number.isFinite)
-  .sort((left, right) => left - right);
-const PLUS_GPC_STEP_IDS = PLUS_GPC_STEP_DEFINITIONS
-  .map((definition) => Number(definition?.id))
-  .filter(Number.isFinite)
-  .sort((left, right) => left - right);
 const PLUS_UPI_STEP_IDS = PLUS_UPI_STEP_DEFINITIONS
   .map((definition) => Number(definition?.id))
   .filter(Number.isFinite)
   .sort((left, right) => left - right);
-const PLUS_STEP_IDS = PLUS_PAYPAL_STEP_IDS;
+const PLUS_STEP_IDS = PLUS_UPI_STEP_IDS;
 const LAST_STEP_ID = Math.max(
   NORMAL_STEP_IDS[NORMAL_STEP_IDS.length - 1] || 10,
-  PLUS_PAYPAL_STEP_IDS[PLUS_PAYPAL_STEP_IDS.length - 1] || 10,
-  PLUS_GOPAY_STEP_IDS[PLUS_GOPAY_STEP_IDS.length - 1] || 10,
-  PLUS_GPC_STEP_IDS[PLUS_GPC_STEP_IDS.length - 1] || 10,
   PLUS_UPI_STEP_IDS[PLUS_UPI_STEP_IDS.length - 1] || 10
 );
 const FINAL_OAUTH_CHAIN_START_STEP = 7;
@@ -410,10 +251,10 @@ const {
   DEFAULT_OUTLOOK_EMAIL_PLUS_BASE_URL,
   buildOutlookEmailPlusAliasAddress,
   buildOutlookEmailPlusHeaders,
-  buildOutlookEmailPlusPayPalAliasAddress,
+  buildOutlookEmailPlusAliasNumberAddress,
   deriveOutlookEmailPlusBaseAddress,
   generateOutlookEmailPlusTag,
-  getOutlookEmailPlusPayPalAliasIndex,
+  getOutlookEmailPlusAliasNumberIndex,
   isOutlookEmailPlusTaggedAlias,
   joinOutlookEmailPlusUrl,
   normalizeOutlookEmailPlusAddress,
@@ -626,9 +467,9 @@ const SUB2API_STEP1_RESPONSE_TIMEOUT_MS = 90000;
 const SUB2API_STEP9_RESPONSE_TIMEOUT_MS = 120000;
 const DEFAULT_SUB2API_URL = '';
 const DEFAULT_CODEX2API_URL = 'http://localhost:8080/admin/accounts';
-const DEFAULT_GPC_HELPER_API_URL = 'https://your-gpc-helper-domain.example';
-const BUILTIN_PLUS_CHECKOUT_CLOUD_CONVERSION_API_URL = 'https://gujumpgate.zg.fyi/api/checkout';
-const BUILTIN_PLUS_CHECKOUT_CLOUD_CONVERSION_API_KEY = '';
+const DEFAULT_CARD_HELPER_HELPER_API_URL = 'https://your-cardHelper-helper-domain.example';
+const BUILTIN_CHATGPT_SESSION_READER_CLOUD_CONVERSION_API_URL = 'https://gujumpgate.zg.fyi/api/checkout';
+const BUILTIN_CHATGPT_SESSION_READER_CLOUD_CONVERSION_API_KEY = '';
 const DEFAULT_SUB2API_GROUP_NAME = 'codex';
 const DEFAULT_SUB2API_PROXY_NAME = '';
 const DEFAULT_SUB2API_ACCOUNT_PRIORITY = 1;
@@ -642,18 +483,18 @@ const DEFAULT_SUB2API_GROUP_NAMES = [
   CONTRIBUTION_SUB2API_PLUS_GROUP_NAME,
 ];
 const DEFAULT_SUB2API_REDIRECT_URI = 'http://localhost:1455/auth/callback';
-const DEFAULT_IP_PROXY_SERVICE = '711proxy';
-const IP_PROXY_SERVICE_VALUES = ['711proxy', 'lumiproxy', 'iproyal', 'omegaproxy'];
-const IP_PROXY_ENABLED_SERVICE_VALUES = ['711proxy'];
-const DEFAULT_IP_PROXY_MODE = 'account';
-const IP_PROXY_MODE_VALUES = ['api', 'account'];
-const DEFAULT_IP_PROXY_PROTOCOL = 'http';
-const IP_PROXY_PROTOCOL_VALUES = ['http', 'https', 'socks4', 'socks5'];
-const IP_PROXY_FETCH_TIMEOUT_MS = 20000;
-const IP_PROXY_SETTINGS_SCOPE = 'regular';
-const IP_PROXY_BYPASS_LIST = ['<local>', 'localhost', '127.0.0.1'];
-const IP_PROXY_ROUTE_ALL_TRAFFIC = true;
-const IP_PROXY_FORCE_DIRECT_HOST_PATTERNS = [
+const DEFAULT_REMOVED_NETWORK_SERVICE = 'removed-network-service';
+const REMOVED_NETWORK_SERVICE_VALUES = ['removed-network-service', 'lumiproxy', 'iproyal', 'omegaproxy'];
+const REMOVED_NETWORK_ENABLED_SERVICE_VALUES = ['removed-network-service'];
+const DEFAULT_REMOVED_NETWORK_MODE = 'account';
+const REMOVED_NETWORK_MODE_VALUES = ['api', 'account'];
+const DEFAULT_REMOVED_NETWORK_PROTOCOL = 'http';
+const REMOVED_NETWORK_PROTOCOL_VALUES = ['http', 'https', 'socks4', 'socks5'];
+const REMOVED_NETWORK_FETCH_TIMEOUT_MS = 20000;
+const REMOVED_NETWORK_SETTINGS_SCOPE = 'regular';
+const REMOVED_NETWORK_BYPASS_LIST = ['<local>', 'localhost', '127.0.0.1'];
+const REMOVED_NETWORK_ROUTE_ALL_TRAFFIC = true;
+const REMOVED_NETWORK_FORCE_DIRECT_HOST_PATTERNS = [
   'pm-redirects.stripe.com',
   '*.pm-redirects.stripe.com',
   'hwork.pro',
@@ -664,13 +505,13 @@ const IP_PROXY_FORCE_DIRECT_HOST_PATTERNS = [
   'luckyous.com',
   '*.luckyous.com',
 ];
-const IP_PROXY_FORCE_DIRECT_FALLBACK = 'PROXY 127.0.0.1:7897';
-const IP_PROXY_ACCOUNT_LIST_ENABLED = false;
-const IP_PROXY_INIT_ENABLE_EXIT_PROBE = false;
-const IP_PROXY_INIT_SUPPRESS_AUTH_REBIND = true;
-const IP_PROXY_INIT_AUTO_APPLY = false;
-const LEGACY_IP_PROXY_FEATURE_ENABLED = false;
-const IP_PROXY_TARGET_HOST_PATTERNS = [
+const REMOVED_NETWORK_FORCE_DIRECT_FALLBACK = 'PROXY 127.0.0.1:7897';
+const REMOVED_NETWORK_ACCOUNT_LIST_ENABLED = false;
+const REMOVED_NETWORK_INIT_ENABLE_EXIT_PROBE = false;
+const REMOVED_NETWORK_INIT_SUPPRESS_AUTH_REBIND = true;
+const REMOVED_NETWORK_INIT_AUTO_APPLY = false;
+const LEGACY_REMOVED_NETWORK_FEATURE_ENABLED = false;
+const REMOVED_NETWORK_TARGET_HOST_PATTERNS = [
   'openai.com',
   '*.openai.com',
   'chatgpt.com',
@@ -693,13 +534,13 @@ const IP_PROXY_TARGET_HOST_PATTERNS = [
   'myip.ipip.net',
 ];
 const AUTO_RUN_TIMER_ALARM_NAME = 'auto-run-timer';
-const IP_PROXY_AUTO_SYNC_ALARM_NAME = 'ip-proxy-auto-sync';
+const REMOVED_NETWORK_AUTO_SYNC_ALARM_NAME = 'removed-network-auto-sync';
 const AUTO_RUN_TIMER_KIND_SCHEDULED_START = 'scheduled_start';
 const AUTO_RUN_TIMER_KIND_BETWEEN_ROUNDS = 'between_rounds';
 const AUTO_RUN_TIMER_KIND_BEFORE_RETRY = 'before_retry';
-const IP_PROXY_AUTO_SYNC_INTERVAL_MIN_MINUTES = 1;
-const IP_PROXY_AUTO_SYNC_INTERVAL_MAX_MINUTES = 1440;
-const IP_PROXY_AUTO_SYNC_DEFAULT_INTERVAL_MINUTES = 15;
+const REMOVED_NETWORK_AUTO_SYNC_INTERVAL_MIN_MINUTES = 1;
+const REMOVED_NETWORK_AUTO_SYNC_INTERVAL_MAX_MINUTES = 1440;
+const REMOVED_NETWORK_AUTO_SYNC_DEFAULT_INTERVAL_MINUTES = 15;
 const AUTO_RUN_DELAY_MIN_MINUTES = 1;
 const AUTO_RUN_DELAY_MAX_MINUTES = 1440;
 const AUTO_RUN_RETRY_DELAY_MS = 3000;
@@ -764,11 +605,11 @@ const DEFAULT_ACCOUNT_RUN_HISTORY_HELPER_BASE_URL = DEFAULT_HOTMAIL_LOCAL_BASE_U
 const DEFAULT_LOCAL_CPA_JSON_RELATIVE_AUTH_DIR = '.cli-proxy-api';
 const HOTMAIL_LOCAL_HELPER_TIMEOUT_MS = 45000;
 const DEFAULT_LUCKMAIL_PROJECT_CODE = 'openai';
-const DEFAULT_HERO_SMS_BASE_URL = 'https://hero-sms.com/stubs/handler_api.php';
-const HERO_SMS_SERVICE_CODE = 'dr';
-const HERO_SMS_SERVICE_LABEL = 'OpenAI';
-const HERO_SMS_COUNTRY_ID = 52;
-const HERO_SMS_COUNTRY_LABEL = '泰国 (Thailand)';
+const DEFAULT_REMOVED_SMS_MAIN_BASE_URL = 'https://removed-sms-main.com/stubs/handler_api.php';
+const REMOVED_SMS_MAIN_SERVICE_CODE = 'dr';
+const REMOVED_SMS_MAIN_SERVICE_LABEL = 'OpenAI';
+const REMOVED_SMS_MAIN_COUNTRY_ID = 52;
+const REMOVED_SMS_MAIN_COUNTRY_LABEL = '泰国 (Thailand)';
 const DEFAULT_HANDLER_API_COUNTRY_FALLBACK = Object.freeze([
   { id: 55, label: '台湾 +886 (Taiwan)' },
   { id: 187, label: '美国 +1 (USA)' },
@@ -778,28 +619,28 @@ const DEFAULT_HANDLER_API_COUNTRY_FALLBACK = Object.freeze([
   { id: 78, label: '法国 +33 (France)' },
   { id: 91, label: '东帝汶 +670 (Timor-Leste)' },
 ]);
-const PHONE_SMS_PROVIDER_HERO = 'hero-sms';
-const PHONE_SMS_PROVIDER_5SIM = '5sim';
-const PHONE_SMS_PROVIDER_HERO_SMS = PHONE_SMS_PROVIDER_HERO;
-const PHONE_SMS_PROVIDER_FIVE_SIM = PHONE_SMS_PROVIDER_5SIM;
-const PHONE_SMS_PROVIDER_NEXSMS = 'nexsms';
-const PHONE_SMS_PROVIDER_HOSTED_SMS = 'hosted-sms';
-const PHONE_SMS_PROVIDER_SMSBOWER = 'smsbower';
-const PHONE_SMS_PROVIDER_SMS_VERIFICATION_NUMBER = 'sms-verification-number';
-const PHONE_SMS_PROVIDER_GRIZZLYSMS = 'grizzlysms';
-const PHONE_SMS_PROVIDER_SMSPOOL = 'smspool';
-const PHONE_SMS_PROVIDER_CHATGPT_API = 'chatgpt-api';
-const DEFAULT_PHONE_SMS_PROVIDER = PHONE_SMS_PROVIDER_HERO;
-const DEFAULT_PHONE_SMS_PROVIDER_ORDER = Object.freeze([
-  PHONE_SMS_PROVIDER_HERO,
-  PHONE_SMS_PROVIDER_5SIM,
-  PHONE_SMS_PROVIDER_NEXSMS,
-  PHONE_SMS_PROVIDER_HOSTED_SMS,
-  PHONE_SMS_PROVIDER_SMSBOWER,
-  PHONE_SMS_PROVIDER_SMS_VERIFICATION_NUMBER,
-  PHONE_SMS_PROVIDER_GRIZZLYSMS,
-  PHONE_SMS_PROVIDER_SMSPOOL,
-  PHONE_SMS_PROVIDER_CHATGPT_API,
+const REMOVED_PHONE_PROVIDER_HERO = 'removed-sms-main';
+const REMOVED_PHONE_PROVIDER_5SIM = '5sim';
+const REMOVED_PHONE_PROVIDER_REMOVED_SMS_MAIN = REMOVED_PHONE_PROVIDER_HERO;
+const REMOVED_PHONE_PROVIDER_FIVE_SIM = REMOVED_PHONE_PROVIDER_5SIM;
+const REMOVED_PHONE_PROVIDER_REMOVED_SMS_VENDOR = 'removed-sms-vendor';
+const REMOVED_PHONE_PROVIDER_REMOVED_SMS = 'removed-sms';
+const REMOVED_PHONE_PROVIDER_REMOVED_SMS_VENDOR_B = 'removed-sms-vendor-b';
+const REMOVED_PHONE_PROVIDER_SMS_VERIFICATION_NUMBER = 'sms-verification-number';
+const REMOVED_PHONE_PROVIDER_GRIZZLYSMS = 'grizzlysms';
+const REMOVED_PHONE_PROVIDER_REMOVED_TEXT_POOL = 'removed-text-pool';
+const REMOVED_PHONE_PROVIDER_CHATGPT_API = 'chatgpt-api';
+const DEFAULT_REMOVED_PHONE_PROVIDER = REMOVED_PHONE_PROVIDER_HERO;
+const DEFAULT_REMOVED_PHONE_PROVIDER_ORDER = Object.freeze([
+  REMOVED_PHONE_PROVIDER_HERO,
+  REMOVED_PHONE_PROVIDER_5SIM,
+  REMOVED_PHONE_PROVIDER_REMOVED_SMS_VENDOR,
+  REMOVED_PHONE_PROVIDER_REMOVED_SMS,
+  REMOVED_PHONE_PROVIDER_REMOVED_SMS_VENDOR_B,
+  REMOVED_PHONE_PROVIDER_SMS_VERIFICATION_NUMBER,
+  REMOVED_PHONE_PROVIDER_GRIZZLYSMS,
+  REMOVED_PHONE_PROVIDER_REMOVED_TEXT_POOL,
+  REMOVED_PHONE_PROVIDER_CHATGPT_API,
 ]);
 const DEFAULT_FIVE_SIM_BASE_URL = 'https://5sim.net/v1';
 const DEFAULT_FIVE_SIM_PRODUCT = 'openai';
@@ -813,33 +654,32 @@ const DEFAULT_FIVE_SIM_COUNTRY_ORDER = Object.freeze([
   'france',
   'easttimor',
 ]);
-const DEFAULT_NEX_SMS_BASE_URL = 'https://api.nexsms.net';
-const DEFAULT_NEX_SMS_SERVICE_CODE = 'dr';
-const DEFAULT_NEX_SMS_COUNTRY_ORDER = Object.freeze([52, 55, 187, 182, 204, 36, 78, 91]);
-const DEFAULT_SMSBOWER_BASE_URL = 'https://smsbower.page/stubs/handler_api.php';
-const DEFAULT_SMSBOWER_SERVICE_CODE = 'dr';
-const DEFAULT_SMS_BOWER_SERVICE_CODE = DEFAULT_SMSBOWER_SERVICE_CODE;
-const DEFAULT_SMS_BOWER_COUNTRY_ORDER = Object.freeze([52, 55, 12, 187, 182, 204, 36, 78, 91, 19, 38, 7]);
+const DEFAULT_REMOVED_SMS_VENDOR_BASE_URL = 'https://api.removed-sms-vendor.net';
+const DEFAULT_REMOVED_SMS_VENDOR_SERVICE_CODE = 'dr';
+const DEFAULT_REMOVED_SMS_VENDOR_COUNTRY_ORDER = Object.freeze([52, 55, 187, 182, 204, 36, 78, 91]);
+const DEFAULT_REMOVED_SMS_VENDOR_B_BASE_URL = 'https://removed-sms-vendor-b.page/stubs/handler_api.php';
+const DEFAULT_REMOVED_SMS_VENDOR_B_SERVICE_CODE = 'dr';
+const DEFAULT_REMOVED_SMS_VENDOR_B_COUNTRY_ORDER = Object.freeze([52, 55, 12, 187, 182, 204, 36, 78, 91, 19, 38, 7]);
 const DEFAULT_SMS_VERIFICATION_NUMBER_BASE_URL = 'https://sms-verification-number.com/stubs/handler_api';
 const DEFAULT_SMS_VERIFICATION_NUMBER_SERVICE_CODE = 'dr';
 const DEFAULT_GRIZZLY_SMS_BASE_URL = 'https://api.grizzlysms.com/stubs/handler_api.php';
 const DEFAULT_GRIZZLY_SMS_SERVICE_CODE = 'dr';
-const DEFAULT_SMSPOOL_BASE_URL = 'https://api.smspool.net/stubs/handler_api.php?setting=smspool';
-const DEFAULT_SMSPOOL_SERVICE_CODE = '671';
-const DEFAULT_SMSPOOL_COUNTRY_ID = 1;
-const DEFAULT_SMSPOOL_COUNTRY_LABEL = '美国 +1 (United States)';
-const DEFAULT_HERO_SMS_REUSE_ENABLED = true;
-const HERO_SMS_ACQUIRE_PRIORITY_COUNTRY = 'country';
-const HERO_SMS_ACQUIRE_PRIORITY_PRICE = 'price';
-const HERO_SMS_ACQUIRE_PRIORITY_PRICE_HIGH = 'price_high';
-const DEFAULT_HERO_SMS_ACQUIRE_PRIORITY = HERO_SMS_ACQUIRE_PRIORITY_COUNTRY;
+const DEFAULT_REMOVED_TEXT_POOL_BASE_URL = 'https://api.removed-text-pool.net/stubs/handler_api.php?setting=removed-text-pool';
+const DEFAULT_REMOVED_TEXT_POOL_SERVICE_CODE = '671';
+const DEFAULT_REMOVED_TEXT_POOL_COUNTRY_ID = 1;
+const DEFAULT_REMOVED_TEXT_POOL_COUNTRY_LABEL = '美国 +1 (United States)';
+const DEFAULT_REMOVED_SMS_MAIN_REUSE_ENABLED = true;
+const REMOVED_SMS_MAIN_ACQUIRE_PRIORITY_COUNTRY = 'country';
+const REMOVED_SMS_MAIN_ACQUIRE_PRIORITY_PRICE = 'price';
+const REMOVED_SMS_MAIN_ACQUIRE_PRIORITY_PRICE_HIGH = 'price_high';
+const DEFAULT_REMOVED_SMS_MAIN_ACQUIRE_PRIORITY = REMOVED_SMS_MAIN_ACQUIRE_PRIORITY_COUNTRY;
 const FIVE_SIM_COUNTRY_ID = 'thailand';
 const FIVE_SIM_COUNTRY_LABEL = '泰国 (Thailand)';
 const FIVE_SIM_SUPPORTED_COUNTRY_IDS = ['indonesia', 'thailand', 'taiwan', 'usa', 'japan', 'canada', 'france', 'easttimor', 'vietnam'];
 const FIVE_SIM_SUPPORTED_COUNTRY_ID_SET = new Set(FIVE_SIM_SUPPORTED_COUNTRY_IDS);
-const HERO_SMS_SUPPORTED_COUNTRY_IDS = [4, 6, 8, 10, 15, 16, 32, 33, 36, 43, 52, 55, 73, 78, 91, 151, 182, 187, 204];
-const HERO_SMS_SUPPORTED_COUNTRY_ID_SET = new Set(HERO_SMS_SUPPORTED_COUNTRY_IDS.map(String));
-const HERO_SMS_COUNTRY_BY_PHONE_PREFIX = Object.freeze([
+const REMOVED_SMS_MAIN_SUPPORTED_COUNTRY_IDS = [4, 6, 8, 10, 15, 16, 32, 33, 36, 43, 52, 55, 73, 78, 91, 151, 182, 187, 204];
+const REMOVED_SMS_MAIN_SUPPORTED_COUNTRY_ID_SET = new Set(REMOVED_SMS_MAIN_SUPPORTED_COUNTRY_IDS.map(String));
+const REMOVED_SMS_MAIN_COUNTRY_BY_PHONE_PREFIX = Object.freeze([
   { prefix: '63', id: 4, label: 'Philippines' },
   { prefix: '84', id: 10, label: 'Vietnam' },
   { prefix: '48', id: 15, label: 'Poland' },
@@ -860,9 +700,6 @@ const HERO_SMS_COUNTRY_BY_PHONE_PREFIX = Object.freeze([
   { prefix: '1', id: 187, label: 'USA' },
 ]);
 const FIVE_SIM_OPERATOR = DEFAULT_FIVE_SIM_OPERATOR;
-const PLUS_PAYMENT_METHOD_PAYPAL = 'paypal';
-const PLUS_PAYMENT_METHOD_GOPAY = 'gopay';
-const PLUS_PAYMENT_METHOD_GPC_HELPER = 'gpc-helper';
 const PLUS_PAYMENT_METHOD_UPI = 'upi';
 const DEFAULT_PLUS_PAYMENT_METHOD = PLUS_PAYMENT_METHOD_UPI;
 const DISPLAY_TIMEZONE = 'Asia/Shanghai';
@@ -877,7 +714,6 @@ const ACCOUNT_RUN_HISTORY_STORAGE_KEY = 'accountRunHistory';
 const UPI_ACCOUNT_CREDENTIAL_BACKUPS_STORAGE_KEY = 'upiAccountCredentialBackups';
 const UPI_CREDENTIAL_MEMBERSHIP_CHECK_RESULTS_STORAGE_KEY = 'upiCredentialMembershipCheckResults';
 const SIGNUP_METHOD_EMAIL = 'email';
-const SIGNUP_METHOD_PHONE = 'phone';
 const DEFAULT_SIGNUP_METHOD = SIGNUP_METHOD_EMAIL;
 const CONTRIBUTION_RUNTIME_DEFAULTS = self.MultiPageBackgroundContributionOAuth?.RUNTIME_DEFAULTS || {
   contributionMode: false,
@@ -913,7 +749,7 @@ function normalizePlusPaymentMethod(value = '') {
   return PLUS_PAYMENT_METHOD_UPI;
 }
 
-function normalizeGpcHelperPhoneMode(value = '') {
+function normalizeCardHelperHelperPhoneMode(value = '') {
   const normalized = String(value || '').trim().toLowerCase();
   return normalized === 'auto' || normalized === 'builtin' ? 'auto' : 'manual';
 }
@@ -953,7 +789,7 @@ function resolveContributionModeRoutingState(state = {}) {
 }
 
 function getSignupMethodForStepDefinitions(state = {}) {
-  return normalizeSignupMethod(state?.resolvedSignupMethod || state?.signupMethod);
+  return SIGNUP_METHOD_EMAIL;
 }
 
 function getStepDefinitionsForState(state = {}) {
@@ -970,9 +806,7 @@ function getStepDefinitionsForState(state = {}) {
       plusModeEnabled: isPlusModeState(state),
       plusPaymentMethod: normalizePlusPaymentMethod(state?.plusPaymentMethod),
       plusAccountAccessStrategy: normalizePlusAccountAccessStrategyForState(state),
-      ppBoomEnabled: Boolean(state?.ppBoomEnabled),
-      signupMethod: getSignupMethodForStepDefinitions(state),
-      phoneSignupReloginAfterBindEmailEnabled: Boolean(state?.phoneSignupReloginAfterBindEmailEnabled),
+      signupMethod: SIGNUP_METHOD_EMAIL,
       upiRedeemStopAfterRedeem: Boolean(state?.upiRedeemStopAfterRedeem ?? state?.pixRedeemStopAfterRedeem),
       upiRedeemContinueAfterRedeem: Boolean(state?.upiRedeemContinueAfterRedeem ?? state?.pixRedeemContinueAfterRedeem),
       totpMfaAfterProfileEnabled: state?.totpMfaAfterProfileEnabled !== false,
@@ -988,53 +822,17 @@ function getStepDefinitionsForState(state = {}) {
   if (!isPlusModeState(state)) {
     return NORMAL_STEP_DEFINITIONS;
   }
-  const paymentMethod = normalizePlusPaymentMethod(state?.plusPaymentMethod);
-  const fallbackSignupMethod = getSignupMethodForStepDefinitions(state);
-  const plusAccountAccessStrategy = fallbackSignupMethod === SIGNUP_METHOD_PHONE
-    ? PLUS_ACCOUNT_ACCESS_STRATEGY_OAUTH
-    : normalizePlusAccountAccessStrategyForState(state);
-  if (paymentMethod === PLUS_PAYMENT_METHOD_GPC_HELPER) {
-    if (plusAccountAccessStrategy === PLUS_ACCOUNT_ACCESS_STRATEGY_SUB2API_CODEX_SESSION) {
-      return PLUS_GPC_SUB2API_SESSION_STEP_DEFINITIONS;
-    }
-    if (plusAccountAccessStrategy === PLUS_ACCOUNT_ACCESS_STRATEGY_CPA_CODEX_SESSION) {
-      return PLUS_GPC_CPA_SESSION_STEP_DEFINITIONS;
-    }
-    return PLUS_GPC_STEP_DEFINITIONS;
-  }
-  if (paymentMethod === PLUS_PAYMENT_METHOD_GOPAY) {
-    if (plusAccountAccessStrategy === PLUS_ACCOUNT_ACCESS_STRATEGY_SUB2API_CODEX_SESSION) {
-      return PLUS_GOPAY_SUB2API_SESSION_STEP_DEFINITIONS;
-    }
-    if (plusAccountAccessStrategy === PLUS_ACCOUNT_ACCESS_STRATEGY_CPA_CODEX_SESSION) {
-      return PLUS_GOPAY_CPA_SESSION_STEP_DEFINITIONS;
-    }
-    return PLUS_GOPAY_STEP_DEFINITIONS;
-  }
-  if (paymentMethod === PLUS_PAYMENT_METHOD_UPI) {
-    if ((state?.upiRedeemContinueAfterRedeem ?? state?.pixRedeemContinueAfterRedeem) !== true) {
-      return PLUS_UPI_REDEEM_ONLY_STEP_DEFINITIONS;
-    }
-    if (plusAccountAccessStrategy === PLUS_ACCOUNT_ACCESS_STRATEGY_SUB2API_CODEX_SESSION) {
-      return PLUS_UPI_SUB2API_SESSION_STEP_DEFINITIONS;
-    }
-    if (plusAccountAccessStrategy === PLUS_ACCOUNT_ACCESS_STRATEGY_CPA_CODEX_SESSION) {
-      return PLUS_UPI_CPA_SESSION_STEP_DEFINITIONS;
-    }
-    if (fallbackSignupMethod === SIGNUP_METHOD_PHONE) {
-      return state?.phoneSignupReloginAfterBindEmailEnabled
-        ? PLUS_UPI_PHONE_BOUND_EMAIL_RELOGIN_STEP_DEFINITIONS
-        : PLUS_UPI_PHONE_STEP_DEFINITIONS;
-    }
-    return PLUS_UPI_STEP_DEFINITIONS;
+  const plusAccountAccessStrategy = normalizePlusAccountAccessStrategyForState(state);
+  if ((state?.upiRedeemContinueAfterRedeem ?? state?.pixRedeemContinueAfterRedeem) !== true) {
+    return PLUS_UPI_REDEEM_ONLY_STEP_DEFINITIONS;
   }
   if (plusAccountAccessStrategy === PLUS_ACCOUNT_ACCESS_STRATEGY_SUB2API_CODEX_SESSION) {
-    return PLUS_PAYPAL_SUB2API_SESSION_STEP_DEFINITIONS;
+    return PLUS_UPI_SUB2API_SESSION_STEP_DEFINITIONS;
   }
   if (plusAccountAccessStrategy === PLUS_ACCOUNT_ACCESS_STRATEGY_CPA_CODEX_SESSION) {
-    return PLUS_PAYPAL_CPA_SESSION_STEP_DEFINITIONS;
+    return PLUS_UPI_CPA_SESSION_STEP_DEFINITIONS;
   }
-  return PLUS_PAYPAL_STEP_DEFINITIONS;
+  return PLUS_UPI_STEP_DEFINITIONS;
 }
 
 function getStepIdsForState(state = {}) {
@@ -1048,14 +846,7 @@ function getStepIdsForState(state = {}) {
   if (!isPlusModeState(state)) {
     return NORMAL_STEP_IDS;
   }
-  const paymentMethod = normalizePlusPaymentMethod(state?.plusPaymentMethod);
-  if (paymentMethod === PLUS_PAYMENT_METHOD_GPC_HELPER) {
-    return PLUS_GPC_STEP_IDS;
-  }
-  if (paymentMethod === PLUS_PAYMENT_METHOD_GOPAY) {
-    return PLUS_GOPAY_STEP_IDS;
-  }
-  return paymentMethod === PLUS_PAYMENT_METHOD_UPI ? PLUS_UPI_STEP_IDS : PLUS_PAYPAL_STEP_IDS;
+  return PLUS_UPI_STEP_IDS;
 }
 
 function getLastStepIdForState(state = {}) {
@@ -1102,7 +893,6 @@ function getNodeDefinitionsForState(state = {}) {
       ...state,
       activeFlowId: state?.activeFlowId || state?.flowId || DEFAULT_ACTIVE_FLOW_ID,
       flowId: state?.flowId || state?.activeFlowId || DEFAULT_ACTIVE_FLOW_ID,
-      ppBoomEnabled: Boolean(state?.ppBoomEnabled),
     });
   }
   return getStepDefinitionsForState(state)
@@ -1208,61 +998,12 @@ const PERSISTED_SETTING_DEFAULTS = {
   sub2apiGroupName: DEFAULT_SUB2API_GROUP_NAME,
   sub2apiGroupNames: DEFAULT_SUB2API_GROUP_NAMES,
   sub2apiAccountPriority: DEFAULT_SUB2API_ACCOUNT_PRIORITY,
-  sub2apiDefaultProxyName: DEFAULT_SUB2API_PROXY_NAME,
-  ipProxyEnabled: false,
-  ipProxyService: DEFAULT_IP_PROXY_SERVICE,
-  ipProxyMode: DEFAULT_IP_PROXY_MODE,
-  ipProxyApiUrl: '',
-  ipProxyServiceProfiles: {},
-  ipProxyAccountList: '',
-  ipProxyAccountSessionPrefix: '',
-  ipProxyAccountLifeMinutes: '',
-  ipProxyPoolTargetCount: '20',
-  ipProxyAutoSyncEnabled: false,
-  ipProxyAutoSyncIntervalMinutes: IP_PROXY_AUTO_SYNC_DEFAULT_INTERVAL_MINUTES,
-  ipProxyHost: '',
-  ipProxyPort: '',
-  ipProxyProtocol: DEFAULT_IP_PROXY_PROTOCOL,
-  ipProxyUsername: '',
-  ipProxyPassword: '',
-  ipProxyRegion: '',
   codex2apiUrl: DEFAULT_CODEX2API_URL,
   codex2apiAdminKey: '',
   customPassword: '',
   plusModeEnabled: true,
   plusPaymentMethod: DEFAULT_PLUS_PAYMENT_METHOD,
   plusAccountAccessStrategy: PLUS_ACCOUNT_ACCESS_STRATEGY_OAUTH,
-  plusCheckoutMode: 'us_pp',
-  plusCheckoutProfiles: {},
-  plusHostedCheckoutOauthDelaySeconds: 10,
-  plusCheckoutCloudConversionEnabled: false,
-  plusCheckoutCloudConversionApiUrl: BUILTIN_PLUS_CHECKOUT_CLOUD_CONVERSION_API_URL,
-  plusCheckoutCloudConversionApiKey: BUILTIN_PLUS_CHECKOUT_CLOUD_CONVERSION_API_KEY,
-  plusCheckoutConversionProxyUrl: '',
-  ppBoomEnabled: true,
-  ppBoomBrowserBackend: 'local',
-  ppBoomAdsPowerApiBase: 'http://127.0.0.1:50325',
-  ppBoomAdsPowerApiKey: '',
-  ppBoomAdsPowerProfileId: '',
-  ppBoomRoxyBrowserApiBase: 'http://127.0.0.1:50000',
-  ppBoomRoxyBrowserApiKey: '',
-  ppBoomRoxyBrowserProfileId: '',
-  ppBoomStripePublishableKey: '',
-  ppBoomDeviceId: '',
-  ppBoomUserAgent: '',
-  ppBoomMaxAttempts: 10,
-  ppBoomPaymentLocale: 'en',
-  ppBoomCheckoutRebuildMaxAttempts: 3,
-  ppBoomDefaultProxy: '',
-  ppBoomProviderProxy: '',
-  ppBoomProxy: '',
-  hostedCheckoutVerificationPopupDelaySeconds: 20,
-  hostedCheckoutVerificationUrl: '',
-  hostedCheckoutPhoneNumber: '',
-  hostedCheckoutSmsPoolText: '',
-  hostedCheckoutSmsPoolUsage: {},
-  hostedCheckoutCardDeclinedRetryEnabled: true,
-  hostedCheckoutSmsPoolAutoDisableEnabled: false,
   upiRedeemApiBaseUrl: '',
   upiSubscriptionApiBaseUrl: 'https://cha.nerver.cc',
   upiRedeemExternalApiKey: '',
@@ -1276,67 +1017,8 @@ const PERSISTED_SETTING_DEFAULTS = {
   signupVerificationCodeWaitSeconds: 10,
   upiRedeemCdkeyPoolText: '',
   upiRedeemCdkeyUsage: {},
-  chatGptApiSmsPoolText: '',
-  chatGptApiSmsPoolUsage: {},
-  chatGptApiSmsPoolAutoDisableEnabled: false,
-  hostedCheckoutFirstDirectResendEnabled: false,
-  hostedCheckoutFirstResendWaitSeconds: HOSTED_CHECKOUT_FIRST_RESEND_WAIT_DEFAULT_SECONDS,
-  hostedCheckoutSubsequentResendWaitSeconds: HOSTED_CHECKOUT_SUBSEQUENT_RESEND_WAIT_DEFAULT_SECONDS,
-  hostedCheckoutVerificationResendMaxAttempts: HOSTED_CHECKOUT_VERIFICATION_RESEND_MAX_ATTEMPTS_DEFAULT,
-  hostedCheckoutVerificationPollAttempts: HOSTED_CHECKOUT_VERIFICATION_POLL_ATTEMPTS_DEFAULT,
-  hostedCheckoutVerificationPollIntervalSeconds: HOSTED_CHECKOUT_VERIFICATION_POLL_INTERVAL_DEFAULT_SECONDS,
-  paypalEmail: '',
-  paypalPassword: '',
-  currentPayPalAccountId: '',
-  gopayCountryCode: '+86',
-  gopayPhone: '',
-  gopayOtp: '',
-  gopayPin: '',
-  gopayHelperApiUrl: DEFAULT_GPC_HELPER_API_URL,
-  gopayHelperApiKey: '',
-  gopayHelperCardKey: '',
-  gopayHelperPhoneMode: 'manual',
-  gopayHelperPhoneNumber: '',
-  gopayHelperCountryCode: '+86',
-  gopayHelperPin: '',
-  gopayHelperOtpChannel: 'whatsapp',
-  gopayHelperLocalSmsHelperEnabled: false,
-  gopayHelperLocalSmsHelperUrl: 'http://127.0.0.1:18767',
-  gopayHelperLocalSmsTimeoutSeconds: 90,
-  gopayHelperLocalSmsPollIntervalSeconds: 2,
-  gopayHelperReferenceId: '',
-  gopayHelperGoPayGuid: '',
-  gopayHelperRedirectUrl: '',
-  gopayHelperNextAction: '',
-  gopayHelperFlowId: '',
-  gopayHelperChallengeId: '',
-  gopayHelperStartPayload: null,
-  gopayHelperTaskId: '',
-  gopayHelperTaskStatus: '',
-  gopayHelperStatusText: '',
-  gopayHelperRemoteStage: '',
-  gopayHelperApiWaitingFor: '',
-  gopayHelperApiInputDeadlineAt: '',
-  gopayHelperApiInputWaitSeconds: 0,
-  gopayHelperLastInputError: '',
-  gopayHelperOtpInvalidCount: 0,
-  gopayHelperFailureStage: '',
-  gopayHelperFailureDetail: '',
-  gopayHelperTaskPayload: null,
-  gopayHelperTaskProgressSignature: '',
-  gopayHelperTaskProgressAt: 0,
-  gopayHelperTaskProgressTaskId: '',
-  gopayHelperBalance: '',
-  gopayHelperBalancePayload: null,
-  gopayHelperBalanceUpdatedAt: 0,
-  gopayHelperBalanceError: '',
-  gopayHelperRemainingUses: 0,
-  gopayHelperAutoModeEnabled: false,
-  gopayHelperApiKeyStatus: '',
   autoRunSkipFailures: false,
   autoRunRetryNonFreeTrial: false,
-  autoRunRetryPaypalCallback: false,
-  autoRunRetryShortLinkError: true,
   autoRunFallbackThreadIntervalMinutes: 0,
   oauthFlowTimeoutEnabled: true,
   autoRunDelayEnabled: false,
@@ -1344,24 +1026,8 @@ const PERSISTED_SETTING_DEFAULTS = {
   autoRunDelayMinutes: 30,
   autoStepDelaySeconds: null,
   step6CookieCleanupEnabled: false,
-  phoneVerificationEnabled: false,
-  phoneSignupReloginAfterBindEmailEnabled: false,
-  phoneAutoReleaseOnStopEnabled: true,
-  phoneSmsReuseEnabled: DEFAULT_HERO_SMS_REUSE_ENABLED,
-  freePhoneReuseEnabled: true,
-  freePhoneReuseAutoEnabled: true,
   signupMethod: DEFAULT_SIGNUP_METHOD,
-  phoneSmsProvider: DEFAULT_PHONE_SMS_PROVIDER,
-  phoneSmsProviderOrder: [],
   verificationResendCount: DEFAULT_VERIFICATION_RESEND_COUNT,
-  phoneVerificationReplacementLimit: DEFAULT_PHONE_VERIFICATION_REPLACEMENT_LIMIT,
-  whatsappPhoneVerificationRestartEnabled: true,
-  whatsappPhoneVerificationRestartMaxAttempts: DEFAULT_WHATSAPP_PHONE_VERIFICATION_RESTART_MAX_ATTEMPTS,
-  phoneCodeWaitSeconds: DEFAULT_PHONE_CODE_WAIT_SECONDS,
-  phoneCodeTimeoutWindows: DEFAULT_PHONE_CODE_TIMEOUT_WINDOWS,
-  phoneCodePollIntervalSeconds: DEFAULT_PHONE_CODE_POLL_INTERVAL_SECONDS,
-  phoneCodePollMaxRounds: DEFAULT_PHONE_CODE_POLL_ROUNDS,
-  heroSmsActivationRetryRounds: DEFAULT_PHONE_ACTIVATION_RETRY_ROUNDS,
   mailProvider: HOTMAIL_PROVIDER,
   mail2925Mode: DEFAULT_MAIL_2925_MODE,
   mail2925UseAccountPool: false,
@@ -1436,196 +1102,7 @@ const PERSISTED_SETTING_DEFAULTS = {
   outlookAliasMaxPerAccount: OUTLOOK_ALIAS_DEFAULT_MAX_PER_ACCOUNT,
   hotmailAliasUsage: {},
   mail2925Accounts: [],
-  paypalAccounts: [],
-  phoneSmsProvider: DEFAULT_PHONE_SMS_PROVIDER,
-  heroSmsApiKey: '',
-  heroSmsReuseEnabled: DEFAULT_HERO_SMS_REUSE_ENABLED,
-  heroSmsAcquirePriority: DEFAULT_HERO_SMS_ACQUIRE_PRIORITY,
-  heroSmsMinPrice: '',
-  heroSmsMaxPrice: '',
-  heroSmsPreferredPrice: '',
-  heroSmsCountryId: HERO_SMS_COUNTRY_ID,
-  heroSmsCountryLabel: HERO_SMS_COUNTRY_LABEL,
-  heroSmsCountryFallback: DEFAULT_HANDLER_API_COUNTRY_FALLBACK.map((entry) => ({ ...entry })),
-  fiveSimApiKey: '',
-  fiveSimProduct: DEFAULT_FIVE_SIM_PRODUCT,
-  fiveSimCountryId: FIVE_SIM_COUNTRY_ID,
-  fiveSimCountryLabel: FIVE_SIM_COUNTRY_LABEL,
-  fiveSimCountryFallback: [],
-  fiveSimCountryOrder: [...DEFAULT_FIVE_SIM_COUNTRY_ORDER],
-  fiveSimMinPrice: '',
-  fiveSimMaxPrice: '',
-  fiveSimOperator: FIVE_SIM_OPERATOR,
-  nexSmsApiKey: '',
-  nexSmsCountryOrder: [...DEFAULT_NEX_SMS_COUNTRY_ORDER],
-  nexSmsServiceCode: DEFAULT_NEX_SMS_SERVICE_CODE,
-  smsBowerApiKey: '',
-  smsBowerCountryOrder: [...DEFAULT_SMS_BOWER_COUNTRY_ORDER],
-  smsBowerBaseUrl: DEFAULT_SMSBOWER_BASE_URL,
-  smsBowerServiceCode: DEFAULT_SMSBOWER_SERVICE_CODE,
-  smsBowerCountryId: 52,
-  smsBowerCountryLabel: '泰国 +66 (Thailand)',
-  smsBowerCountryFallback: [],
-  smsBowerMinPrice: '',
-  smsBowerMaxPrice: '',
-  smsBowerPreferredPrice: '',
-  hostedSmsPoolText: '',
-  hostedSmsPoolUsage: {},
-  smsVerificationNumberApiKey: '',
-  smsVerificationNumberBaseUrl: DEFAULT_SMS_VERIFICATION_NUMBER_BASE_URL,
-  smsVerificationNumberServiceCode: DEFAULT_SMS_VERIFICATION_NUMBER_SERVICE_CODE,
-  smsVerificationNumberCountryId: HERO_SMS_COUNTRY_ID,
-  smsVerificationNumberCountryLabel: HERO_SMS_COUNTRY_LABEL,
-  smsVerificationNumberCountryFallback: DEFAULT_HANDLER_API_COUNTRY_FALLBACK.map((entry) => ({ ...entry })),
-  smsVerificationNumberMinPrice: '',
-  smsVerificationNumberMaxPrice: '',
-  smsVerificationNumberPreferredPrice: '',
-  grizzlySmsApiKey: '',
-  grizzlySmsBaseUrl: DEFAULT_GRIZZLY_SMS_BASE_URL,
-  grizzlySmsServiceCode: DEFAULT_GRIZZLY_SMS_SERVICE_CODE,
-  grizzlySmsCountryId: 52,
-  grizzlySmsCountryLabel: '泰国 +66 (Thailand)',
-  grizzlySmsCountryFallback: DEFAULT_HANDLER_API_COUNTRY_FALLBACK.map((entry) => ({ ...entry })),
-  grizzlySmsMinPrice: '',
-  grizzlySmsMaxPrice: '',
-  grizzlySmsPreferredPrice: '',
-  smsPoolApiKey: '',
-  smsPoolBaseUrl: 'https://api.smspool.net',
-  smsPoolServiceCode: DEFAULT_SMSPOOL_SERVICE_CODE,
-  smsPoolCountryId: DEFAULT_SMSPOOL_COUNTRY_ID,
-  smsPoolCountryLabel: DEFAULT_SMSPOOL_COUNTRY_LABEL,
-  smsPoolCountryFallback: [
-    { id: 54, label: '台湾 +886 (Taiwan)' },
-    { id: 22, label: '美国虚拟 +1 (United States Virtual)' },
-    { id: 157, label: '日本 +81 (Japan)' },
-    { id: 23, label: '法国 +33 (France)' },
-    { id: 52, label: '泰国 +66 (Thailand)' },
-  ],
-  smsPoolMinPrice: '',
-  smsPoolMaxPrice: '',
-  smsPoolPreferredPrice: '',
-  phonePreferredActivation: null,
 };
-
-const PLUS_CHECKOUT_MODE_US_PP = 'us_pp';
-const PLUS_CHECKOUT_MODE_JP_PP = 'jp_pp';
-const DEFAULT_PLUS_CHECKOUT_MODE = PLUS_CHECKOUT_MODE_US_PP;
-const PLUS_CHECKOUT_PROFILE_SETTING_KEYS = Object.freeze([
-  'hostedCheckoutVerificationUrl',
-  'hostedCheckoutPhoneNumber',
-  'hostedCheckoutSmsPoolText',
-  'hostedCheckoutSmsPoolUsage',
-  'hostedCheckoutCardDeclinedRetryEnabled',
-  'hostedCheckoutSmsPoolAutoDisableEnabled',
-  'hostedCheckoutFirstDirectResendEnabled',
-  'hostedCheckoutFirstResendWaitSeconds',
-  'hostedCheckoutSubsequentResendWaitSeconds',
-  'hostedCheckoutVerificationResendMaxAttempts',
-  'hostedCheckoutVerificationPollAttempts',
-  'hostedCheckoutVerificationPollIntervalSeconds',
-]);
-const PLUS_CHECKOUT_MODE_VALUES = Object.freeze([
-  PLUS_CHECKOUT_MODE_US_PP,
-  PLUS_CHECKOUT_MODE_JP_PP,
-]);
-
-function buildDefaultPlusCheckoutProfile() {
-  return {
-    hostedCheckoutVerificationUrl: '',
-    hostedCheckoutPhoneNumber: '',
-    hostedCheckoutSmsPoolText: '',
-    hostedCheckoutSmsPoolUsage: {},
-    hostedCheckoutCardDeclinedRetryEnabled: true,
-    hostedCheckoutSmsPoolAutoDisableEnabled: false,
-    hostedCheckoutFirstDirectResendEnabled: false,
-    hostedCheckoutFirstResendWaitSeconds: PERSISTED_SETTING_DEFAULTS.hostedCheckoutFirstResendWaitSeconds,
-    hostedCheckoutSubsequentResendWaitSeconds: PERSISTED_SETTING_DEFAULTS.hostedCheckoutSubsequentResendWaitSeconds,
-    hostedCheckoutVerificationResendMaxAttempts: PERSISTED_SETTING_DEFAULTS.hostedCheckoutVerificationResendMaxAttempts,
-    hostedCheckoutVerificationPollAttempts: PERSISTED_SETTING_DEFAULTS.hostedCheckoutVerificationPollAttempts,
-    hostedCheckoutVerificationPollIntervalSeconds: PERSISTED_SETTING_DEFAULTS.hostedCheckoutVerificationPollIntervalSeconds,
-  };
-}
-
-function normalizePlusCheckoutMode(value = '') {
-  const normalized = String(value || '').trim().toLowerCase();
-  return normalized === PLUS_CHECKOUT_MODE_JP_PP
-    ? PLUS_CHECKOUT_MODE_JP_PP
-    : DEFAULT_PLUS_CHECKOUT_MODE;
-}
-
-function normalizePlusCheckoutProfile(profile = {}, fallback = null) {
-  const rawProfile = profile && typeof profile === 'object' && !Array.isArray(profile)
-    ? profile
-    : {};
-  const baseProfile = fallback && typeof fallback === 'object' && !Array.isArray(fallback)
-    ? fallback
-    : buildDefaultPlusCheckoutProfile();
-  const normalizedProfile = {};
-  for (const key of PLUS_CHECKOUT_PROFILE_SETTING_KEYS) {
-    const sourceValue = Object.prototype.hasOwnProperty.call(rawProfile, key)
-      ? rawProfile[key]
-      : baseProfile[key];
-    normalizedProfile[key] = normalizePersistentSettingValue(key, sourceValue);
-  }
-  return normalizedProfile;
-}
-
-function buildLegacyPlusCheckoutProfileFromState(state = {}) {
-  const source = state && typeof state === 'object' && !Array.isArray(state) ? state : {};
-  return normalizePlusCheckoutProfile(Object.fromEntries(
-    PLUS_CHECKOUT_PROFILE_SETTING_KEYS.map((key) => [key, source[key]])
-  ));
-}
-
-function normalizePlusCheckoutProfiles(value = {}, fallbackState = {}) {
-  const rawProfiles = value && typeof value === 'object' && !Array.isArray(value)
-    ? value
-    : {};
-  const legacyProfile = buildLegacyPlusCheckoutProfileFromState({
-    ...PERSISTED_SETTING_DEFAULTS,
-    ...(fallbackState && typeof fallbackState === 'object' && !Array.isArray(fallbackState) ? fallbackState : {}),
-  });
-  const hasUsProfile = Object.prototype.hasOwnProperty.call(rawProfiles, PLUS_CHECKOUT_MODE_US_PP);
-  const hasJpProfile = Object.prototype.hasOwnProperty.call(rawProfiles, PLUS_CHECKOUT_MODE_JP_PP);
-  const usProfile = hasUsProfile
-    ? normalizePlusCheckoutProfile(rawProfiles[PLUS_CHECKOUT_MODE_US_PP])
-    : normalizePlusCheckoutProfile(legacyProfile);
-  const jpProfile = hasJpProfile
-    ? normalizePlusCheckoutProfile(rawProfiles[PLUS_CHECKOUT_MODE_JP_PP])
-    : normalizePlusCheckoutProfile(hasUsProfile ? usProfile : legacyProfile);
-  return {
-    [PLUS_CHECKOUT_MODE_US_PP]: usProfile,
-    [PLUS_CHECKOUT_MODE_JP_PP]: jpProfile,
-  };
-}
-
-function buildPlusCheckoutLegacyFieldMirror(profile = {}) {
-  const normalizedProfile = normalizePlusCheckoutProfile(profile);
-  return Object.fromEntries(
-    PLUS_CHECKOUT_PROFILE_SETTING_KEYS.map((key) => [key, normalizedProfile[key]])
-  );
-}
-
-function applyActivePlusCheckoutProfileToState(state = {}) {
-  const source = state && typeof state === 'object' && !Array.isArray(state) ? state : {};
-  const mode = normalizePlusCheckoutMode(source.plusCheckoutMode);
-  const profiles = normalizePlusCheckoutProfiles(source.plusCheckoutProfiles, source);
-  const activeProfileFromLegacy = buildLegacyPlusCheckoutProfileFromState(source);
-  const activeProfile = normalizePlusCheckoutProfile({
-    ...(profiles[mode] || {}),
-    ...activeProfileFromLegacy,
-  }, profiles[mode] || activeProfileFromLegacy);
-  const nextProfiles = {
-    ...profiles,
-    [mode]: activeProfile,
-  };
-  return {
-    ...source,
-    plusCheckoutMode: mode,
-    plusCheckoutProfiles: nextProfiles,
-    ...buildPlusCheckoutLegacyFieldMirror(activeProfile),
-  };
-}
 
 const PERSISTED_SETTING_KEYS = Object.keys(PERSISTED_SETTING_DEFAULTS);
 const LEGACY_UPI_REDEEM_SETTING_KEY_MAP = Object.freeze({
@@ -1680,64 +1157,9 @@ const DEFAULT_STATE = {
   sub2apiGroupId: null, // SUB2API 目标分组 ID。
   sub2apiGroupIds: [], // SUB2API 多目标分组 ID。
   sub2apiDraftName: null, // SUB2API 本轮预生成的账号名称。
-  sub2apiProxyId: null, // SUB2API 本轮使用的代理 ID。
   codex2apiSessionId: null, // Codex2API OAuth 会话 ID。
   codex2apiOAuthState: null, // Codex2API OAuth state。
-  plusCheckoutTabId: null, // Plus checkout / PayPal 标签页 ID。
   automationWindowId: null, // 当前任务锁定的浏览器窗口 ID，避免新标签页跑到其它窗口。
-  plusCheckoutUrl: null, // Plus checkout 运行时短链，不写入持久配置。
-  plusCheckoutCountry: 'DE',
-  plusCheckoutCurrency: 'EUR',
-  plusCheckoutSource: '',
-  ppBoomJobId: '',
-  ppBoomJobStatus: '',
-  ppBoomCurrentAttempt: 0,
-  ppBoomPauseRequested: false,
-  ppBoomLastLogIndex: 0,
-  paypalGenericErrorRecoveryCount: 0,
-  paypalApprovalBranchRecoveryCount: 0,
-  pendingPayPalCookieCleanupBeforeCheckoutCreate: false,
-  hostedCheckoutCurrentSmsEntry: null,
-  hostedSmsCurrentEntry: null,
-  chatGptApiCurrentSmsEntry: null,
-  plusBillingCountryText: '',
-  plusBillingAddress: null,
-  plusPaypalApprovedAt: null,
-  plusGoPayApprovedAt: null,
-  plusReturnUrl: '',
-  plusManualConfirmationPending: false,
-  plusManualConfirmationRequestId: '',
-  plusManualConfirmationStep: 0,
-  plusManualConfirmationMethod: '',
-  plusManualConfirmationTitle: '',
-  plusManualConfirmationMessage: '',
-  gopayHelperReferenceId: '',
-  gopayHelperGoPayGuid: '',
-  gopayHelperRedirectUrl: '',
-  gopayHelperNextAction: '',
-  gopayHelperFlowId: '',
-  gopayHelperChallengeId: '',
-  gopayHelperStartPayload: null,
-  gopayHelperTaskId: '',
-  gopayHelperTaskStatus: '',
-  gopayHelperStatusText: '',
-  gopayHelperRemoteStage: '',
-  gopayHelperApiWaitingFor: '',
-  gopayHelperApiInputDeadlineAt: '',
-  gopayHelperApiInputWaitSeconds: 0,
-  gopayHelperLastInputError: '',
-  gopayHelperOtpInvalidCount: 0,
-  gopayHelperFailureStage: '',
-  gopayHelperFailureDetail: '',
-  gopayHelperTaskPayload: null,
-  gopayHelperOrderCreatedAt: 0,
-  gopayHelperTaskProgressSignature: '',
-  gopayHelperTaskProgressAt: 0,
-  gopayHelperTaskProgressTaskId: '',
-  gopayHelperPinPayload: null,
-  gopayHelperResolvedOtp: '',
-  gopayHelperOtpRequestId: '',
-  gopayHelperOtpReferenceId: '',
   flowStartTime: null, // 当前流程开始时间。
   tabRegistry: {}, // 程序维护的标签页注册表。
   sourceLastUrls: {}, // 各来源页面最近一次打开的地址记录。
@@ -1757,15 +1179,6 @@ const DEFAULT_STATE = {
     freeCount: 0,
     failedCount: 0,
   },
-  ipProxyApiPool: [],
-  ipProxyApiCurrentIndex: 0,
-  ipProxyApiCurrent: null,
-  ipProxyAccountPool: [],
-  ipProxyAccountCurrentIndex: 0,
-  ipProxyAccountCurrent: null,
-  ipProxyPool: [],
-  ipProxyCurrentIndex: 0,
-  ipProxyCurrent: null,
   luckmailApiKey: '',
   luckmailBaseUrl: DEFAULT_LUCKMAIL_BASE_URL,
   luckmailEmailType: DEFAULT_LUCKMAIL_EMAIL_TYPE,
@@ -1775,28 +1188,6 @@ const DEFAULT_STATE = {
   luckmailPreserveTagName: DEFAULT_LUCKMAIL_PRESERVE_TAG_NAME,
   currentLuckmailPurchase: null,
   currentLuckmailMailCursor: null,
-  currentPhoneActivation: null,
-  phoneNumber: '',
-  currentPhoneVerificationCode: '',
-  currentPhoneVerificationCountdownEndsAt: 0,
-  currentPhoneVerificationCountdownWindowIndex: 0,
-  currentPhoneVerificationCountdownWindowTotal: 0,
-  reusablePhoneActivation: null,
-  freeReusablePhoneActivation: null,
-  phoneReusableActivationPool: [],
-  signupPhoneNumber: '',
-  signupPhoneActivation: null,
-  signupPhoneCompletedActivation: null,
-  signupPhoneVerificationRequestedAt: null,
-  signupPhoneVerificationPurpose: '',
-  signupPhoneExcludedNumbersThisAttempt: [],
-  whatsappPhoneVerificationRestartCount: 0,
-  heroSmsLastPriceTiers: [],
-  heroSmsLastPriceCountryId: 0,
-  heroSmsLastPriceCountryLabel: '',
-  heroSmsLastPriceUserLimit: '',
-  heroSmsLastPriceAt: 0,
-  pendingPhoneActivationConfirmation: null,
   autoRunning: false, // 当前是否处于自动运行中。
   autoRunPhase: 'idle', // 当前自动运行阶段。
   autoRunCurrentRun: 0, // 自动运行当前执行到第几轮。
@@ -1813,26 +1204,10 @@ const DEFAULT_STATE = {
   loginVerificationRequestedAt: null,
   oauthFlowDeadlineAt: null,
   oauthFlowDeadlineSourceUrl: null,
-  currentPayPalAccountId: null,
   currentHotmailAccountId: null,
   currentOutlookEmailPlusClaim: null,
   currentMail2925AccountId: null,
   preferredIcloudHost: '',
-  ipProxyApplied: false,
-  ipProxyAppliedReason: 'disabled',
-  ipProxyAppliedAt: 0,
-  ipProxyAppliedHost: '',
-  ipProxyAppliedPort: 0,
-  ipProxyAppliedRegion: '',
-  ipProxyAppliedHasAuth: false,
-  ipProxyAppliedProvider: DEFAULT_IP_PROXY_SERVICE,
-  ipProxyAppliedError: '',
-  ipProxyAppliedWarning: '',
-  ipProxyAppliedExitIp: '',
-  ipProxyAppliedExitRegion: '',
-  ipProxyAppliedExitDetecting: false,
-  ipProxyAppliedExitError: '',
-  ipProxyAppliedExitSource: '',
 };
 
 function normalizeAutoRunDelayMinutes(value) {
@@ -1863,68 +1238,68 @@ function normalizeAutoRunFallbackThreadIntervalMinutes(value) {
   );
 }
 
-function normalizeIpProxyAutoSyncIntervalMinutes(value, fallback = IP_PROXY_AUTO_SYNC_DEFAULT_INTERVAL_MINUTES) {
+function normalizeRemovedNetworkAutoSyncIntervalMinutes(value, fallback = REMOVED_NETWORK_AUTO_SYNC_DEFAULT_INTERVAL_MINUTES) {
   const rawValue = String(value ?? '').trim();
   if (!rawValue) {
     return Math.min(
-      IP_PROXY_AUTO_SYNC_INTERVAL_MAX_MINUTES,
-      Math.max(IP_PROXY_AUTO_SYNC_INTERVAL_MIN_MINUTES, Math.floor(Number(fallback) || IP_PROXY_AUTO_SYNC_DEFAULT_INTERVAL_MINUTES))
+      REMOVED_NETWORK_AUTO_SYNC_INTERVAL_MAX_MINUTES,
+      Math.max(REMOVED_NETWORK_AUTO_SYNC_INTERVAL_MIN_MINUTES, Math.floor(Number(fallback) || REMOVED_NETWORK_AUTO_SYNC_DEFAULT_INTERVAL_MINUTES))
     );
   }
   const numeric = Number(rawValue);
   if (!Number.isFinite(numeric)) {
     return Math.min(
-      IP_PROXY_AUTO_SYNC_INTERVAL_MAX_MINUTES,
-      Math.max(IP_PROXY_AUTO_SYNC_INTERVAL_MIN_MINUTES, Math.floor(Number(fallback) || IP_PROXY_AUTO_SYNC_DEFAULT_INTERVAL_MINUTES))
+      REMOVED_NETWORK_AUTO_SYNC_INTERVAL_MAX_MINUTES,
+      Math.max(REMOVED_NETWORK_AUTO_SYNC_INTERVAL_MIN_MINUTES, Math.floor(Number(fallback) || REMOVED_NETWORK_AUTO_SYNC_DEFAULT_INTERVAL_MINUTES))
     );
   }
   return Math.min(
-    IP_PROXY_AUTO_SYNC_INTERVAL_MAX_MINUTES,
-    Math.max(IP_PROXY_AUTO_SYNC_INTERVAL_MIN_MINUTES, Math.floor(numeric))
+    REMOVED_NETWORK_AUTO_SYNC_INTERVAL_MAX_MINUTES,
+    Math.max(REMOVED_NETWORK_AUTO_SYNC_INTERVAL_MIN_MINUTES, Math.floor(numeric))
   );
 }
 
-function normalizeIpProxyProviderForSettings(value = '') {
-  if (typeof normalizeIpProxyProviderValue === 'function') {
-    return normalizeIpProxyProviderValue(value);
+function normalizeRemovedNetworkProviderForSettings(value = '') {
+  if (typeof normalizeRemovedNetworkProviderValue === 'function') {
+    return normalizeRemovedNetworkProviderValue(value);
   }
   const normalized = String(value || '').trim().toLowerCase();
-  if (IP_PROXY_ENABLED_SERVICE_VALUES.includes(normalized)) {
+  if (REMOVED_NETWORK_ENABLED_SERVICE_VALUES.includes(normalized)) {
     return normalized;
   }
-  if (IP_PROXY_SERVICE_VALUES.includes(normalized)) {
-    return DEFAULT_IP_PROXY_SERVICE;
+  if (REMOVED_NETWORK_SERVICE_VALUES.includes(normalized)) {
+    return DEFAULT_REMOVED_NETWORK_SERVICE;
   }
-  return DEFAULT_IP_PROXY_SERVICE;
+  return DEFAULT_REMOVED_NETWORK_SERVICE;
 }
 
-function normalizeIpProxyModeForSettings(value = '') {
-  if (typeof normalizeIpProxyMode === 'function') {
-    return normalizeIpProxyMode(value);
-  }
-  const normalized = String(value || '').trim().toLowerCase();
-  return IP_PROXY_MODE_VALUES.includes(normalized) ? normalized : DEFAULT_IP_PROXY_MODE;
-}
-
-function normalizeIpProxyProtocolForSettings(value = '') {
-  if (typeof normalizeIpProxyProtocol === 'function') {
-    return normalizeIpProxyProtocol(value);
+function normalizeRemovedNetworkModeForSettings(value = '') {
+  if (typeof normalizeRemovedNetworkMode === 'function') {
+    return normalizeRemovedNetworkMode(value);
   }
   const normalized = String(value || '').trim().toLowerCase();
-  return IP_PROXY_PROTOCOL_VALUES.includes(normalized) ? normalized : DEFAULT_IP_PROXY_PROTOCOL;
+  return REMOVED_NETWORK_MODE_VALUES.includes(normalized) ? normalized : DEFAULT_REMOVED_NETWORK_MODE;
 }
 
-function normalizeIpProxyPortForSettings(value = '') {
-  if (typeof normalizeIpProxyPort === 'function') {
-    return normalizeIpProxyPort(value);
+function normalizeRemovedNetworkProtocolForSettings(value = '') {
+  if (typeof normalizeRemovedNetworkProtocol === 'function') {
+    return normalizeRemovedNetworkProtocol(value);
+  }
+  const normalized = String(value || '').trim().toLowerCase();
+  return REMOVED_NETWORK_PROTOCOL_VALUES.includes(normalized) ? normalized : DEFAULT_REMOVED_NETWORK_PROTOCOL;
+}
+
+function normalizeRemovedNetworkPortForSettings(value = '') {
+  if (typeof normalizeRemovedNetworkPort === 'function') {
+    return normalizeRemovedNetworkPort(value);
   }
   const numeric = Number.parseInt(String(value || '').trim(), 10);
   return Number.isInteger(numeric) && numeric > 0 && numeric <= 65535 ? numeric : 0;
 }
 
-function normalizeIpProxyAccountListForSettings(value = '') {
-  if (typeof normalizeIpProxyAccountList === 'function') {
-    return normalizeIpProxyAccountList(value || '');
+function normalizeRemovedNetworkAccountListForSettings(value = '') {
+  if (typeof normalizeRemovedNetworkAccountList === 'function') {
+    return normalizeRemovedNetworkAccountList(value || '');
   }
   return String(value || '')
     .replace(/\r/g, '')
@@ -1934,16 +1309,16 @@ function normalizeIpProxyAccountListForSettings(value = '') {
     .join('\n');
 }
 
-function normalizeIpProxyAccountSessionPrefixForSettings(value = '') {
-  if (typeof normalizeIpProxyAccountSessionPrefix === 'function') {
-    return normalizeIpProxyAccountSessionPrefix(value || '');
+function normalizeRemovedNetworkAccountSessionPrefixForSettings(value = '') {
+  if (typeof normalizeRemovedNetworkAccountSessionPrefix === 'function') {
+    return normalizeRemovedNetworkAccountSessionPrefix(value || '');
   }
   return String(value || '').trim().replace(/[^A-Za-z0-9_-]/g, '').slice(0, 32);
 }
 
-function normalizeIpProxyAccountLifeMinutesForSettings(value = '', fallback = '') {
-  if (typeof normalizeIpProxyAccountLifeMinutes === 'function') {
-    return normalizeIpProxyAccountLifeMinutes(value || '', fallback);
+function normalizeRemovedNetworkAccountLifeMinutesForSettings(value = '', fallback = '') {
+  if (typeof normalizeRemovedNetworkAccountLifeMinutes === 'function') {
+    return normalizeRemovedNetworkAccountLifeMinutes(value || '', fallback);
   }
   const rawValue = String(value ?? '').trim();
   if (!rawValue) {
@@ -1953,28 +1328,28 @@ function normalizeIpProxyAccountLifeMinutesForSettings(value = '', fallback = ''
   return Number.isInteger(numeric) ? String(Math.max(1, Math.min(1440, numeric))) : String(fallback || '').trim();
 }
 
-function normalizeIpProxyPoolTargetCountForSettings(value = '', fallback = 20) {
-  if (typeof normalizeIpProxyPoolTargetCount === 'function') {
-    return normalizeIpProxyPoolTargetCount(value || '', fallback);
+function normalizeRemovedNetworkPoolTargetCountForSettings(value = '', fallback = 20) {
+  if (typeof normalizeRemovedNetworkPoolTargetCount === 'function') {
+    return normalizeRemovedNetworkPoolTargetCount(value || '', fallback);
   }
   const rawValue = String(value ?? '').trim();
   const numeric = rawValue ? Number.parseInt(rawValue, 10) : Number(fallback);
   return String(Math.max(1, Math.min(500, Number.isInteger(numeric) ? numeric : Number(fallback) || 20)));
 }
 
-function normalizeIpProxyCurrentIndexForSettings(value = 0, fallback = 0) {
-  if (typeof normalizeIpProxyCurrentIndex === 'function') {
-    return normalizeIpProxyCurrentIndex(value, fallback);
+function normalizeRemovedNetworkCurrentIndexForSettings(value = 0, fallback = 0) {
+  if (typeof normalizeRemovedNetworkCurrentIndex === 'function') {
+    return normalizeRemovedNetworkCurrentIndex(value, fallback);
   }
   const numeric = Number.parseInt(String(value ?? '').trim(), 10);
   return Number.isInteger(numeric) && numeric >= 0 ? numeric : Math.max(0, Number(fallback) || 0);
 }
 
-function normalizeProxyPoolEntriesForSettings(value = [], provider = DEFAULT_IP_PROXY_SERVICE) {
+function normalizeProxyPoolEntriesForSettings(value = [], provider = DEFAULT_REMOVED_NETWORK_SERVICE) {
   if (typeof normalizeProxyPoolEntries === 'function') {
     return normalizeProxyPoolEntries(value, provider);
   }
-  const fallbackProvider = normalizeIpProxyProviderForSettings(provider);
+  const fallbackProvider = normalizeRemovedNetworkProviderForSettings(provider);
   return (Array.isArray(value) ? value : [])
     .map((entry) => {
       if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
@@ -1982,10 +1357,10 @@ function normalizeProxyPoolEntriesForSettings(value = [], provider = DEFAULT_IP_
       }
       return {
         ...entry,
-        provider: normalizeIpProxyProviderForSettings(entry.provider || fallbackProvider),
+        provider: normalizeRemovedNetworkProviderForSettings(entry.provider || fallbackProvider),
         host: String(entry.host || '').trim(),
-        port: String(normalizeIpProxyPortForSettings(entry.port || '') || ''),
-        protocol: normalizeIpProxyProtocolForSettings(entry.protocol || DEFAULT_IP_PROXY_PROTOCOL),
+        port: String(normalizeRemovedNetworkPortForSettings(entry.port || '') || ''),
+        protocol: normalizeRemovedNetworkProtocolForSettings(entry.protocol || DEFAULT_REMOVED_NETWORK_PROTOCOL),
         username: String(entry.username || '').trim(),
         password: String(entry.password || ''),
         region: String(entry.region || '').trim(),
@@ -1994,43 +1369,43 @@ function normalizeProxyPoolEntriesForSettings(value = [], provider = DEFAULT_IP_
     .filter(Boolean);
 }
 
-function buildIpProxyServiceProfileForSettings(state = {}) {
-  if (typeof buildIpProxyServiceProfileFromState === 'function') {
-    return buildIpProxyServiceProfileFromState(state);
+function buildRemovedNetworkServiceProfileForSettings(state = {}) {
+  if (typeof buildRemovedNetworkServiceProfileFromState === 'function') {
+    return buildRemovedNetworkServiceProfileFromState(state);
   }
   return {
-    mode: normalizeIpProxyModeForSettings(state?.ipProxyMode || DEFAULT_IP_PROXY_MODE),
-    apiUrl: String(state?.ipProxyApiUrl || '').trim(),
-    accountList: normalizeIpProxyAccountListForSettings(state?.ipProxyAccountList || ''),
-    accountSessionPrefix: normalizeIpProxyAccountSessionPrefixForSettings(state?.ipProxyAccountSessionPrefix || ''),
-    accountLifeMinutes: normalizeIpProxyAccountLifeMinutesForSettings(state?.ipProxyAccountLifeMinutes || ''),
-    poolTargetCount: normalizeIpProxyPoolTargetCountForSettings(state?.ipProxyPoolTargetCount || '', 20),
-    host: String(state?.ipProxyHost || '').trim(),
-    port: String(normalizeIpProxyPortForSettings(state?.ipProxyPort || '') || ''),
-    protocol: normalizeIpProxyProtocolForSettings(state?.ipProxyProtocol || DEFAULT_IP_PROXY_PROTOCOL),
-    username: String(state?.ipProxyUsername || '').trim(),
-    password: String(state?.ipProxyPassword || ''),
-    region: String(state?.ipProxyRegion || '').trim(),
+    mode: normalizeRemovedNetworkModeForSettings(state?.removedNetworkMode || DEFAULT_REMOVED_NETWORK_MODE),
+    apiUrl: String(state?.removedNetworkApiUrl || '').trim(),
+    accountList: normalizeRemovedNetworkAccountListForSettings(state?.removedNetworkAccountList || ''),
+    accountSessionPrefix: normalizeRemovedNetworkAccountSessionPrefixForSettings(state?.removedNetworkAccountSessionPrefix || ''),
+    accountLifeMinutes: normalizeRemovedNetworkAccountLifeMinutesForSettings(state?.removedNetworkAccountLifeMinutes || ''),
+    poolTargetCount: normalizeRemovedNetworkPoolTargetCountForSettings(state?.removedNetworkPoolTargetCount || '', 20),
+    host: String(state?.removedNetworkHost || '').trim(),
+    port: String(normalizeRemovedNetworkPortForSettings(state?.removedNetworkPort || '') || ''),
+    protocol: normalizeRemovedNetworkProtocolForSettings(state?.removedNetworkProtocol || DEFAULT_REMOVED_NETWORK_PROTOCOL),
+    username: String(state?.removedNetworkUsername || '').trim(),
+    password: String(state?.removedNetworkPassword || ''),
+    region: String(state?.removedNetworkRegion || '').trim(),
   };
 }
 
-function normalizeIpProxyServiceProfilesForSettings(value = {}, fallbackState = {}) {
-  if (typeof normalizeIpProxyServiceProfiles === 'function') {
-    return normalizeIpProxyServiceProfiles(value || {}, fallbackState);
+function normalizeRemovedNetworkServiceProfilesForSettings(value = {}, fallbackState = {}) {
+  if (typeof normalizeRemovedNetworkServiceProfiles === 'function') {
+    return normalizeRemovedNetworkServiceProfiles(value || {}, fallbackState);
   }
   const raw = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-  const fallbackProfile = buildIpProxyServiceProfileForSettings(fallbackState || {});
+  const fallbackProfile = buildRemovedNetworkServiceProfileForSettings(fallbackState || {});
   const services = Array.from(new Set([
-    normalizeIpProxyProviderForSettings(fallbackState?.ipProxyService || DEFAULT_IP_PROXY_SERVICE),
-    DEFAULT_IP_PROXY_SERVICE,
-    ...Object.keys(raw).map((key) => normalizeIpProxyProviderForSettings(key)),
+    normalizeRemovedNetworkProviderForSettings(fallbackState?.removedNetworkService || DEFAULT_REMOVED_NETWORK_SERVICE),
+    DEFAULT_REMOVED_NETWORK_SERVICE,
+    ...Object.keys(raw).map((key) => normalizeRemovedNetworkProviderForSettings(key)),
   ]));
   const profiles = {};
   services.forEach((service) => {
     const source = raw[service] && typeof raw[service] === 'object' && !Array.isArray(raw[service])
       ? raw[service]
       : fallbackProfile;
-    profiles[service] = buildIpProxyServiceProfileForSettings({
+    profiles[service] = buildRemovedNetworkServiceProfileForSettings({
       ...(fallbackState || {}),
       ...source,
     });
@@ -2392,7 +1767,7 @@ function normalizeUrl(value = '', fallback = '') {
   }
 }
 
-function normalizeHeroSmsMaxPrice(value = '') {
+function normalizeRemovedSmsMainMaxPrice(value = '') {
   const rawValue = String(value ?? '').trim();
   if (!rawValue) {
     return '';
@@ -2404,18 +1779,18 @@ function normalizeHeroSmsMaxPrice(value = '') {
   return String(Math.round(numeric * 10000) / 10000);
 }
 
-function normalizeHeroSmsAcquirePriority(value = '') {
+function normalizeRemovedSmsMainAcquirePriority(value = '') {
   const normalized = String(value || '').trim().toLowerCase();
-  if (normalized === HERO_SMS_ACQUIRE_PRIORITY_PRICE) {
-    return HERO_SMS_ACQUIRE_PRIORITY_PRICE;
+  if (normalized === REMOVED_SMS_MAIN_ACQUIRE_PRIORITY_PRICE) {
+    return REMOVED_SMS_MAIN_ACQUIRE_PRIORITY_PRICE;
   }
-  if (normalized === HERO_SMS_ACQUIRE_PRIORITY_PRICE_HIGH) {
-    return HERO_SMS_ACQUIRE_PRIORITY_PRICE_HIGH;
+  if (normalized === REMOVED_SMS_MAIN_ACQUIRE_PRIORITY_PRICE_HIGH) {
+    return REMOVED_SMS_MAIN_ACQUIRE_PRIORITY_PRICE_HIGH;
   }
-  return HERO_SMS_ACQUIRE_PRIORITY_COUNTRY;
+  return REMOVED_SMS_MAIN_ACQUIRE_PRIORITY_COUNTRY;
 }
 
-function normalizeHeroSmsCountryFallback(value = []) {
+function normalizeRemovedSmsMainCountryFallback(value = []) {
   const source = Array.isArray(value)
     ? value
     : String(value || '')
@@ -2460,42 +1835,42 @@ function normalizeHeroSmsCountryFallback(value = []) {
 }
 
 
-function normalizePhoneSmsProvider(value = '') {
+function normalizeRemovedPhoneProvider(value = '') {
   const rootScope = typeof self !== 'undefined' ? self : globalThis;
-  if (rootScope.PhoneSmsProviderRegistry?.normalizeProviderId) {
-    return rootScope.PhoneSmsProviderRegistry.normalizeProviderId(value);
+  if (rootScope.RemovedPhoneProviderRegistry?.normalizeProviderId) {
+    return rootScope.RemovedPhoneProviderRegistry.normalizeProviderId(value);
   }
   const normalized = String(value || '').trim().toLowerCase();
-  if (normalized === PHONE_SMS_PROVIDER_FIVE_SIM) {
-    return PHONE_SMS_PROVIDER_FIVE_SIM;
+  if (normalized === REMOVED_PHONE_PROVIDER_FIVE_SIM) {
+    return REMOVED_PHONE_PROVIDER_FIVE_SIM;
   }
-  if (normalized === PHONE_SMS_PROVIDER_NEXSMS) {
-    return PHONE_SMS_PROVIDER_NEXSMS;
+  if (normalized === REMOVED_PHONE_PROVIDER_REMOVED_SMS_VENDOR) {
+    return REMOVED_PHONE_PROVIDER_REMOVED_SMS_VENDOR;
   }
-  if (normalized === PHONE_SMS_PROVIDER_SMSBOWER) {
-    return PHONE_SMS_PROVIDER_SMSBOWER;
+  if (normalized === REMOVED_PHONE_PROVIDER_REMOVED_SMS_VENDOR_B) {
+    return REMOVED_PHONE_PROVIDER_REMOVED_SMS_VENDOR_B;
   }
-  if (normalized === PHONE_SMS_PROVIDER_HOSTED_SMS) {
-    return PHONE_SMS_PROVIDER_HOSTED_SMS;
+  if (normalized === REMOVED_PHONE_PROVIDER_REMOVED_SMS) {
+    return REMOVED_PHONE_PROVIDER_REMOVED_SMS;
   }
-  if (normalized === PHONE_SMS_PROVIDER_SMS_VERIFICATION_NUMBER) {
-    return PHONE_SMS_PROVIDER_SMS_VERIFICATION_NUMBER;
+  if (normalized === REMOVED_PHONE_PROVIDER_SMS_VERIFICATION_NUMBER) {
+    return REMOVED_PHONE_PROVIDER_SMS_VERIFICATION_NUMBER;
   }
-  if (normalized === PHONE_SMS_PROVIDER_GRIZZLYSMS) {
-    return PHONE_SMS_PROVIDER_GRIZZLYSMS;
+  if (normalized === REMOVED_PHONE_PROVIDER_GRIZZLYSMS) {
+    return REMOVED_PHONE_PROVIDER_GRIZZLYSMS;
   }
-  if (normalized === PHONE_SMS_PROVIDER_SMSPOOL) {
-    return PHONE_SMS_PROVIDER_SMSPOOL;
+  if (normalized === REMOVED_PHONE_PROVIDER_REMOVED_TEXT_POOL) {
+    return REMOVED_PHONE_PROVIDER_REMOVED_TEXT_POOL;
   }
-  if (normalized === PHONE_SMS_PROVIDER_CHATGPT_API) {
-    return PHONE_SMS_PROVIDER_CHATGPT_API;
+  if (normalized === REMOVED_PHONE_PROVIDER_CHATGPT_API) {
+    return REMOVED_PHONE_PROVIDER_CHATGPT_API;
   }
-  return PHONE_SMS_PROVIDER_HERO_SMS;
+  return REMOVED_PHONE_PROVIDER_REMOVED_SMS_MAIN;
 }
-function normalizePhoneSmsProviderOrder(value = [], fallbackOrder = []) {
+function normalizeRemovedPhoneProviderOrder(value = [], fallbackOrder = []) {
   const rootScope = typeof self !== 'undefined' ? self : globalThis;
-  if (rootScope.PhoneSmsProviderRegistry?.normalizeProviderOrder) {
-    return rootScope.PhoneSmsProviderRegistry.normalizeProviderOrder(value, fallbackOrder);
+  if (rootScope.RemovedPhoneProviderRegistry?.normalizeProviderOrder) {
+    return rootScope.RemovedPhoneProviderRegistry.normalizeProviderOrder(value, fallbackOrder);
   }
   const source = Array.isArray(value)
     ? value
@@ -2507,7 +1882,7 @@ function normalizePhoneSmsProviderOrder(value = [], fallbackOrder = []) {
   const seen = new Set();
 
   source.forEach((entry) => {
-    const provider = normalizePhoneSmsProvider(
+    const provider = normalizeRemovedPhoneProvider(
       entry && typeof entry === 'object' && !Array.isArray(entry)
         ? (entry.provider || entry.id || entry.value || '')
         : entry
@@ -2520,12 +1895,12 @@ function normalizePhoneSmsProviderOrder(value = [], fallbackOrder = []) {
   });
 
   if (normalized.length) {
-    return normalized.slice(0, DEFAULT_PHONE_SMS_PROVIDER_ORDER.length);
+    return normalized.slice(0, DEFAULT_REMOVED_PHONE_PROVIDER_ORDER.length);
   }
 
   const fallback = Array.isArray(fallbackOrder) ? fallbackOrder : [];
   fallback.forEach((entry) => {
-    const provider = normalizePhoneSmsProvider(
+    const provider = normalizeRemovedPhoneProvider(
       entry && typeof entry === 'object' && !Array.isArray(entry)
         ? (entry.provider || entry.id || entry.value || '')
         : entry
@@ -2537,7 +1912,7 @@ function normalizePhoneSmsProviderOrder(value = [], fallbackOrder = []) {
     normalized.push(provider);
   });
 
-  return normalized.slice(0, DEFAULT_PHONE_SMS_PROVIDER_ORDER.length);
+  return normalized.slice(0, DEFAULT_REMOVED_PHONE_PROVIDER_ORDER.length);
 }
 function normalizeSignupMethod(value = '') {
   return String(value || '').trim().toLowerCase() === 'phone'
@@ -2601,60 +1976,15 @@ function validateModeSwitchState(state = {}, options = {}) {
 }
 
 function canUsePhoneSignup(state = {}) {
-  const capabilityState = typeof resolveCurrentFlowCapabilities === 'function'
-    ? resolveCurrentFlowCapabilities(state)
-    : (() => {
-      const rootScope = typeof self !== 'undefined' ? self : globalThis;
-      const registry = rootScope.MultiPageFlowCapabilities?.createFlowCapabilityRegistry?.({
-        defaultFlowId: typeof DEFAULT_ACTIVE_FLOW_ID === 'string' ? DEFAULT_ACTIVE_FLOW_ID : 'openai',
-      }) || null;
-      return registry?.resolveSidepanelCapabilities
-        ? registry.resolveSidepanelCapabilities({
-          activeFlowId: state?.activeFlowId,
-          panelMode: state?.panelMode,
-          signupMethod: state?.signupMethod,
-          state,
-        })
-        : null;
-    })();
-  if (capabilityState && typeof capabilityState.canUsePhoneSignup === 'boolean') {
-    return capabilityState.canUsePhoneSignup;
-  }
-  return Boolean(state?.phoneVerificationEnabled)
-    && !Boolean(state?.plusModeEnabled)
-    && !Boolean(state?.contributionMode);
+  return false;
 }
 
 function resolveSignupMethod(state = {}) {
-  const frozenMethod = String(state?.resolvedSignupMethod || '').trim().toLowerCase();
-  if (frozenMethod === SIGNUP_METHOD_EMAIL || frozenMethod === SIGNUP_METHOD_PHONE) {
-    return normalizeSignupMethod(frozenMethod);
-  }
-  const method = normalizeSignupMethod(state?.signupMethod);
-  const capabilityState = typeof resolveCurrentFlowCapabilities === 'function'
-    ? resolveCurrentFlowCapabilities(state, { signupMethod: method })
-    : (() => {
-      const rootScope = typeof self !== 'undefined' ? self : globalThis;
-      const registry = rootScope.MultiPageFlowCapabilities?.createFlowCapabilityRegistry?.({
-        defaultFlowId: typeof DEFAULT_ACTIVE_FLOW_ID === 'string' ? DEFAULT_ACTIVE_FLOW_ID : 'openai',
-      }) || null;
-      return registry?.resolveSidepanelCapabilities
-        ? registry.resolveSidepanelCapabilities({
-          activeFlowId: state?.activeFlowId,
-          panelMode: state?.panelMode,
-          signupMethod: method,
-          state,
-        })
-        : null;
-    })();
-  if (capabilityState?.effectiveSignupMethod) {
-    return normalizeSignupMethod(capabilityState.effectiveSignupMethod);
-  }
-  return method === SIGNUP_METHOD_PHONE && canUsePhoneSignup(state) ? SIGNUP_METHOD_PHONE : SIGNUP_METHOD_EMAIL;
+  return SIGNUP_METHOD_EMAIL;
 }
 
 function shouldDeferHotmailUsedMarkForPhoneSignup(state = {}) {
-  return isHotmailProvider(state) && resolveSignupMethod(state) === SIGNUP_METHOD_PHONE;
+  return false;
 }
 
 function hasSignupPhoneActivationState(state = {}) {
@@ -2666,41 +1996,12 @@ function hasSignupPhoneActivationState(state = {}) {
 }
 
 function isPhoneSignupIdentityStateForReuse(state = {}) {
-  if (resolveSignupMethod(state) === SIGNUP_METHOD_PHONE) {
-    return true;
-  }
-
-  const runtimeActive = (
-    (typeof isAutoRunLockedState === 'function' && isAutoRunLockedState(state))
-    || (typeof isAutoRunPausedState === 'function' && isAutoRunPausedState(state))
-    || (typeof isAutoRunScheduledState === 'function' && isAutoRunScheduledState(state))
-    || Boolean(state?.autoRunning)
-  );
-  if (!runtimeActive) {
-    return false;
-  }
-
-  const identifierType = String(state?.accountIdentifierType || '').trim().toLowerCase();
-  return identifierType === 'phone' || hasSignupPhoneActivationState(state);
+  return false;
 }
 
 async function ensureResolvedSignupMethodForRun(options = {}) {
-  const state = await getState();
-  const force = Boolean(options.force);
-  const existing = String(state?.resolvedSignupMethod || '').trim().toLowerCase();
-  if (!force && (existing === SIGNUP_METHOD_EMAIL || existing === SIGNUP_METHOD_PHONE)) {
-    return normalizeSignupMethod(existing);
-  }
-
-  const configuredMethod = normalizeSignupMethod(state?.signupMethod);
-  const resolvedMethod = resolveSignupMethod({
-    ...state,
-    resolvedSignupMethod: null,
-  });
+  const resolvedMethod = SIGNUP_METHOD_EMAIL;
   await setState({ resolvedSignupMethod: resolvedMethod });
-  if (configuredMethod === SIGNUP_METHOD_PHONE && resolvedMethod !== SIGNUP_METHOD_PHONE) {
-    await addLog('当前模式暂不支持手机号注册，本轮已固定为邮箱注册。', 'warn');
-  }
   return resolvedMethod;
 }
 
@@ -2714,8 +2015,8 @@ function normalizePlusPaymentMethod(value = '') {
 
 function normalizeFiveSimCountryId(value, fallback = FIVE_SIM_COUNTRY_ID) {
   const rootScope = typeof self !== 'undefined' ? self : globalThis;
-  const rawNormalized = rootScope.PhoneSmsFiveSimProvider?.normalizeFiveSimCountryId
-    ? rootScope.PhoneSmsFiveSimProvider.normalizeFiveSimCountryId(value, '')
+  const rawNormalized = rootScope.RemovedPhoneFiveSimProvider?.normalizeFiveSimCountryId
+    ? rootScope.RemovedPhoneFiveSimProvider.normalizeFiveSimCountryId(value, '')
     : String(value || '').trim().toLowerCase().replace(/[^a-z0-9_-]+/g, '');
   const normalized = String(rawNormalized || '').trim().toLowerCase();
   if (normalized) {
@@ -2764,7 +2065,7 @@ function normalizeFiveSimCountryOrder(value = []) {
   return normalized.slice(0, 12);
 }
 
-function normalizeNexSmsCountryId(value, fallback = 0) {
+function normalizeRemovedSmsVendorCountryId(value, fallback = 0) {
   const parsed = Math.floor(Number(value));
   if (Number.isFinite(parsed) && parsed >= 0) {
     return parsed;
@@ -2776,7 +2077,7 @@ function normalizeNexSmsCountryId(value, fallback = 0) {
   return 0;
 }
 
-function normalizeNexSmsCountryOrder(value = []) {
+function normalizeRemovedSmsVendorCountryOrder(value = []) {
   const source = Array.isArray(value)
     ? value
     : String(value || '')
@@ -2786,7 +2087,7 @@ function normalizeNexSmsCountryOrder(value = []) {
   const normalized = [];
   const seen = new Set();
   source.forEach((entry) => {
-    const id = normalizeNexSmsCountryId(
+    const id = normalizeRemovedSmsVendorCountryId(
       entry && typeof entry === 'object' && !Array.isArray(entry)
         ? (entry.id || entry.countryId || entry.country || '')
         : entry,
@@ -2801,7 +2102,7 @@ function normalizeNexSmsCountryOrder(value = []) {
   return normalized.slice(0, 12);
 }
 
-function normalizeNexSmsServiceCode(value = '', fallback = DEFAULT_NEX_SMS_SERVICE_CODE) {
+function normalizeRemovedSmsVendorServiceCode(value = '', fallback = DEFAULT_REMOVED_SMS_VENDOR_SERVICE_CODE) {
   const normalized = String(value || '')
     .trim()
     .toLowerCase()
@@ -2815,13 +2116,13 @@ function normalizeNexSmsServiceCode(value = '', fallback = DEFAULT_NEX_SMS_SERVI
     .replace(/[^a-z0-9_-]/g, '');
   return fallbackNormalized && fallbackNormalized !== 'ot' && fallbackNormalized !== 'any'
     ? fallbackNormalized
-    : DEFAULT_NEX_SMS_SERVICE_CODE;
+    : DEFAULT_REMOVED_SMS_VENDOR_SERVICE_CODE;
 }
 
-function normalizeSmsBowerCountryId(value, fallback = 52) {
+function normalizeRemovedSmsVendorBCountryId(value, fallback = 52) {
   const rootScope = typeof self !== 'undefined' ? self : globalThis;
-  if (rootScope.PhoneSmsBowerProvider?.normalizeSmsBowerCountryId) {
-    return rootScope.PhoneSmsBowerProvider.normalizeSmsBowerCountryId(value, fallback);
+  if (rootScope.RemovedPhoneBowerProvider?.normalizeRemovedSmsVendorBCountryId) {
+    return rootScope.RemovedPhoneBowerProvider.normalizeRemovedSmsVendorBCountryId(value, fallback);
   }
   const parsed = Math.floor(Number(value));
   if (Number.isFinite(parsed) && parsed > 0) {
@@ -2831,10 +2132,10 @@ function normalizeSmsBowerCountryId(value, fallback = 52) {
   return Number.isFinite(fallbackParsed) && fallbackParsed > 0 ? fallbackParsed : 52;
 }
 
-function normalizeSmsBowerCountryOrder(value) {
+function normalizeRemovedSmsVendorBCountryOrder(value) {
   const rootScope = typeof self !== 'undefined' ? self : globalThis;
-  if (rootScope.PhoneSmsBowerProvider?.normalizeSmsBowerCountryOrder) {
-    return rootScope.PhoneSmsBowerProvider.normalizeSmsBowerCountryOrder(value);
+  if (rootScope.RemovedPhoneBowerProvider?.normalizeRemovedSmsVendorBCountryOrder) {
+    return rootScope.RemovedPhoneBowerProvider.normalizeRemovedSmsVendorBCountryOrder(value);
   }
   const hasExplicitValue = value !== undefined && value !== null;
   const source = hasExplicitValue
@@ -2844,11 +2145,11 @@ function normalizeSmsBowerCountryOrder(value) {
         .split(/[\r\n,，;；]+/)
         .map((entry) => String(entry || '').trim())
         .filter(Boolean))
-    : DEFAULT_SMS_BOWER_COUNTRY_ORDER;
+    : DEFAULT_REMOVED_SMS_VENDOR_B_COUNTRY_ORDER;
   const normalized = [];
   const seen = new Set();
   source.forEach((entry) => {
-    const id = normalizeSmsBowerCountryId(
+    const id = normalizeRemovedSmsVendorBCountryId(
       entry && typeof entry === 'object' && !Array.isArray(entry)
         ? (entry.id || entry.countryId || entry.country || '')
         : entry,
@@ -2862,13 +2163,13 @@ function normalizeSmsBowerCountryOrder(value) {
   });
   return hasExplicitValue || normalized.length
     ? normalized.slice(0, 12)
-    : [...DEFAULT_SMS_BOWER_COUNTRY_ORDER];
+    : [...DEFAULT_REMOVED_SMS_VENDOR_B_COUNTRY_ORDER];
 }
 
-function normalizeSmsBowerServiceCode(value = '', fallback = DEFAULT_SMS_BOWER_SERVICE_CODE) {
+function normalizeRemovedSmsVendorBServiceCode(value = '', fallback = DEFAULT_REMOVED_SMS_VENDOR_B_SERVICE_CODE) {
   const rootScope = typeof self !== 'undefined' ? self : globalThis;
-  if (rootScope.PhoneSmsBowerProvider?.normalizeSmsBowerServiceCode) {
-    return rootScope.PhoneSmsBowerProvider.normalizeSmsBowerServiceCode(value, fallback);
+  if (rootScope.RemovedPhoneBowerProvider?.normalizeRemovedSmsVendorBServiceCode) {
+    return rootScope.RemovedPhoneBowerProvider.normalizeRemovedSmsVendorBServiceCode(value, fallback);
   }
   const normalized = String(value || '')
     .trim()
@@ -2883,7 +2184,7 @@ function normalizeSmsBowerServiceCode(value = '', fallback = DEFAULT_SMS_BOWER_S
     .replace(/[^a-z0-9_-]+/g, '');
   return fallbackNormalized && fallbackNormalized !== 'ot' && fallbackNormalized !== 'any'
     ? fallbackNormalized
-    : DEFAULT_SMS_BOWER_SERVICE_CODE;
+    : DEFAULT_REMOVED_SMS_VENDOR_B_SERVICE_CODE;
 }
 
 function normalizePhonePreferredActivation(value) {
@@ -2895,7 +2196,7 @@ function normalizePhonePreferredActivation(value) {
   if (!activationId || !phoneNumber) {
     return null;
   }
-  const provider = normalizePhoneSmsProvider(value.provider || value.smsProvider || DEFAULT_PHONE_SMS_PROVIDER);
+  const provider = normalizeRemovedPhoneProvider(value.provider || value.smsProvider || DEFAULT_REMOVED_PHONE_PROVIDER);
   return {
     ...value,
     provider,
@@ -2910,27 +2211,27 @@ function normalizePhonePreferredActivation(value) {
 
 function normalizeFiveSimCountryLabel(value = '', fallback = FIVE_SIM_COUNTRY_LABEL) {
   const rootScope = typeof self !== 'undefined' ? self : globalThis;
-  if (rootScope.PhoneSmsFiveSimProvider?.normalizeFiveSimCountryLabel) {
-    return rootScope.PhoneSmsFiveSimProvider.normalizeFiveSimCountryLabel(value, fallback);
+  if (rootScope.RemovedPhoneFiveSimProvider?.normalizeFiveSimCountryLabel) {
+    return rootScope.RemovedPhoneFiveSimProvider.normalizeFiveSimCountryLabel(value, fallback);
   }
-  if (rootScope.PhoneSmsFiveSimProvider?.formatFiveSimCountryLabel) {
-    return rootScope.PhoneSmsFiveSimProvider.formatFiveSimCountryLabel('', value, fallback);
+  if (rootScope.RemovedPhoneFiveSimProvider?.formatFiveSimCountryLabel) {
+    return rootScope.RemovedPhoneFiveSimProvider.formatFiveSimCountryLabel('', value, fallback);
   }
   return String(value || '').trim() || fallback;
 }
 
 function normalizeFiveSimOperator(value = '', fallback = FIVE_SIM_OPERATOR) {
   const rootScope = typeof self !== 'undefined' ? self : globalThis;
-  if (rootScope.PhoneSmsFiveSimProvider?.normalizeFiveSimOperator) {
-    return rootScope.PhoneSmsFiveSimProvider.normalizeFiveSimOperator(value || fallback);
+  if (rootScope.RemovedPhoneFiveSimProvider?.normalizeFiveSimOperator) {
+    return rootScope.RemovedPhoneFiveSimProvider.normalizeFiveSimOperator(value || fallback);
   }
   return String(value || '').trim().toLowerCase().replace(/[^a-z0-9_-]+/g, '') || fallback;
 }
 
 function normalizeFiveSimMaxPrice(value = '') {
   const rootScope = typeof self !== 'undefined' ? self : globalThis;
-  if (rootScope.PhoneSmsFiveSimProvider?.normalizeFiveSimMaxPrice) {
-    return rootScope.PhoneSmsFiveSimProvider.normalizeFiveSimMaxPrice(value);
+  if (rootScope.RemovedPhoneFiveSimProvider?.normalizeFiveSimMaxPrice) {
+    return rootScope.RemovedPhoneFiveSimProvider.normalizeFiveSimMaxPrice(value);
   }
   const rawValue = String(value ?? '').trim();
   if (!rawValue) {
@@ -2945,8 +2246,8 @@ function normalizeFiveSimMaxPrice(value = '') {
 
 function normalizeFiveSimCountryFallback(value = []) {
   const rootScope = typeof self !== 'undefined' ? self : globalThis;
-  if (rootScope.PhoneSmsFiveSimProvider?.normalizeFiveSimCountryFallback) {
-    return rootScope.PhoneSmsFiveSimProvider.normalizeFiveSimCountryFallback(value);
+  if (rootScope.RemovedPhoneFiveSimProvider?.normalizeFiveSimCountryFallback) {
+    return rootScope.RemovedPhoneFiveSimProvider.normalizeFiveSimCountryFallback(value);
   }
   const source = Array.isArray(value)
     ? value
@@ -3090,7 +2391,7 @@ function normalizeAutoRunTimerPlan(plan) {
   const totalRuns = normalizeRunCount(plan.totalRuns);
   const autoRunSkipFailures = Boolean(plan.autoRunSkipFailures);
   const autoRunRetryNonFreeTrial = Boolean(plan.autoRunRetryNonFreeTrial);
-  const autoRunRetryPaypalCallback = Boolean(plan.autoRunRetryPaypalCallback);
+  const autoRunRetryLegacyWalletCallback = Boolean(plan.autoRunRetryLegacyWalletCallback);
   const autoRunRetryShortLinkError = plan.autoRunRetryShortLinkError !== undefined
     ? Boolean(plan.autoRunRetryShortLinkError)
     : true;
@@ -3112,7 +2413,7 @@ function normalizeAutoRunTimerPlan(plan) {
       totalRuns,
       autoRunSkipFailures,
       autoRunRetryNonFreeTrial,
-      autoRunRetryPaypalCallback,
+      autoRunRetryLegacyWalletCallback,
       autoRunRetryShortLinkError,
       mode,
       currentRun: 0,
@@ -3133,7 +2434,7 @@ function normalizeAutoRunTimerPlan(plan) {
       totalRuns,
       autoRunSkipFailures,
       autoRunRetryNonFreeTrial,
-      autoRunRetryPaypalCallback,
+      autoRunRetryLegacyWalletCallback,
       autoRunRetryShortLinkError,
       mode: 'restart',
       currentRun: normalizedCurrentRun,
@@ -3153,7 +2454,7 @@ function normalizeAutoRunTimerPlan(plan) {
     totalRuns,
     autoRunSkipFailures,
     autoRunRetryNonFreeTrial,
-    autoRunRetryPaypalCallback,
+    autoRunRetryLegacyWalletCallback,
     autoRunRetryShortLinkError,
     mode: 'restart',
     currentRun: normalizedCurrentRun,
@@ -3186,7 +2487,7 @@ function normalizeAutoRunTimerPlanFromState(state = {}) {
     totalRuns: state.scheduledAutoRunPlan?.totalRuns ?? state.autoRunTotalRuns,
     autoRunSkipFailures: state.scheduledAutoRunPlan?.autoRunSkipFailures ?? state.autoRunSkipFailures,
     autoRunRetryNonFreeTrial: state.scheduledAutoRunPlan?.autoRunRetryNonFreeTrial ?? state.autoRunRetryNonFreeTrial,
-    autoRunRetryPaypalCallback: state.scheduledAutoRunPlan?.autoRunRetryPaypalCallback ?? state.autoRunRetryPaypalCallback,
+    autoRunRetryLegacyWalletCallback: state.scheduledAutoRunPlan?.autoRunRetryLegacyWalletCallback ?? state.autoRunRetryLegacyWalletCallback,
     autoRunRetryShortLinkError: state.scheduledAutoRunPlan?.autoRunRetryShortLinkError ?? state.autoRunRetryShortLinkError,
     autoRunSessionId: state.autoRunSessionId,
     mode: state.scheduledAutoRunPlan?.mode,
@@ -3773,12 +3074,6 @@ function normalizePanelMode(value = '') {
 
 function normalizePlusAccountAccessStrategy(value = '') {
   const normalized = String(value || '').trim().toLowerCase();
-  if (normalized === PLUS_ACCOUNT_ACCESS_STRATEGY_SMS_OAUTH) {
-    return PLUS_ACCOUNT_ACCESS_STRATEGY_SMS_OAUTH;
-  }
-  if (normalized === PLUS_ACCOUNT_ACCESS_STRATEGY_PHONE_BIND_OAUTH) {
-    return PLUS_ACCOUNT_ACCESS_STRATEGY_PHONE_BIND_OAUTH;
-  }
   if (normalized === PLUS_ACCOUNT_ACCESS_STRATEGY_SUB2API_CODEX_SESSION) {
     return PLUS_ACCOUNT_ACCESS_STRATEGY_SUB2API_CODEX_SESSION;
   }
@@ -3793,18 +3088,6 @@ function normalizePlusAccountAccessStrategyForState(state = {}) {
     ? getPanelMode(state)
     : normalizePanelMode(state?.panelMode);
   const strategy = normalizePlusAccountAccessStrategy(state?.plusAccountAccessStrategy);
-  if (
-    (panelMode === 'cpa' || panelMode === 'local-cpa-json' || panelMode === 'local-cpa-json-no-rt' || panelMode === 'sub2api')
-    && strategy === PLUS_ACCOUNT_ACCESS_STRATEGY_SMS_OAUTH
-  ) {
-    return PLUS_ACCOUNT_ACCESS_STRATEGY_SMS_OAUTH;
-  }
-  if (
-    (panelMode === 'cpa' || panelMode === 'local-cpa-json' || panelMode === 'local-cpa-json-no-rt' || panelMode === 'sub2api')
-    && strategy === PLUS_ACCOUNT_ACCESS_STRATEGY_PHONE_BIND_OAUTH
-  ) {
-    return PLUS_ACCOUNT_ACCESS_STRATEGY_PHONE_BIND_OAUTH;
-  }
   if (panelMode === 'sub2api' && strategy === PLUS_ACCOUNT_ACCESS_STRATEGY_SUB2API_CODEX_SESSION) {
     return PLUS_ACCOUNT_ACCESS_STRATEGY_SUB2API_CODEX_SESSION;
   }
@@ -4159,10 +3442,10 @@ const outlookEmailPlusProvider = self.MultiPageBackgroundOutlookEmailPlusProvide
   broadcastDataUpdate,
   buildOutlookEmailPlusAliasAddress,
   buildOutlookEmailPlusHeaders,
-  buildOutlookEmailPlusPayPalAliasAddress,
+  buildOutlookEmailPlusAliasNumberAddress,
   deriveOutlookEmailPlusBaseAddress,
   generateOutlookEmailPlusTag,
-  getOutlookEmailPlusPayPalAliasIndex,
+  getOutlookEmailPlusAliasNumberIndex,
   isOutlookEmailPlusTaggedAlias,
   joinOutlookEmailPlusUrl,
   normalizeOutlookEmailPlusAddress,
@@ -4227,6 +3510,10 @@ function normalizePersistentSettingValue(key, value) {
   switch (key) {
     case 'panelMode':
       return normalizePanelMode(value);
+    case 'localCpaJsonPluginDir':
+      return normalizeLocalCpaJsonPluginDir(value);
+    case 'localCpaJsonRelativeAuthDir':
+      return normalizeLocalCpaJsonRelativeAuthDir(value);
     case 'vpsUrl':
       return String(value || '').trim();
     case 'vpsPassword':
@@ -4245,72 +3532,6 @@ function normalizePersistentSettingValue(key, value) {
       return normalizeSub2ApiGroupNames(value);
     case 'sub2apiAccountPriority':
       return normalizeSub2ApiAccountPriority(value);
-    case 'sub2apiDefaultProxyName':
-      return String(value || '').trim();
-    case 'ipProxyEnabled':
-      return Boolean(value);
-    case 'ipProxyService':
-      return normalizeIpProxyProviderForSettings(value);
-    case 'ipProxyMode':
-      return normalizeIpProxyModeForSettings(value);
-    case 'ipProxyApiUrl':
-      return String(value || '').trim();
-    case 'ipProxyServiceProfiles':
-      return normalizeIpProxyServiceProfilesForSettings(value || {}, PERSISTED_SETTING_DEFAULTS);
-    case 'ipProxyAccountList':
-      return normalizeIpProxyAccountListForSettings(value || '');
-    case 'ipProxyAccountSessionPrefix':
-      return normalizeIpProxyAccountSessionPrefixForSettings(value || '');
-    case 'ipProxyAccountLifeMinutes':
-      return normalizeIpProxyAccountLifeMinutesForSettings(value || '');
-    case 'ipProxyPoolTargetCount':
-      return normalizeIpProxyPoolTargetCountForSettings(value || '', 20);
-    case 'ipProxyAutoSyncEnabled':
-      return Boolean(value);
-    case 'ipProxyAutoSyncIntervalMinutes':
-      return normalizeIpProxyAutoSyncIntervalMinutes(
-        value,
-        PERSISTED_SETTING_DEFAULTS.ipProxyAutoSyncIntervalMinutes
-      );
-    case 'ipProxyHost':
-      return String(value || '').trim();
-    case 'ipProxyPort':
-      return String(normalizeIpProxyPortForSettings(value || '') || '');
-    case 'ipProxyProtocol':
-      return normalizeIpProxyProtocolForSettings(value);
-    case 'ipProxyUsername':
-      return String(value || '').trim();
-    case 'ipProxyPassword':
-      return String(value || '');
-    case 'ipProxyRegion':
-      return String(value || '').trim();
-    case 'ipProxyApiPool':
-      return normalizeProxyPoolEntriesForSettings(
-        value,
-        normalizeIpProxyProviderForSettings(value?.provider || DEFAULT_IP_PROXY_SERVICE)
-      );
-    case 'ipProxyApiCurrentIndex':
-      return normalizeIpProxyCurrentIndexForSettings(value, 0);
-    case 'ipProxyApiCurrent':
-      return normalizeProxyPoolEntriesForSettings(value ? [value] : [], DEFAULT_IP_PROXY_SERVICE)[0] || null;
-    case 'ipProxyAccountPool':
-      return normalizeProxyPoolEntriesForSettings(
-        value,
-        normalizeIpProxyProviderForSettings(value?.provider || DEFAULT_IP_PROXY_SERVICE)
-      );
-    case 'ipProxyAccountCurrentIndex':
-      return normalizeIpProxyCurrentIndexForSettings(value, 0);
-    case 'ipProxyAccountCurrent':
-      return normalizeProxyPoolEntriesForSettings(value ? [value] : [], DEFAULT_IP_PROXY_SERVICE)[0] || null;
-    case 'ipProxyPool':
-      return normalizeProxyPoolEntriesForSettings(
-        value,
-        normalizeIpProxyProviderForSettings(value?.provider || DEFAULT_IP_PROXY_SERVICE)
-      );
-    case 'ipProxyCurrentIndex':
-      return normalizeIpProxyCurrentIndexForSettings(value, 0);
-    case 'ipProxyCurrent':
-      return normalizeProxyPoolEntriesForSettings(value ? [value] : [], DEFAULT_IP_PROXY_SERVICE)[0] || null;
     case 'codex2apiUrl':
       return normalizeCodex2ApiUrl(value);
     case 'codex2apiAdminKey':
@@ -4318,179 +3539,17 @@ function normalizePersistentSettingValue(key, value) {
     case 'customPassword':
       return String(value || '');
     case 'signupMethod':
-      return normalizeSignupMethod(value);
+      return SIGNUP_METHOD_EMAIL;
+    case 'plusModeEnabled':
+      return true;
     case 'plusPaymentMethod':
-      return normalizePlusPaymentMethod(value);
+      return PLUS_PAYMENT_METHOD_UPI;
     case 'plusAccountAccessStrategy':
       return normalizePlusAccountAccessStrategy(value);
-    case 'plusCheckoutMode':
-      return normalizePlusCheckoutMode(value);
-    case 'plusCheckoutProfiles':
-      return normalizePlusCheckoutProfiles(value || {});
-    case 'plusHostedCheckoutOauthDelaySeconds':
-      return normalizePlusHostedCheckoutOauthDelaySeconds(
-        value,
-        PERSISTED_SETTING_DEFAULTS.plusHostedCheckoutOauthDelaySeconds
-      );
-    case 'plusCheckoutCloudConversionEnabled':
-      return Boolean(value);
-    case 'plusCheckoutCloudConversionApiUrl':
-      try {
-        const rawValue = String(value || '').trim();
-        if (!rawValue) {
-          return '';
-        }
-        const parsed = new URL(rawValue);
-        parsed.hash = '';
-        return parsed.toString();
-      } catch {
-        return String(value || '').trim();
-      }
-    case 'plusCheckoutCloudConversionApiKey':
-      return String(value || '').trim();
-    case 'ppBoomEnabled':
-      return Boolean(value);
-    case 'ppBoomBrowserBackend':
-      {
-        const normalized = String(value || '').trim().toLowerCase();
-        if (normalized === 'adspower') return 'adspower';
-        if (normalized === 'roxybrowser') return 'roxybrowser';
-        return 'local';
-      }
-    case 'ppBoomAdsPowerApiBase': {
-      const raw = String(value || '').trim();
-      if (!raw) {
-        return '';
-      }
-      return /:\/\//.test(raw) ? raw.replace(/\/+$/, '') : `http://${raw.replace(/\/+$/, '')}`;
-    }
-    case 'ppBoomAdsPowerApiKey':
-      return String(value || '').trim();
-    case 'ppBoomAdsPowerProfileId':
-      return String(value || '').trim();
-    case 'ppBoomRoxyBrowserProfileId':
-      return String(value || '').trim();
-    case 'ppBoomRoxyBrowserApiBase': {
-      const raw = String(value || '').trim();
-      if (!raw) {
-        return '';
-      }
-      return /:\/\//.test(raw) ? raw.replace(/\/+$/, '') : `http://${raw.replace(/\/+$/, '')}`;
-    }
-    case 'ppBoomRoxyBrowserApiKey':
-      return String(value || '').trim();
-    case 'ppBoomStripePublishableKey':
-      return String(value || '').trim();
-    case 'ppBoomDeviceId':
-      return String(value || '').trim();
-    case 'ppBoomUserAgent':
-      return String(value || '').trim();
-    case 'ppBoomMaxAttempts': {
-      const numeric = Number.parseInt(String(value ?? '').trim(), 10);
-      if (!Number.isFinite(numeric)) {
-        return 10;
-      }
-      return Math.max(1, Math.min(20, numeric));
-    }
-    case 'ppBoomPaymentLocale': {
-      const normalized = String(value || '').trim();
-      const allowed = new Set(['en', 'zh-CN', 'zh-TW', 'ja', 'ko', 'de', 'fr', 'es', 'id', 'pt-BR']);
-      return allowed.has(normalized) ? normalized : 'en';
-    }
-    case 'ppBoomCheckoutRebuildMaxAttempts': {
-      const numeric = Number.parseInt(String(value ?? '').trim(), 10);
-      if (!Number.isFinite(numeric)) {
-        return 3;
-      }
-      return Math.max(1, Math.min(10, numeric));
-    }
-    case 'ppBoomDefaultProxy':
-      return String(value || '').trim();
-    case 'ppBoomProviderProxy':
-      return String(value || '').trim();
-    case 'ppBoomProxy':
-      return String(value || '').trim();
-    case 'plusCheckoutConversionProxyUrl': {
-      const rawValue = String(value || '').trim();
-      if (!rawValue) {
-        return '';
-      }
-      try {
-        const parsed = new URL(rawValue);
-        const protocol = String(parsed.protocol || '').replace(/:$/g, '').trim().toLowerCase();
-        if (!['http', 'https', 'socks4', 'socks5', 'socks5h'].includes(protocol)) {
-          return rawValue;
-        }
-        const host = String(parsed.hostname || '').trim();
-        const port = String(parsed.port || '').trim();
-        if (!host || !port) {
-          return rawValue;
-        }
-        const username = parsed.username ? decodeURIComponent(parsed.username) : '';
-        const password = parsed.password ? decodeURIComponent(parsed.password) : '';
-        const auth = username || password
-          ? `${encodeURIComponent(username)}${parsed.password || password ? `:${encodeURIComponent(password)}` : ''}@`
-          : '';
-        return `${protocol}://${auth}${host}:${port}`;
-      } catch {
-        return rawValue;
-      }
-    }
-    case 'hostedCheckoutVerificationPopupDelaySeconds':
-      return normalizeHostedCheckoutVerificationPopupDelaySeconds(
-        value,
-        PERSISTED_SETTING_DEFAULTS.hostedCheckoutVerificationPopupDelaySeconds
-      );
-    case 'hostedCheckoutVerificationUrl':
-      try {
-        const rawValue = String(value || '').trim();
-        if (!rawValue) {
-          return '';
-        }
-        const parsed = new URL(rawValue);
-        parsed.searchParams.delete('t');
-        return parsed.toString();
-      } catch {
-        return String(value || '')
-          .trim()
-          .replace(/([?&])t=\d+(?=(&|$))/i, '$1')
-          .replace(/[?&]$/g, '');
-      }
-    case 'hostedCheckoutPhoneNumber':
-      return String(value || '').trim();
-    case 'hostedCheckoutSmsPoolText':
-      return String(value || '')
-        .replace(/\r/g, '')
-        .split('\n')
-        .map((line) => line.trim())
-        .filter(Boolean)
-        .join('\n');
-    case 'hostedCheckoutSmsPoolUsage':
-      if (!value || typeof value !== 'object' || Array.isArray(value)) {
-        return {};
-      }
-      return Object.fromEntries(Object.entries(value).map(([key, usage]) => {
-        const item = usage && typeof usage === 'object' && !Array.isArray(usage) ? usage : {};
-        const legacyUsedCount = Number(item.usedAt) > 0 ? 1 : 0;
-        const useCount = Math.max(0, Math.floor(Number(item.useCount ?? item.usageCount ?? legacyUsedCount) || 0));
-        return [String(key || '').trim(), {
-          useCount,
-          usedAt: Math.max(0, Number(item.usedAt) || 0),
-          lastAttemptAt: Math.max(0, Number(item.lastAttemptAt) || 0),
-          lastError: String(item.lastError || '').trim(),
-          blockedAt: Math.max(0, Number(item.blockedAt) || 0),
-          blockedReason: String(item.blockedReason || '').trim(),
-          enabled: item.enabled !== false,
-          disabledReason: String(item.disabledReason || '').trim(),
-          disabledAt: Math.max(0, Number(item.disabledAt) || 0),
-          failureCount: Math.max(0, Math.floor(Number(item.failureCount) || 0)),
-        }];
-      }).filter(([key]) => Boolean(key)));
     case 'upiRedeemApiBaseUrl':
       return String(value || '')
         .trim()
         .replace(/#.*$/g, '')
-        .replace(/\/+$/g, '')
         .replace(/\/api\/external\/cdkey-redeems\/status$/i, '')
         .replace(/\/api\/external\/cdkey-redeems$/i, '')
         .replace(/\/api\/?$/i, '')
@@ -4499,44 +3558,41 @@ function normalizePersistentSettingValue(key, value) {
       return String(value || PERSISTED_SETTING_DEFAULTS.upiSubscriptionApiBaseUrl)
         .trim()
         .replace(/#.*$/g, '')
-        .replace(/\/+$/g, '')
         .replace(/\/api\/v1\/subscription$/i, '')
         .replace(/\/api\/v1\/totp\/(?:enable|lookup)$/i, '')
         .replace(/\/api$/i, '')
         .replace(/\/+$/g, '') || PERSISTED_SETTING_DEFAULTS.upiSubscriptionApiBaseUrl;
     case 'upiRedeemExternalApiKey':
-      return String(value || '').trim();
     case 'upiRedeemClientId':
+    case 'upiCredentialMembershipCheckTotpLookupKey':
       return String(value || '').trim();
     case 'upiRedeemStopAfterRedeem':
-      return Boolean(value);
     case 'upiRedeemContinueAfterRedeem':
-      return Boolean(value);
     case 'totpMfaAfterProfileEnabled':
+    case 'autoRunSkipFailures':
+    case 'autoRunRetryNonFreeTrial':
+    case 'oauthFlowTimeoutEnabled':
+    case 'autoRunDelayEnabled':
+    case 'step6CookieCleanupEnabled':
+    case 'mail2925UseAccountPool':
+    case 'autoDeleteUsedIcloudAlias':
+    case 'accountRunHistoryTextEnabled':
+    case 'cloudflareTempEmailUseRandomSubdomain':
+    case 'hotmailAliasEnabled':
       return Boolean(value);
+    case 'operationDelayEnabled':
+      return typeof value === 'boolean' ? value : true;
     case 'upiCredentialMembershipCheckTotpApiBaseUrl':
       return String(value || PERSISTED_SETTING_DEFAULTS.upiCredentialMembershipCheckTotpApiBaseUrl)
         .trim()
         .replace(/#.*$/g, '')
-        .replace(/\/+$/g, '')
         .replace(/\/api\/v1\/totp\/(?:enable|lookup|code)$/i, '')
         .replace(/\/api$/i, '')
         .replace(/\/+$/g, '') || PERSISTED_SETTING_DEFAULTS.upiCredentialMembershipCheckTotpApiBaseUrl;
-    case 'upiCredentialMembershipCheckTotpLookupKey':
-      return String(value || '').trim();
-    case 'setGptPasswordVerificationWaitSeconds': {
-      const numeric = Number.parseInt(String(value ?? '').trim(), 10);
-      if (!Number.isFinite(numeric)) {
-        return PERSISTED_SETTING_DEFAULTS.setGptPasswordVerificationWaitSeconds;
-      }
-      return Math.max(0, Math.min(300, numeric));
-    }
+    case 'setGptPasswordVerificationWaitSeconds':
     case 'signupVerificationCodeWaitSeconds': {
       const numeric = Number.parseInt(String(value ?? '').trim(), 10);
-      if (!Number.isFinite(numeric)) {
-        return PERSISTED_SETTING_DEFAULTS.signupVerificationCodeWaitSeconds;
-      }
-      return Math.max(0, Math.min(300, numeric));
+      return Number.isFinite(numeric) ? Math.max(0, Math.min(300, numeric)) : PERSISTED_SETTING_DEFAULTS[key];
     }
     case 'upiRedeemCdkeyPoolText': {
       const seen = new Set();
@@ -4545,21 +3601,17 @@ function normalizePersistentSettingValue(key, value) {
         .split('\n')
         .map((line) => line.trim())
         .filter((line) => {
-          if (!line || seen.has(line)) {
-            return false;
-          }
+          if (!line || seen.has(line)) return false;
           seen.add(line);
           return true;
         })
         .join('\n');
     }
     case 'upiRedeemCdkeyUsage':
-      if (!value || typeof value !== 'object' || Array.isArray(value)) {
-        return {};
-      }
-      return Object.fromEntries(Object.entries(value).map(([key, usage]) => {
+      if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+      return Object.fromEntries(Object.entries(value).map(([rawKey, usage]) => {
         const item = usage && typeof usage === 'object' && !Array.isArray(usage) ? usage : {};
-        return [String(key || '').trim(), {
+        return [String(rawKey || '').trim(), {
           usedAt: Math.max(0, Number(item.usedAt) || 0),
           lastAttemptAt: Math.max(0, Number(item.lastAttemptAt) || 0),
           lastError: String(item.lastError || '').trim(),
@@ -4568,227 +3620,7 @@ function normalizePersistentSettingValue(key, value) {
           remoteMessage: String(item.remoteMessage || '').trim(),
           remoteCheckedAt: Math.max(0, Number(item.remoteCheckedAt) || 0),
         }];
-      }).filter(([key]) => Boolean(key)));
-    case 'hostedSmsPoolText':
-      return String(value || '')
-        .replace(/\r/g, '')
-        .split('\n')
-        .map((line) => line.trim())
-        .filter(Boolean)
-        .join('\n');
-    case 'hostedSmsPoolUsage':
-      if (self.PhoneSmsHostedSmsProvider?.normalizeHostedSmsPoolUsage) {
-        return self.PhoneSmsHostedSmsProvider.normalizeHostedSmsPoolUsage(value);
-      }
-      if (!value || typeof value !== 'object' || Array.isArray(value)) {
-        return {};
-      }
-      return Object.fromEntries(Object.entries(value).map(([key, usage]) => {
-        const item = usage && typeof usage === 'object' && !Array.isArray(usage) ? usage : {};
-        return [String(key || '').trim(), {
-          useCount: Math.max(0, Math.floor(Number(item.useCount) || 0)),
-          usedAt: Math.max(0, Number(item.usedAt) || 0),
-          lastAttemptAt: Math.max(0, Number(item.lastAttemptAt) || 0),
-          lastSuccessAt: Math.max(0, Number(item.lastSuccessAt) || 0),
-          lastCancelAt: Math.max(0, Number(item.lastCancelAt) || 0),
-          lastBanAt: Math.max(0, Number(item.lastBanAt) || 0),
-          lastError: String(item.lastError || '').trim(),
-        }];
-      }).filter(([key]) => Boolean(key)));
-    case 'hostedCheckoutCardDeclinedRetryEnabled':
-      return Boolean(value);
-    case 'hostedCheckoutSmsPoolAutoDisableEnabled':
-      return Boolean(value);
-    case 'chatGptApiSmsPoolText':
-      return String(value || '')
-        .replace(/\r/g, '')
-        .split('\n')
-        .map((line) => line.trim())
-        .filter(Boolean)
-        .join('\n');
-    case 'chatGptApiSmsPoolUsage':
-      if (!value || typeof value !== 'object' || Array.isArray(value)) {
-        return {};
-      }
-      return Object.fromEntries(Object.entries(value).map(([key, usage]) => {
-        const item = usage && typeof usage === 'object' && !Array.isArray(usage) ? usage : {};
-        const legacyUsedCount = Number(item.usedAt) > 0 ? 1 : 0;
-        const useCount = Math.max(0, Math.floor(Number(item.useCount ?? item.usageCount ?? legacyUsedCount) || 0));
-        return [String(key || '').trim(), {
-          useCount,
-          usedAt: Math.max(0, Number(item.usedAt) || 0),
-          lastAttemptAt: Math.max(0, Number(item.lastAttemptAt) || 0),
-          lastError: String(item.lastError || '').trim(),
-          enabled: item.enabled !== false,
-          disabledReason: String(item.disabledReason || '').trim(),
-          disabledAt: Math.max(0, Number(item.disabledAt) || 0),
-          failureCount: Math.max(0, Math.floor(Number(item.failureCount) || 0)),
-        }];
-      }).filter(([key]) => Boolean(key)));
-    case 'chatGptApiSmsPoolAutoDisableEnabled':
-      return Boolean(value);
-    case 'hostedCheckoutFirstDirectResendEnabled':
-      return Boolean(value);
-    case 'hostedCheckoutFirstResendWaitSeconds':
-      return normalizeHostedCheckoutResendWaitSeconds(
-        value,
-        PERSISTED_SETTING_DEFAULTS.hostedCheckoutFirstResendWaitSeconds
-      );
-    case 'hostedCheckoutSubsequentResendWaitSeconds':
-      return normalizeHostedCheckoutResendWaitSeconds(
-        value,
-        PERSISTED_SETTING_DEFAULTS.hostedCheckoutSubsequentResendWaitSeconds
-      );
-    case 'hostedCheckoutVerificationResendMaxAttempts':
-      return normalizeHostedCheckoutVerificationResendMaxAttempts(
-        value,
-        PERSISTED_SETTING_DEFAULTS.hostedCheckoutVerificationResendMaxAttempts
-      );
-    case 'hostedCheckoutVerificationPollAttempts':
-      return normalizeHostedCheckoutVerificationPollAttempts(
-        value,
-        PERSISTED_SETTING_DEFAULTS.hostedCheckoutVerificationPollAttempts
-      );
-    case 'hostedCheckoutVerificationPollIntervalSeconds':
-      return normalizeHostedCheckoutVerificationPollIntervalSeconds(
-        value,
-        PERSISTED_SETTING_DEFAULTS.hostedCheckoutVerificationPollIntervalSeconds
-      );
-    case 'paypalEmail':
-      return String(value || '').trim();
-    case 'paypalPassword':
-      return String(value || '');
-    case 'currentPayPalAccountId':
-      return String(value || '').trim();
-    case 'gopayCountryCode':
-      return self.GoPayUtils?.normalizeGoPayCountryCode
-        ? self.GoPayUtils.normalizeGoPayCountryCode(value)
-        : String(value || '+86').trim();
-    case 'gopayPhone':
-      return self.GoPayUtils?.normalizeGoPayPhone
-        ? self.GoPayUtils.normalizeGoPayPhone(value)
-        : String(value || '').trim();
-    case 'gopayOtp':
-      return self.GoPayUtils?.normalizeGoPayOtp
-        ? self.GoPayUtils.normalizeGoPayOtp(value)
-        : String(value || '').trim().replace(/[^\d]/g, '');
-    case 'gopayPin':
-      return self.GoPayUtils?.normalizeGoPayPin
-        ? self.GoPayUtils.normalizeGoPayPin(value)
-        : String(value || '');
-    case 'gopayHelperPhoneMode':
-      return self.GoPayUtils?.normalizeGpcHelperPhoneMode
-        ? self.GoPayUtils.normalizeGpcHelperPhoneMode(value)
-        : (String(value || '').trim().toLowerCase() === 'auto' || String(value || '').trim().toLowerCase() === 'builtin' ? 'auto' : 'manual');
-    case 'gopayHelperPhoneNumber':
-      return self.GoPayUtils?.normalizeGoPayPhone
-        ? self.GoPayUtils.normalizeGoPayPhone(value)
-        : String(value || '').trim();
-    case 'gopayHelperPin':
-      return self.GoPayUtils?.normalizeGoPayPin
-        ? self.GoPayUtils.normalizeGoPayPin(value)
-        : String(value || '');
-    case 'gopayHelperCountryCode':
-      return self.GoPayUtils?.normalizeGoPayCountryCode
-        ? self.GoPayUtils.normalizeGoPayCountryCode(value)
-        : String(value || '+86').trim();
-    case 'gopayHelperOtpChannel':
-      return self.GoPayUtils?.normalizeGpcOtpChannel
-        ? self.GoPayUtils.normalizeGpcOtpChannel(value)
-        : (String(value || '').trim().toLowerCase() === 'sms' ? 'sms' : 'whatsapp');
-    case 'gopayHelperLocalSmsHelperUrl':
-      return normalizeLocalHttpBaseUrl(
-        value,
-        PERSISTED_SETTING_DEFAULTS.gopayHelperLocalSmsHelperUrl || 'http://127.0.0.1:18767'
-      );
-    case 'gopayHelperLocalSmsTimeoutSeconds':
-      return normalizeBoundedIntegerSetting(
-        value,
-        PERSISTED_SETTING_DEFAULTS.gopayHelperLocalSmsTimeoutSeconds,
-        10,
-        300
-      );
-    case 'gopayHelperLocalSmsPollIntervalSeconds':
-      return normalizeBoundedIntegerSetting(
-        value,
-        PERSISTED_SETTING_DEFAULTS.gopayHelperLocalSmsPollIntervalSeconds,
-        1,
-        30
-      );
-    case 'gopayHelperApiUrl':
-      {
-        const defaultGpcHelperApiUrl = PERSISTED_SETTING_DEFAULTS.gopayHelperApiUrl
-          || (typeof DEFAULT_GPC_HELPER_API_URL !== 'undefined' ? DEFAULT_GPC_HELPER_API_URL : 'https://your-gpc-helper-domain.example');
-        const normalizedGpcHelperApiUrl = self.GoPayUtils?.normalizeGpcHelperBaseUrl
-          ? self.GoPayUtils.normalizeGpcHelperBaseUrl(value || defaultGpcHelperApiUrl)
-          : String(value || defaultGpcHelperApiUrl).trim().replace(/\/+$/g, '');
-        if (!self.GoPayUtils?.normalizeGpcHelperBaseUrl) {
-          try {
-            const parsed = new URL(normalizedGpcHelperApiUrl);
-            if (!/^https?:$/i.test(parsed.protocol)) {
-              return defaultGpcHelperApiUrl;
-            }
-          } catch {
-            return defaultGpcHelperApiUrl;
-          }
-        }
-        return normalizedGpcHelperApiUrl;
-      }
-    case 'gopayHelperApiKey':
-    case 'gopayHelperCardKey':
-    case 'gopayHelperReferenceId':
-    case 'gopayHelperGoPayGuid':
-    case 'gopayHelperRedirectUrl':
-    case 'gopayHelperNextAction':
-    case 'gopayHelperFlowId':
-    case 'gopayHelperChallengeId':
-    case 'gopayHelperTaskId':
-    case 'gopayHelperTaskStatus':
-    case 'gopayHelperStatusText':
-    case 'gopayHelperRemoteStage':
-    case 'gopayHelperApiWaitingFor':
-    case 'gopayHelperApiInputDeadlineAt':
-    case 'gopayHelperLastInputError':
-    case 'gopayHelperFailureStage':
-    case 'gopayHelperFailureDetail':
-    case 'gopayHelperBalance':
-    case 'gopayHelperBalanceError':
-    case 'gopayHelperApiKeyStatus':
-      return String(value || '').trim();
-    case 'gopayHelperBalancePayload':
-    case 'gopayHelperStartPayload':
-    case 'gopayHelperTaskPayload':
-      return value && typeof value === 'object' && !Array.isArray(value) ? value : null;
-    case 'gopayHelperBalanceUpdatedAt':
-    case 'gopayHelperApiInputWaitSeconds':
-    case 'gopayHelperOtpInvalidCount':
-    case 'gopayHelperRemainingUses':
-      return Math.max(0, Number(value) || 0);
-    case 'autoRunSkipFailures':
-    case 'autoRunRetryNonFreeTrial':
-    case 'autoRunRetryPaypalCallback':
-    case 'autoRunRetryShortLinkError':
-    case 'oauthFlowTimeoutEnabled':
-    case 'gopayHelperLocalSmsHelperEnabled':
-    case 'gopayHelperAutoModeEnabled':
-    case 'autoRunDelayEnabled':
-      return Boolean(value);
-    case 'operationDelayEnabled':
-      return typeof value === 'boolean' ? value : true;
-    case 'step6CookieCleanupEnabled':
-    case 'phoneVerificationEnabled':
-    case 'phoneSignupReloginAfterBindEmailEnabled':
-    case 'whatsappPhoneVerificationRestartEnabled':
-    case 'phoneAutoReleaseOnStopEnabled':
-    case 'phoneSmsReuseEnabled':
-    case 'freePhoneReuseEnabled':
-    case 'freePhoneReuseAutoEnabled':
-    case 'plusModeEnabled':
-      return Boolean(value);
-    case 'phoneSmsProvider':
-      return normalizePhoneSmsProvider(value);
-    case 'phoneSmsProviderOrder':
-      return normalizePhoneSmsProviderOrder(value);
+      }).filter(([normalizedKey]) => Boolean(normalizedKey)));
     case 'autoRunFallbackThreadIntervalMinutes':
       return normalizeAutoRunFallbackThreadIntervalMinutes(value);
     case 'autoRunDelayMinutes':
@@ -4797,50 +3629,15 @@ function normalizePersistentSettingValue(key, value) {
       return normalizeAutoStepDelaySeconds(value, PERSISTED_SETTING_DEFAULTS.autoStepDelaySeconds);
     case 'verificationResendCount':
       return normalizeVerificationResendCount(value, DEFAULT_VERIFICATION_RESEND_COUNT);
-    case 'phoneVerificationReplacementLimit':
-      return normalizePhoneVerificationReplacementLimit(value, DEFAULT_PHONE_VERIFICATION_REPLACEMENT_LIMIT);
-    case 'whatsappPhoneVerificationRestartMaxAttempts':
-      return normalizeWhatsAppPhoneVerificationRestartMaxAttempts(
-        value,
-        DEFAULT_WHATSAPP_PHONE_VERIFICATION_RESTART_MAX_ATTEMPTS
-      );
-    case 'phoneCodeWaitSeconds':
-      return normalizePhoneCodeWaitSeconds(value, DEFAULT_PHONE_CODE_WAIT_SECONDS);
-    case 'phoneCodeTimeoutWindows':
-      return normalizePhoneCodeTimeoutWindows(value, DEFAULT_PHONE_CODE_TIMEOUT_WINDOWS);
-    case 'phoneCodePollIntervalSeconds':
-      return normalizePhoneCodePollIntervalSeconds(value, DEFAULT_PHONE_CODE_POLL_INTERVAL_SECONDS);
-    case 'phoneCodePollMaxRounds':
-      return normalizePhoneCodePollMaxRounds(value, DEFAULT_PHONE_CODE_POLL_ROUNDS);
-    case 'heroSmsActivationRetryRounds':
-      return normalizePhoneActivationRetryRounds(value, DEFAULT_PHONE_ACTIVATION_RETRY_ROUNDS);
-    case 'mailProvider':
-      {
-        const normalizedMailProvider = normalizeMailProvider(value);
-        if (normalizedMailProvider === CLOUDFLARE_TEMP_EMAIL_PROVIDER) {
-          return CLOUDFLARE_TEMP_EMAIL_PROVIDER;
-        }
-        if (normalizedMailProvider === CLOUD_MAIL_PROVIDER) {
-          return CLOUD_MAIL_PROVIDER;
-        }
-        if (normalizedMailProvider === FREEMAIL_PROVIDER) {
-          return FREEMAIL_PROVIDER;
-        }
-        if (normalizedMailProvider === MOEMAIL_PROVIDER) {
-          return MOEMAIL_PROVIDER;
-        }
-        if (normalizedMailProvider === YYDSMAIL_PROVIDER) {
-          return YYDSMAIL_PROVIDER;
-        }
-        if (normalizedMailProvider === ICLOUD_PROVIDER || normalizedMailProvider === ICLOUD_API_PROVIDER) {
-          return normalizedMailProvider;
-        }
-        return HOTMAIL_PROVIDER;
+    case 'mailProvider': {
+      const normalizedMailProvider = normalizeMailProvider(value);
+      if ([CLOUDFLARE_TEMP_EMAIL_PROVIDER, CLOUD_MAIL_PROVIDER, FREEMAIL_PROVIDER, MOEMAIL_PROVIDER, YYDSMAIL_PROVIDER, ICLOUD_PROVIDER, ICLOUD_API_PROVIDER].includes(normalizedMailProvider)) {
+        return normalizedMailProvider;
       }
+      return HOTMAIL_PROVIDER;
+    }
     case 'mail2925Mode':
       return normalizeMail2925Mode(value);
-    case 'mail2925UseAccountPool':
-      return Boolean(value);
     case 'emailGenerator':
       return normalizeEmailGenerator(value);
     case 'customMailProviderPool':
@@ -4851,10 +3648,6 @@ function normalizePersistentSettingValue(key, value) {
       return normalizeCustomEmailPoolEntryObjects(value);
     case 'selectedCustomEmailPoolEmail':
       return String(value || '').trim().toLowerCase();
-    case 'autoDeleteUsedIcloudAlias':
-    case 'accountRunHistoryTextEnabled':
-    case 'cloudflareTempEmailUseRandomSubdomain':
-      return Boolean(value);
     case 'icloudHostPreference':
       return normalizeIcloudHost(value) || 'auto';
     case 'icloudTargetMailboxType':
@@ -4869,18 +3662,18 @@ function normalizePersistentSettingValue(key, value) {
       return normalizeIcloudFetchMode(value);
     case 'accountRunHistoryHelperBaseUrl':
       return normalizeAccountRunHistoryHelperBaseUrl(value);
-    case 'localCpaJsonPluginDir':
-      return normalizeLocalCpaJsonPluginDir(value);
-    case 'localCpaJsonRelativeAuthDir':
-      return normalizeLocalCpaJsonRelativeAuthDir(value);
     case 'gmailBaseEmail':
     case 'mail2925BaseEmail':
     case 'currentMail2925AccountId':
     case 'emailPrefix':
-      return String(value || '').trim();
     case 'inbucketHost':
-      return String(value || '').trim();
     case 'inbucketMailbox':
+    case 'luckmailDomain':
+    case 'cloudMailAdminEmail':
+    case 'moemailApiKey':
+    case 'moemailEmailId':
+    case 'yydsMailApiKey':
+    case 'outlookEmailPlusApiKey':
       return String(value || '').trim();
     case 'hotmailServiceMode':
       return normalizeHotmailServiceMode(value);
@@ -4889,13 +3682,16 @@ function normalizePersistentSettingValue(key, value) {
     case 'hotmailLocalBaseUrl':
       return normalizeHotmailLocalBaseUrl(value);
     case 'luckmailApiKey':
+    case 'cloudflareTempEmailAdminAuth':
+    case 'cloudflareTempEmailCustomAuth':
+    case 'cloudMailAdminPassword':
+    case 'cloudMailToken':
+    case 'freemailAdminPassword':
       return String(value || '');
     case 'luckmailBaseUrl':
       return normalizeLuckmailBaseUrl(value);
     case 'luckmailEmailType':
       return normalizeLuckmailEmailType(value);
-    case 'luckmailDomain':
-      return String(value || '').trim();
     case 'luckmailUsedPurchases':
       return normalizeLuckmailUsedPurchases(value);
     case 'luckmailPreserveTagId':
@@ -4908,9 +3704,6 @@ function normalizePersistentSettingValue(key, value) {
       return normalizeCloudflareDomains(value);
     case 'cloudflareTempEmailBaseUrl':
       return normalizeCloudflareTempEmailBaseUrl(value);
-    case 'cloudflareTempEmailAdminAuth':
-    case 'cloudflareTempEmailCustomAuth':
-      return String(value || '');
     case 'cloudflareTempEmailLookupMode':
       return normalizeCloudflareTempEmailLookupMode(value);
     case 'cloudflareTempEmailReceiveMailbox':
@@ -4921,11 +3714,6 @@ function normalizePersistentSettingValue(key, value) {
       return normalizeCloudflareTempEmailDomains(value);
     case 'cloudMailBaseUrl':
       return normalizeCloudMailBaseUrl(value);
-    case 'cloudMailAdminEmail':
-      return String(value || '').trim();
-    case 'cloudMailAdminPassword':
-    case 'cloudMailToken':
-      return String(value || '');
     case 'cloudMailReceiveMailbox':
       return normalizeCloudMailReceiveMailbox(value);
     case 'cloudMailDomain':
@@ -4936,32 +3724,22 @@ function normalizePersistentSettingValue(key, value) {
       return normalizeFreemailBaseUrl(value);
     case 'freemailAdminUsername':
       return String(value || '').trim();
-    case 'freemailAdminPassword':
-      return String(value || '');
     case 'freemailDomain':
       return normalizeFreemailDomain(value);
     case 'freemailDomains':
       return normalizeFreemailDomains(value);
     case 'moemailBaseUrl':
       return normalizeMoemailBaseUrl(value);
-    case 'moemailApiKey':
-      return String(value || '').trim();
     case 'moemailDomain':
       return normalizeMoemailDomain(value);
     case 'moemailDomains':
       return normalizeMoemailDomains(value);
-    case 'moemailEmailId':
-      return String(value || '').trim();
     case 'yydsMailBaseUrl':
       return normalizeYydsMailBaseUrl(value);
-    case 'yydsMailApiKey':
-      return String(value || '').trim();
     case 'yydsMailDomain':
       return normalizeYydsMailDomain(value);
     case 'outlookEmailPlusBaseUrl':
       return normalizeOutlookEmailPlusBaseUrl(value);
-    case 'outlookEmailPlusApiKey':
-      return String(value || '').trim();
     case 'outlookEmailPlusProvider':
       return normalizeOutlookEmailPlusProvider(value) || PERSISTED_SETTING_DEFAULTS.outlookEmailPlusProvider;
     case 'outlookEmailPlusProjectKey':
@@ -4969,177 +3747,19 @@ function normalizePersistentSettingValue(key, value) {
     case 'outlookEmailPlusCallerIdPrefix':
       return normalizeOutlookEmailPlusCallerIdPrefix(value) || PERSISTED_SETTING_DEFAULTS.outlookEmailPlusCallerIdPrefix;
     case 'outlookEmailPlusAliasMaxPerMailbox':
-      return normalizeOutlookEmailPlusAliasMaxPerMailbox(
-        value,
-        PERSISTED_SETTING_DEFAULTS.outlookEmailPlusAliasMaxPerMailbox
-      );
+      return normalizeOutlookEmailPlusAliasMaxPerMailbox(value, PERSISTED_SETTING_DEFAULTS.outlookEmailPlusAliasMaxPerMailbox);
     case 'hotmailAccounts':
       return normalizeHotmailAccounts(value);
-    case 'hotmailAliasEnabled':
-      return Boolean(value);
     case 'outlookAliasMaxPerAccount':
-      return normalizeOutlookAliasMaxPerAccount(
-        value,
-        PERSISTED_SETTING_DEFAULTS.outlookAliasMaxPerAccount
-      );
+      return normalizeOutlookAliasMaxPerAccount(value, PERSISTED_SETTING_DEFAULTS.outlookAliasMaxPerAccount);
     case 'hotmailAliasUsage':
       return normalizeHotmailAliasUsage(value);
     case 'mail2925Accounts':
       return normalizeMail2925Accounts(value);
-    case 'paypalAccounts':
-      return normalizePayPalAccounts(value);
-    case 'phoneSmsProvider':
-      return normalizePhoneSmsProvider(value);
-    case 'heroSmsApiKey':
-      return String(value || '');
-    case 'heroSmsReuseEnabled':
-      return Boolean(value);
-    case 'heroSmsAcquirePriority':
-      return normalizeHeroSmsAcquirePriority(value);
-    case 'heroSmsMinPrice':
-    case 'heroSmsMaxPrice':
-      return normalizeHeroSmsMaxPrice(value);
-    case 'heroSmsPreferredPrice':
-      return normalizeHeroSmsMaxPrice(value);
-    case 'heroSmsCountryId': {
-      const parsed = Math.floor(Number(value));
-      if (Number.isFinite(parsed) && parsed === 0) {
-        return 0;
-      }
-      if (Number.isFinite(parsed) && parsed > 0) {
-        return parsed;
-      }
-      return HERO_SMS_COUNTRY_ID;
-    }
-    case 'heroSmsCountryLabel':
-      return String(value || HERO_SMS_COUNTRY_LABEL).trim() || HERO_SMS_COUNTRY_LABEL;
-    case 'heroSmsCountryFallback':
-      return normalizeHeroSmsCountryFallback(value);
-    case 'fiveSimApiKey':
-      return String(value || '');
-    case 'fiveSimProduct':
-      return normalizeFiveSimCountryCode(value, DEFAULT_FIVE_SIM_PRODUCT);
-    case 'fiveSimCountryId':
-      return normalizeFiveSimCountryId(value);
-    case 'fiveSimCountryLabel':
-      return normalizeFiveSimCountryLabel(value);
-    case 'fiveSimCountryFallback':
-      return normalizeFiveSimCountryFallback(value);
-    case 'fiveSimCountryOrder':
-      return normalizeFiveSimCountryOrder(value);
-    case 'fiveSimMinPrice':
-    case 'fiveSimMaxPrice':
-      return normalizeFiveSimMaxPrice(value);
-    case 'fiveSimOperator':
-      return normalizeFiveSimOperator(value);
-    case 'nexSmsApiKey':
-      return String(value || '');
-    case 'nexSmsCountryOrder':
-      return normalizeNexSmsCountryOrder(value);
-    case 'nexSmsServiceCode':
-      return normalizeNexSmsServiceCode(value);
-    case 'smsBowerApiKey':
-      return String(value || '');
-    case 'smsBowerBaseUrl':
-      return normalizeUrl(value, DEFAULT_SMSBOWER_BASE_URL);
-    case 'smsBowerCountryOrder':
-      return normalizeSmsBowerCountryOrder(value);
-    case 'smsBowerServiceCode':
-      return normalizeSmsBowerServiceCode(value, DEFAULT_SMSBOWER_SERVICE_CODE);
-    case 'smsBowerCountryId': {
-      const parsed = Math.floor(Number(value));
-      if (Number.isFinite(parsed) && parsed > 0) {
-        return parsed;
-      }
-      return 52;
-    }
-    case 'smsBowerCountryLabel':
-      return String(value || '泰国 +66 (Thailand)').trim() || '泰国 +66 (Thailand)';
-    case 'smsBowerCountryFallback':
-      return normalizeHeroSmsCountryFallback(value);
-    case 'smsBowerMinPrice':
-    case 'smsBowerMaxPrice':
-    case 'smsBowerPreferredPrice':
-      return normalizeHeroSmsMaxPrice(value);
-    case 'smsVerificationNumberApiKey':
-      return String(value || '');
-    case 'smsVerificationNumberBaseUrl':
-      return normalizeUrl(value, DEFAULT_SMS_VERIFICATION_NUMBER_BASE_URL);
-    case 'smsVerificationNumberServiceCode':
-      return normalizeNexSmsServiceCode(value, DEFAULT_SMS_VERIFICATION_NUMBER_SERVICE_CODE);
-    case 'smsVerificationNumberCountryId': {
-      const parsed = Math.floor(Number(value));
-      if (Number.isFinite(parsed) && parsed === 0) {
-        return 0;
-      }
-      if (Number.isFinite(parsed) && parsed > 0) {
-        return parsed;
-      }
-      return HERO_SMS_COUNTRY_ID;
-    }
-    case 'smsVerificationNumberCountryLabel':
-      return String(value || HERO_SMS_COUNTRY_LABEL).trim() || HERO_SMS_COUNTRY_LABEL;
-    case 'smsVerificationNumberCountryFallback':
-      return normalizeHeroSmsCountryFallback(value);
-    case 'smsVerificationNumberMinPrice':
-    case 'smsVerificationNumberMaxPrice':
-    case 'smsVerificationNumberPreferredPrice':
-      return normalizeHeroSmsMaxPrice(value);
-    case 'grizzlySmsApiKey':
-      return String(value || '');
-    case 'grizzlySmsBaseUrl':
-      return normalizeUrl(value, DEFAULT_GRIZZLY_SMS_BASE_URL);
-    case 'grizzlySmsServiceCode':
-      return normalizeNexSmsServiceCode(value, DEFAULT_GRIZZLY_SMS_SERVICE_CODE);
-    case 'grizzlySmsCountryId': {
-      const parsed = Math.floor(Number(value));
-      if (Number.isFinite(parsed) && parsed === 0) {
-        return 0;
-      }
-      if (Number.isFinite(parsed) && parsed > 0) {
-        return parsed;
-      }
-      return 52;
-    }
-    case 'grizzlySmsCountryLabel':
-      return String(value || '泰国 +66 (Thailand)').trim() || '泰国 +66 (Thailand)';
-    case 'grizzlySmsCountryFallback':
-      return normalizeHeroSmsCountryFallback(value);
-    case 'grizzlySmsMinPrice':
-    case 'grizzlySmsMaxPrice':
-    case 'grizzlySmsPreferredPrice':
-      return normalizeHeroSmsMaxPrice(value);
-    case 'smsPoolApiKey':
-      return String(value || '');
-    case 'smsPoolBaseUrl':
-      return normalizeUrl(value, DEFAULT_SMSPOOL_BASE_URL);
-    case 'smsPoolServiceCode':
-      return normalizeNexSmsServiceCode(value, DEFAULT_SMSPOOL_SERVICE_CODE);
-    case 'smsPoolCountryId': {
-      const parsed = Math.floor(Number(value));
-      if (Number.isFinite(parsed) && parsed === 0) {
-        return 0;
-      }
-      if (Number.isFinite(parsed) && parsed > 0) {
-        return parsed;
-      }
-      return DEFAULT_SMSPOOL_COUNTRY_ID;
-    }
-    case 'smsPoolCountryLabel':
-      return String(value || DEFAULT_SMSPOOL_COUNTRY_LABEL).trim() || DEFAULT_SMSPOOL_COUNTRY_LABEL;
-    case 'smsPoolCountryFallback':
-      return normalizeHeroSmsCountryFallback(value);
-    case 'smsPoolMinPrice':
-    case 'smsPoolMaxPrice':
-    case 'smsPoolPreferredPrice':
-      return normalizeHeroSmsMaxPrice(value);
-    case 'phonePreferredActivation':
-      return normalizePhonePreferredActivation(value);
     default:
       return value;
   }
 }
-
 function buildPersistentSettingsPayload(input = {}, options = {}) {
   const { fillDefaults = false, requireKnownKeys = false } = options;
   if (!input || typeof input !== 'object' || Array.isArray(input)) {
@@ -5188,30 +3808,6 @@ function buildPersistentSettingsPayload(input = {}, options = {}) {
     }
   }
 
-  const hasPhoneSmsReuseEnabled = Object.prototype.hasOwnProperty.call(normalizedInput, 'phoneSmsReuseEnabled');
-  const hasHeroSmsReuseEnabled = Object.prototype.hasOwnProperty.call(normalizedInput, 'heroSmsReuseEnabled');
-  const hasFiveSimReuseEnabled = Object.prototype.hasOwnProperty.call(normalizedInput, 'fiveSimReuseEnabled');
-  if (hasPhoneSmsReuseEnabled || hasHeroSmsReuseEnabled || hasFiveSimReuseEnabled) {
-    const reuseSource = hasPhoneSmsReuseEnabled
-      ? normalizedInput.phoneSmsReuseEnabled
-      : (hasHeroSmsReuseEnabled
-        ? normalizedInput.heroSmsReuseEnabled
-        : normalizedInput.fiveSimReuseEnabled);
-    const normalizedReuseEnabled = normalizePersistentSettingValue('phoneSmsReuseEnabled', reuseSource);
-    payload.phoneSmsReuseEnabled = normalizedReuseEnabled;
-    payload.heroSmsReuseEnabled = normalizedReuseEnabled;
-  }
-
-  const effectivePhoneSmsProvider = normalizePhoneSmsProvider(
-    Object.prototype.hasOwnProperty.call(payload, 'phoneSmsProvider')
-      ? payload.phoneSmsProvider
-      : normalizedInput.phoneSmsProvider
-  );
-  if (effectivePhoneSmsProvider === PHONE_SMS_PROVIDER_SMSBOWER) {
-    payload.phoneSmsReuseEnabled = false;
-    payload.heroSmsReuseEnabled = false;
-  }
-
   if (requireKnownKeys && matchedKeyCount === 0) {
     throw new Error('\u914d\u7f6e\u6587\u4ef6\u4e2d\u6ca1\u6709\u53ef\u8bc6\u522b\u7684\u914d\u7f6e\u5185\u5bb9\u3002');
   }
@@ -5256,119 +3852,7 @@ function buildPersistentSettingsPayload(input = {}, options = {}) {
       ? groupNames
       : [...DEFAULT_SUB2API_GROUP_NAMES];
   }
-  const nextSignupConstraintState = {
-    ...PERSISTED_SETTING_DEFAULTS,
-    ...payload,
-    resolvedSignupMethod: null,
-  };
-  if (Object.prototype.hasOwnProperty.call(payload, 'phoneVerificationEnabled')
-    || Object.prototype.hasOwnProperty.call(payload, 'plusModeEnabled')
-    || Object.prototype.hasOwnProperty.call(payload, 'signupMethod')
-    || Object.prototype.hasOwnProperty.call(payload, 'panelMode')
-    || Object.prototype.hasOwnProperty.call(payload, 'activeFlowId')) {
-    payload.signupMethod = resolveSignupMethod(nextSignupConstraintState);
-  }
-  if (payload.ipProxyServiceProfiles) {
-    const selectedService = normalizeIpProxyProviderForSettings(
-      payload.ipProxyService || PERSISTED_SETTING_DEFAULTS.ipProxyService
-    );
-    const normalizedProfiles = normalizeIpProxyServiceProfilesForSettings(payload.ipProxyServiceProfiles, {
-      ...PERSISTED_SETTING_DEFAULTS,
-      ...payload,
-    });
-    payload.ipProxyServiceProfiles = normalizedProfiles;
-    const activeProfile = normalizedProfiles[selectedService]
-      || buildIpProxyServiceProfileForSettings({
-        ...PERSISTED_SETTING_DEFAULTS,
-        ...payload,
-      });
-    payload.ipProxyService = selectedService;
-    payload.ipProxyMode = normalizeIpProxyModeForSettings(activeProfile?.mode || payload.ipProxyMode);
-    payload.ipProxyApiUrl = String(activeProfile?.apiUrl || payload.ipProxyApiUrl || '').trim();
-    payload.ipProxyAccountList = normalizeIpProxyAccountListForSettings(activeProfile?.accountList || payload.ipProxyAccountList || '');
-    payload.ipProxyAccountSessionPrefix = normalizeIpProxyAccountSessionPrefixForSettings(activeProfile?.accountSessionPrefix || payload.ipProxyAccountSessionPrefix || '');
-    payload.ipProxyAccountLifeMinutes = normalizeIpProxyAccountLifeMinutesForSettings(activeProfile?.accountLifeMinutes || payload.ipProxyAccountLifeMinutes || '');
-    payload.ipProxyPoolTargetCount = normalizeIpProxyPoolTargetCountForSettings(activeProfile?.poolTargetCount || payload.ipProxyPoolTargetCount || '', 20);
-    payload.ipProxyHost = String(activeProfile?.host || payload.ipProxyHost || '').trim();
-    payload.ipProxyPort = String(normalizeIpProxyPortForSettings(activeProfile?.port || payload.ipProxyPort || '') || '');
-    payload.ipProxyProtocol = normalizeIpProxyProtocolForSettings(activeProfile?.protocol || payload.ipProxyProtocol);
-    payload.ipProxyUsername = String(activeProfile?.username || payload.ipProxyUsername || '').trim();
-    payload.ipProxyPassword = String(activeProfile?.password || payload.ipProxyPassword || '');
-    payload.ipProxyRegion = String(activeProfile?.region || payload.ipProxyRegion || '').trim();
-  }
-
-  const countryOrderEquals = (value, expected) => (
-    Array.isArray(value)
-    && value.length === expected.length
-    && value.every((entry, index) => String(entry) === String(expected[index]))
-  );
-  const countryFallbackEmpty = (value) => !Array.isArray(value) || value.length === 0;
-  if (
-    countryOrderEquals(payload.fiveSimCountryOrder, ['thailand'])
-    || countryOrderEquals(payload.fiveSimCountryOrder, ['vietnam'])
-  ) {
-    payload.fiveSimCountryOrder = [...DEFAULT_FIVE_SIM_COUNTRY_ORDER];
-  }
-  if (countryOrderEquals(payload.nexSmsCountryOrder, [1])) {
-    payload.nexSmsCountryOrder = [...DEFAULT_NEX_SMS_COUNTRY_ORDER];
-  }
-  if (
-    countryOrderEquals(payload.smsBowerCountryOrder, [12, 187, 19, 38, 7, 52])
-    || countryOrderEquals(payload.smsBowerCountryOrder, [187, 7, 38, 52])
-  ) {
-    payload.smsBowerCountryOrder = [...DEFAULT_SMS_BOWER_COUNTRY_ORDER];
-  }
-  if (
-    [33, 52].includes(Math.floor(Number(payload.heroSmsCountryId) || 0))
-    && countryFallbackEmpty(payload.heroSmsCountryFallback)
-  ) {
-    payload.heroSmsCountryId = HERO_SMS_COUNTRY_ID;
-    payload.heroSmsCountryLabel = HERO_SMS_COUNTRY_LABEL;
-    payload.heroSmsCountryFallback = DEFAULT_HANDLER_API_COUNTRY_FALLBACK.map((entry) => ({ ...entry }));
-  }
-  if (
-    [33, 52].includes(Math.floor(Number(payload.smsVerificationNumberCountryId) || 0))
-    && countryFallbackEmpty(payload.smsVerificationNumberCountryFallback)
-  ) {
-    payload.smsVerificationNumberCountryId = HERO_SMS_COUNTRY_ID;
-    payload.smsVerificationNumberCountryLabel = HERO_SMS_COUNTRY_LABEL;
-    payload.smsVerificationNumberCountryFallback = DEFAULT_HANDLER_API_COUNTRY_FALLBACK.map((entry) => ({ ...entry }));
-  }
-  if (
-    Math.floor(Number(payload.grizzlySmsCountryId) || 0) === 52
-    && countryFallbackEmpty(payload.grizzlySmsCountryFallback)
-  ) {
-    payload.grizzlySmsCountryLabel = '泰国 +66 (Thailand)';
-    payload.grizzlySmsCountryFallback = DEFAULT_HANDLER_API_COUNTRY_FALLBACK.map((entry) => ({ ...entry }));
-  }
-  if (
-    Math.floor(Number(payload.smsPoolCountryId) || 0) === DEFAULT_SMSPOOL_COUNTRY_ID
-    && countryFallbackEmpty(payload.smsPoolCountryFallback)
-  ) {
-    payload.smsPoolCountryLabel = DEFAULT_SMSPOOL_COUNTRY_LABEL;
-    payload.smsPoolCountryFallback = [
-      { id: 54, label: '台湾 +886 (Taiwan)' },
-      { id: 22, label: '美国虚拟 +1 (United States Virtual)' },
-      { id: 157, label: '日本 +81 (Japan)' },
-      { id: 23, label: '法国 +33 (France)' },
-      { id: 52, label: '泰国 +66 (Thailand)' },
-    ];
-  }
-
-  const hasPlusCheckoutProfileUpdates = fillDefaults
-    || Object.prototype.hasOwnProperty.call(normalizedInput, 'plusCheckoutMode')
-    || Object.prototype.hasOwnProperty.call(normalizedInput, 'plusCheckoutProfiles')
-    || PLUS_CHECKOUT_PROFILE_SETTING_KEYS.some((key) => (
-      Object.prototype.hasOwnProperty.call(normalizedInput, key)
-      || Object.prototype.hasOwnProperty.call(payload, key)
-    ));
-  if (hasPlusCheckoutProfileUpdates) {
-    Object.assign(payload, applyActivePlusCheckoutProfileToState({
-      ...PERSISTED_SETTING_DEFAULTS,
-      ...normalizedInput,
-      ...payload,
-    }));
-  }
+  payload.signupMethod = SIGNUP_METHOD_EMAIL;
 
   return payload;
 }
@@ -5465,34 +3949,6 @@ async function setState(updates) {
     }
     if (Object.keys(persistentAliasUpdates).length > 0) {
       await chrome.storage.local.set(persistentAliasUpdates);
-    }
-    if (Object.prototype.hasOwnProperty.call(sessionUpdates, 'hostedCheckoutSmsPoolUsage')) {
-      const persistedCheckoutProfileState = await chrome.storage.local.get([
-        'plusCheckoutMode',
-        'plusCheckoutProfiles',
-        ...PLUS_CHECKOUT_PROFILE_SETTING_KEYS,
-      ]).catch(() => ({}));
-      const nextPersistedState = applyActivePlusCheckoutProfileToState({
-        ...PERSISTED_SETTING_DEFAULTS,
-        ...persistedCheckoutProfileState,
-        hostedCheckoutSmsPoolUsage: normalizePersistentSettingValue(
-          'hostedCheckoutSmsPoolUsage',
-          sessionUpdates.hostedCheckoutSmsPoolUsage
-        ),
-      });
-      await chrome.storage.local.set({
-        plusCheckoutMode: nextPersistedState.plusCheckoutMode,
-        plusCheckoutProfiles: nextPersistedState.plusCheckoutProfiles,
-        hostedCheckoutSmsPoolUsage: nextPersistedState.hostedCheckoutSmsPoolUsage,
-      });
-    }
-    if (Object.prototype.hasOwnProperty.call(sessionUpdates, 'hostedSmsPoolUsage')) {
-      await chrome.storage.local.set({
-        hostedSmsPoolUsage: normalizePersistentSettingValue(
-          'hostedSmsPoolUsage',
-          sessionUpdates.hostedSmsPoolUsage
-        ),
-      });
     }
     if (Object.prototype.hasOwnProperty.call(sessionUpdates, 'upiRedeemCdkeyUsage')) {
       await chrome.storage.local.set({
@@ -6402,9 +4858,9 @@ function generatePassword() {
   return pw.split('').sort(() => Math.random() - 0.5).join('');
 }
 
-function normalizePayPalAccount(account = {}) {
-  if (self.PayPalUtils?.normalizePayPalAccount) {
-    return self.PayPalUtils.normalizePayPalAccount(account);
+function normalizeLegacyWalletAccount(account = {}) {
+  if (self.LegacyWalletUtils?.normalizeLegacyWalletAccount) {
+    return self.LegacyWalletUtils.normalizeLegacyWalletAccount(account);
   }
   return {
     id: String(account.id || crypto.randomUUID()),
@@ -6416,28 +4872,28 @@ function normalizePayPalAccount(account = {}) {
   };
 }
 
-function normalizePayPalAccounts(accounts) {
-  if (self.PayPalUtils?.normalizePayPalAccounts) {
-    return self.PayPalUtils.normalizePayPalAccounts(accounts);
+function normalizeLegacyWalletAccounts(accounts) {
+  if (self.LegacyWalletUtils?.normalizeLegacyWalletAccounts) {
+    return self.LegacyWalletUtils.normalizeLegacyWalletAccounts(accounts);
   }
-  return Array.isArray(accounts) ? accounts.map((account) => normalizePayPalAccount(account)) : [];
+  return Array.isArray(accounts) ? accounts.map((account) => normalizeLegacyWalletAccount(account)) : [];
 }
 
-function findPayPalAccount(accounts, accountId) {
-  if (self.PayPalUtils?.findPayPalAccount) {
-    return self.PayPalUtils.findPayPalAccount(accounts, accountId);
+function findLegacyWalletAccount(accounts, accountId) {
+  if (self.LegacyWalletUtils?.findLegacyWalletAccount) {
+    return self.LegacyWalletUtils.findLegacyWalletAccount(accounts, accountId);
   }
   const normalizedId = String(accountId || '').trim();
   if (!normalizedId) return null;
-  return normalizePayPalAccounts(accounts).find((account) => account.id === normalizedId) || null;
+  return normalizeLegacyWalletAccounts(accounts).find((account) => account.id === normalizedId) || null;
 }
 
-function upsertPayPalAccountInList(accounts, nextAccount) {
-  if (self.PayPalUtils?.upsertPayPalAccountInList) {
-    return self.PayPalUtils.upsertPayPalAccountInList(accounts, nextAccount);
+function upsertLegacyWalletAccountInList(accounts, nextAccount) {
+  if (self.LegacyWalletUtils?.upsertLegacyWalletAccountInList) {
+    return self.LegacyWalletUtils.upsertLegacyWalletAccountInList(accounts, nextAccount);
   }
-  const normalizedNext = normalizePayPalAccount(nextAccount);
-  const list = normalizePayPalAccounts(accounts);
+  const normalizedNext = normalizeLegacyWalletAccount(nextAccount);
+  const list = normalizeLegacyWalletAccounts(accounts);
   const existingIndex = list.findIndex((account) => account.id === normalizedNext.id);
   if (existingIndex >= 0) {
     list[existingIndex] = normalizedNext;
@@ -6583,22 +5039,22 @@ function buildOutlookPlusAliasEmail(baseEmail = '', tag = '') {
   return `${parts.local}+${cleanedTag}@${parts.domain}`;
 }
 
-function buildOutlookPayPalAliasEmail(baseEmail = '', index = 1) {
+function buildOutlookAliasEmail(baseEmail = '', index = 1) {
   const parts = parseEmailAddressParts(baseEmail);
   const numericIndex = Math.max(1, Math.floor(Number(index) || 1));
   if (!parts) {
     return '';
   }
-  return `${parts.local}+PayPal${numericIndex}@${parts.domain}`;
+  return `${parts.local}+Alias${numericIndex}@${parts.domain}`;
 }
 
-function getOutlookPayPalAliasIndex(aliasEmail = '', account = {}) {
+function getOutlookAliasIndex(aliasEmail = '', account = {}) {
   const aliasParts = parseEmailAddressParts(aliasEmail);
   const baseParts = parseEmailAddressParts(account?.email);
   if (!aliasParts || !baseParts || aliasParts.domain.toLowerCase() !== baseParts.domain.toLowerCase()) {
     return null;
   }
-  const prefix = `${baseParts.local}+paypal`.toLowerCase();
+  const prefix = `${baseParts.local}+alias`.toLowerCase();
   const local = aliasParts.local.toLowerCase();
   if (!local.startsWith(prefix)) {
     return null;
@@ -6792,8 +5248,8 @@ async function ensureOutlookAliasForHotmailAccount(account = {}, options = {}) {
     .map((entry) => entry.email)
     .filter(Boolean)
     .sort((left, right) => {
-      const leftIndex = getOutlookPayPalAliasIndex(left, account);
-      const rightIndex = getOutlookPayPalAliasIndex(right, account);
+      const leftIndex = getOutlookAliasIndex(left, account);
+      const rightIndex = getOutlookAliasIndex(right, account);
       if (leftIndex !== null || rightIndex !== null) {
         return (leftIndex ?? Number.MAX_SAFE_INTEGER) - (rightIndex ?? Number.MAX_SAFE_INTEGER);
       }
@@ -6808,7 +5264,7 @@ async function ensureOutlookAliasForHotmailAccount(account = {}, options = {}) {
     if (existingAliasSet.size + generatedCandidates.length >= maxAliases) {
       break;
     }
-    const candidate = buildOutlookPayPalAliasEmail(account.email, index);
+    const candidate = buildOutlookAliasEmail(account.email, index);
     const candidateKey = normalizeEmailAddressForMatch(candidate);
     if (!candidate || existingAliasSet.has(candidateKey) || generatedCandidates.some((item) => normalizeEmailAddressForMatch(item) === candidateKey)) {
       continue;
@@ -10692,12 +9148,12 @@ async function clearFreeReusablePhoneActivation() {
   return { ok: true, freeReusablePhoneActivation: null };
 }
 
-function inferHeroSmsCountryFromPhoneNumber(phoneNumber = '') {
+function inferRemovedSmsMainCountryFromPhoneNumber(phoneNumber = '') {
   const digits = String(phoneNumber || '').replace(/\D+/g, '');
   if (!digits) {
     return null;
   }
-  const match = HERO_SMS_COUNTRY_BY_PHONE_PREFIX.find((entry) => digits.startsWith(entry.prefix));
+  const match = REMOVED_SMS_MAIN_COUNTRY_BY_PHONE_PREFIX.find((entry) => digits.startsWith(entry.prefix));
   if (!match) {
     return null;
   }
@@ -10708,7 +9164,7 @@ function inferHeroSmsCountryFromPhoneNumber(phoneNumber = '') {
 }
 
 function inferFiveSimCountryFromPhoneNumber(phoneNumber = '') {
-  const heroCountry = inferHeroSmsCountryFromPhoneNumber(phoneNumber);
+  const heroCountry = inferRemovedSmsMainCountryFromPhoneNumber(phoneNumber);
   if (!heroCountry) {
     return null;
   }
@@ -10746,44 +9202,44 @@ function inferFiveSimCountryFromPhoneNumber(phoneNumber = '') {
 }
 
 function supportsPhoneActivationReuseProvider(providerId = '') {
-  const normalizedProvider = normalizePhoneSmsProvider(providerId);
+  const normalizedProvider = normalizeRemovedPhoneProvider(providerId);
   const rootScope = typeof self !== 'undefined' ? self : globalThis;
-  if (rootScope.PhoneSmsProviderRegistry?.supportsActivationReuse) {
-    return Boolean(rootScope.PhoneSmsProviderRegistry.supportsActivationReuse(normalizedProvider));
+  if (rootScope.RemovedPhoneProviderRegistry?.supportsActivationReuse) {
+    return Boolean(rootScope.RemovedPhoneProviderRegistry.supportsActivationReuse(normalizedProvider));
   }
-  return normalizedProvider === PHONE_SMS_PROVIDER_HERO
-    || normalizedProvider === PHONE_SMS_PROVIDER_5SIM
-    || normalizedProvider === PHONE_SMS_PROVIDER_SMSPOOL;
+  return normalizedProvider === REMOVED_PHONE_PROVIDER_HERO
+    || normalizedProvider === REMOVED_PHONE_PROVIDER_5SIM
+    || normalizedProvider === REMOVED_PHONE_PROVIDER_REMOVED_TEXT_POOL;
 }
 
 function supportsFreePhoneReuseProvider(providerId = '') {
-  const normalizedProvider = normalizePhoneSmsProvider(providerId);
+  const normalizedProvider = normalizeRemovedPhoneProvider(providerId);
   const rootScope = typeof self !== 'undefined' ? self : globalThis;
-  if (rootScope.PhoneSmsProviderRegistry?.supportsFreePhoneReuse) {
-    return Boolean(rootScope.PhoneSmsProviderRegistry.supportsFreePhoneReuse(normalizedProvider));
+  if (rootScope.RemovedPhoneProviderRegistry?.supportsFreePhoneReuse) {
+    return Boolean(rootScope.RemovedPhoneProviderRegistry.supportsFreePhoneReuse(normalizedProvider));
   }
-  return normalizedProvider === PHONE_SMS_PROVIDER_HERO
-    || normalizedProvider === PHONE_SMS_PROVIDER_5SIM
-    || normalizedProvider === PHONE_SMS_PROVIDER_SMSBOWER
-    || normalizedProvider === PHONE_SMS_PROVIDER_SMSPOOL;
+  return normalizedProvider === REMOVED_PHONE_PROVIDER_HERO
+    || normalizedProvider === REMOVED_PHONE_PROVIDER_5SIM
+    || normalizedProvider === REMOVED_PHONE_PROVIDER_REMOVED_SMS_VENDOR_B
+    || normalizedProvider === REMOVED_PHONE_PROVIDER_REMOVED_TEXT_POOL;
 }
 
 function getPhoneDefaultServiceCodeByProvider(providerId = '') {
-  const normalizedProvider = normalizePhoneSmsProvider(providerId);
-  if (normalizedProvider === PHONE_SMS_PROVIDER_5SIM) {
+  const normalizedProvider = normalizeRemovedPhoneProvider(providerId);
+  if (normalizedProvider === REMOVED_PHONE_PROVIDER_5SIM) {
     return DEFAULT_FIVE_SIM_PRODUCT;
   }
-  if (normalizedProvider === PHONE_SMS_PROVIDER_SMSPOOL) {
-    return DEFAULT_SMSPOOL_SERVICE_CODE;
+  if (normalizedProvider === REMOVED_PHONE_PROVIDER_REMOVED_TEXT_POOL) {
+    return DEFAULT_REMOVED_TEXT_POOL_SERVICE_CODE;
   }
-  return HERO_SMS_SERVICE_CODE;
+  return REMOVED_SMS_MAIN_SERVICE_CODE;
 }
 
 function getFreeReuseEligibilityForStoredActivation(activation) {
   if (!activation || typeof activation !== 'object' || Array.isArray(activation)) {
     return { ok: false, reason: 'activation_missing', message: '接码订单无效。' };
   }
-  const provider = normalizePhoneSmsProvider(activation.provider || PHONE_SMS_PROVIDER_HERO);
+  const provider = normalizeRemovedPhoneProvider(activation.provider || REMOVED_PHONE_PROVIDER_HERO);
   if (!supportsFreePhoneReuseProvider(provider)) {
     return {
       ok: false,
@@ -10791,11 +9247,11 @@ function getFreeReuseEligibilityForStoredActivation(activation) {
       message: '当前接码服务商不支持白嫖复用。',
     };
   }
-  if (provider === PHONE_SMS_PROVIDER_SMSBOWER && activation.canGetAnotherSms === false) {
+  if (provider === REMOVED_PHONE_PROVIDER_REMOVED_SMS_VENDOR_B && activation.canGetAnotherSms === false) {
     return {
       ok: false,
-      reason: 'smsbower_no_additional_sms',
-      message: `SMSBower 号码 ${activation.phoneNumber || ''} 不支持白嫖复用：接口返回 canGetAnotherSms=false，平台不允许继续请求下一条短信。`,
+      reason: 'removed-sms-vendor-b_no_additional_sms',
+      message: `RemovedSMSVendorB 号码 ${activation.phoneNumber || ''} 不支持白嫖复用：接口返回 canGetAnotherSms=false，平台不允许继续请求下一条短信。`,
     };
   }
   return { ok: true, reason: '', message: '' };
@@ -10821,11 +9277,11 @@ function normalizeLocalReusablePhoneActivation(record) {
     return null;
   }
   const rawProvider = String(record.provider ?? record.smsProvider ?? '').trim();
-  const provider = rawProvider ? normalizePhoneSmsProvider(rawProvider) : PHONE_SMS_PROVIDER_HERO;
+  const provider = rawProvider ? normalizeRemovedPhoneProvider(rawProvider) : REMOVED_PHONE_PROVIDER_HERO;
   if (!supportsFreePhoneReuseProvider(provider)) {
     return null;
   }
-  const countryId = provider === PHONE_SMS_PROVIDER_5SIM
+  const countryId = provider === REMOVED_PHONE_PROVIDER_5SIM
     ? normalizeFiveSimCountryId(record.countryCode ?? record.countryId ?? record.country, '')
     : Math.max(0, Math.floor(Number(record.countryId ?? record.country ?? record.countryCode) || 0));
   const countryLabel = String(record.countryLabel || record.label || '').trim();
@@ -10838,13 +9294,13 @@ function normalizeLocalReusablePhoneActivation(record) {
     phoneNumber,
     serviceCode,
     ...(countryId > 0 ? { countryId } : {}),
-    ...(provider === PHONE_SMS_PROVIDER_5SIM && countryId ? { countryCode: countryId } : {}),
+    ...(provider === REMOVED_PHONE_PROVIDER_5SIM && countryId ? { countryCode: countryId } : {}),
     ...(countryLabel ? { countryLabel } : {}),
   };
 }
 
 function findLocalReusablePhoneActivationForPhone(state = {}, phoneNumber = '', providerId = '') {
-  const normalizedProvider = providerId ? normalizePhoneSmsProvider(providerId) : '';
+  const normalizedProvider = providerId ? normalizeRemovedPhoneProvider(providerId) : '';
   const candidates = [
     state.currentPhoneActivation,
     state.reusablePhoneActivation,
@@ -10879,15 +9335,15 @@ async function setFreeReusablePhoneActivation(record = {}) {
   if (isPhoneSignupIdentityStateForReuse(state)) {
     throw new Error('\u624b\u673a\u53f7\u6ce8\u518c\u6a21\u5f0f\u4e0b\u4e0d\u80fd\u8bb0\u5f55\u767d\u5ad6\u590d\u7528\u624b\u673a\u53f7\uff0c\u8bf7\u5207\u6362\u90ae\u7bb1\u6ce8\u518c\u540e\u518d\u4f7f\u7528\u3002');
   }
-  const requestedProvider = normalizePhoneSmsProvider(
-    record.provider || record.smsProvider || state.phoneSmsProvider || PHONE_SMS_PROVIDER_HERO
+  const requestedProvider = normalizeRemovedPhoneProvider(
+    record.provider || record.smsProvider || state.removedPhoneProvider || REMOVED_PHONE_PROVIDER_HERO
   );
   if (!supportsFreePhoneReuseProvider(requestedProvider)) {
     throw new Error('当前接码服务商不支持白嫖复用。');
   }
   const localActivation = findLocalReusablePhoneActivationForPhone(state, phoneNumber, requestedProvider)
     || findLocalReusablePhoneActivationForPhone(state, phoneNumber);
-  const provider = normalizePhoneSmsProvider(localActivation?.provider || requestedProvider);
+  const provider = normalizeRemovedPhoneProvider(localActivation?.provider || requestedProvider);
   const explicitCanGetAnotherSms = record.canGetAnotherSms !== undefined
     ? Boolean(record.canGetAnotherSms)
     : undefined;
@@ -10898,13 +9354,13 @@ async function setFreeReusablePhoneActivation(record = {}) {
     || localActivation?.activationId
     || ''
   ).trim();
-  const inferredCountry = provider === PHONE_SMS_PROVIDER_5SIM
+  const inferredCountry = provider === REMOVED_PHONE_PROVIDER_5SIM
     ? inferFiveSimCountryFromPhoneNumber(phoneNumber)
-    : inferHeroSmsCountryFromPhoneNumber(phoneNumber);
-  const hasExplicitCountry = provider === PHONE_SMS_PROVIDER_5SIM
+    : inferRemovedSmsMainCountryFromPhoneNumber(phoneNumber);
+  const hasExplicitCountry = provider === REMOVED_PHONE_PROVIDER_5SIM
     ? Boolean(String(record.countryCode || record.countryId || '').trim())
     : Number.isFinite(Number(record.countryId)) && Number(record.countryId) > 0;
-  const countryId = provider === PHONE_SMS_PROVIDER_5SIM
+  const countryId = provider === REMOVED_PHONE_PROVIDER_5SIM
     ? normalizeFiveSimCountryId(
       record.countryCode || record.countryId || localActivation?.countryId || inferredCountry?.id || state.fiveSimCountryId || FIVE_SIM_COUNTRY_ID,
       state.fiveSimCountryId || FIVE_SIM_COUNTRY_ID
@@ -10915,26 +9371,26 @@ async function setFreeReusablePhoneActivation(record = {}) {
         Number(record.countryId)
         || Number(localActivation?.countryId)
         || Number(inferredCountry?.id)
-        || Number(state.smsPoolCountryId && provider === PHONE_SMS_PROVIDER_SMSPOOL ? state.smsPoolCountryId : 0)
-        || Number(state.heroSmsCountryId)
-        || HERO_SMS_COUNTRY_ID
+        || Number(state.removedTextPoolCountryId && provider === REMOVED_PHONE_PROVIDER_REMOVED_TEXT_POOL ? state.removedTextPoolCountryId : 0)
+        || Number(state.removedSmsMainCountryId)
+        || REMOVED_SMS_MAIN_COUNTRY_ID
       )
     );
-  const stateCountryLabel = provider === PHONE_SMS_PROVIDER_5SIM
+  const stateCountryLabel = provider === REMOVED_PHONE_PROVIDER_5SIM
     ? (String(state.fiveSimCountryId || '').trim() === String(countryId || '').trim()
       ? String(state.fiveSimCountryLabel || '').trim()
       : '')
-    : (Math.floor(Number(state.smsPoolCountryId && provider === PHONE_SMS_PROVIDER_SMSPOOL ? state.smsPoolCountryId : state.heroSmsCountryId) || 0) === Number(countryId)
-      ? String(provider === PHONE_SMS_PROVIDER_SMSPOOL ? (state.smsPoolCountryLabel || state.heroSmsCountryLabel || '') : (state.heroSmsCountryLabel || '')).trim()
+    : (Math.floor(Number(state.removedTextPoolCountryId && provider === REMOVED_PHONE_PROVIDER_REMOVED_TEXT_POOL ? state.removedTextPoolCountryId : state.removedSmsMainCountryId) || 0) === Number(countryId)
+      ? String(provider === REMOVED_PHONE_PROVIDER_REMOVED_TEXT_POOL ? (state.removedTextPoolCountryLabel || state.removedSmsMainCountryLabel || '') : (state.removedSmsMainCountryLabel || '')).trim()
       : '');
   const countryLabel = String(
     record.countryLabel
     || (String(localActivation?.countryId || '') === String(countryId || '') ? localActivation?.countryLabel : '')
     || (!hasExplicitCountry && String(inferredCountry?.id || '') === String(countryId || '') ? inferredCountry.label : '')
     || stateCountryLabel
-    || (provider === PHONE_SMS_PROVIDER_5SIM
+    || (provider === REMOVED_PHONE_PROVIDER_5SIM
       ? normalizeFiveSimCountryLabel(countryId, countryId || FIVE_SIM_COUNTRY_LABEL)
-      : (countryId === HERO_SMS_COUNTRY_ID ? HERO_SMS_COUNTRY_LABEL : `Country #${countryId}`))
+      : (countryId === REMOVED_SMS_MAIN_COUNTRY_ID ? REMOVED_SMS_MAIN_COUNTRY_LABEL : `Country #${countryId}`))
   ).trim();
   const activation = {
     ...(activationId ? { activationId } : {}),
@@ -10943,7 +9399,7 @@ async function setFreeReusablePhoneActivation(record = {}) {
     serviceCode: String(record.serviceCode || localActivation?.serviceCode || getPhoneDefaultServiceCodeByProvider(provider)).trim()
       || getPhoneDefaultServiceCodeByProvider(provider),
     countryId,
-    ...(provider === PHONE_SMS_PROVIDER_5SIM ? { countryCode: countryId } : {}),
+    ...(provider === REMOVED_PHONE_PROVIDER_5SIM ? { countryCode: countryId } : {}),
     ...(countryLabel ? { countryLabel } : {}),
     successfulUses: Math.max(0, Math.floor(Number(record.successfulUses) || 0)),
     maxUses: Math.max(1, Math.floor(Number(record.maxUses) || 3)),
@@ -11168,11 +9624,11 @@ async function resolveCurrentSessionExportTabs() {
   activeTabs.forEach(appendTab);
 
   const state = await getState().catch(() => ({}));
-  const registeredTabId = await getTabId('plus-checkout').catch(() => null);
+  const registeredTabId = await getTabId('chatgpt-session-reader').catch(() => null);
   if (registeredTabId) {
     appendTab(await chrome.tabs.get(registeredTabId).catch(() => null));
   }
-  const checkoutTabId = Number(state?.plusCheckoutTabId) || 0;
+  const checkoutTabId = Number(state?.chatgptSessionReaderTabId) || 0;
   if (checkoutTabId) {
     appendTab(await chrome.tabs.get(checkoutTabId).catch(() => null));
   }
@@ -11522,8 +9978,8 @@ async function ensureContentScriptReadyOnTab(source, tabId, options = {}) {
 function isContentScriptReadyPong(source, pong) {
   if (!pong?.ok) return false;
   if (pong.source && !sourcesMatch(pong.source, source)) return false;
-  if (source === 'plus-checkout') {
-    return Boolean(pong.plusCheckoutReady);
+  if (source === 'chatgpt-session-reader') {
+    return Boolean(pong.chatgptSessionReaderReady);
   }
   return true;
 }
@@ -11769,7 +10225,7 @@ function getSourceLabel(source) {
     'cloudflare-temp-email': 'Cloudflare Temp Email',
     'cloudmail': 'Cloud Mail',
     'freemail': 'freemail',
-    'plus-checkout': 'Plus Checkout',
+    'chatgpt-session-reader': 'ChatGPT 会话读取',
     'unknown-source': '未知来源',
   };
   return labels[source] || source || '未知来源';
@@ -11879,7 +10335,7 @@ function getErrorMessage(error) {
     ? loggingStatus.getErrorMessage(error)
     : String(typeof error === 'string' ? error : error?.message || '');
   return String(message || '')
-    .replace(/^GPC_TASK_ENDED::/i, '')
+    .replace(/^CARD_HELPER_TASK_ENDED::/i, '')
     .replace(/^UPI_REDEEM_BACKEND_FAILED::/i, '')
     .replace(new RegExp(`^${HOTMAIL_MAILBOX_UNAVAILABLE_PREFIX}`, 'i'), '')
     .replace(/^AUTO_RUN_STEP_IDLE_RESTART::/i, '');
@@ -12272,16 +10728,16 @@ function isStep4Route405RecoveryLimitFailure(error) {
   return /STEP4_405_RECOVERY_LIMIT::|步骤\s*4：检测到\s*405\s*错误页面，已连续点击“重试”恢复/i.test(message);
 }
 
-function isPhoneSmsPlatformRateLimitFailure(error) {
+function isRemovedPhonePlatformRateLimitFailure(error) {
   const message = getErrorMessage(error);
   return /FIVE_SIM_RATE_LIMIT::|5sim[\s\S]*(?:限流|rate\s*limit)/i.test(message);
 }
 
-function isPlusCheckoutNonFreeTrialFailure(error) {
+function isChatgptSessionReaderNonFreeTrialFailure(error) {
   const rawMessage = String(typeof error === 'string' ? error : error?.message || '');
   const message = getErrorMessage(error);
   const combinedMessage = `${rawMessage}\n${message}`;
-  return /UPI_ACCOUNT_INELIGIBLE::|PIX_ACCOUNT_INELIGIBLE::|PLUS_CHECKOUT_NON_FREE_TRIAL::|今日应付金额不是\s*0|没有免费试用资格|该账号已经开通过\s*ChatGPT\s*订阅套餐，不能重复订阅(?:。)?(?:（\s*checkout_order\s*）|\(\s*checkout_order\s*\))?/i.test(combinedMessage);
+  return /UPI_ACCOUNT_INELIGIBLE::|PIX_ACCOUNT_INELIGIBLE::|CHATGPT_SESSION_READER_NON_FREE_TRIAL::|今日应付金额不是\s*0|没有免费试用资格|该账号已经开通过\s*ChatGPT\s*订阅套餐，不能重复订阅(?:。)?(?:（\s*checkout_order\s*）|\(\s*checkout_order\s*\))?/i.test(combinedMessage);
 }
 
 function isUpiRedeemBackendFailure(error) {
@@ -12291,9 +10747,9 @@ function isUpiRedeemBackendFailure(error) {
   return /UPI_REDEEM_BACKEND_FAILED::|UPI[\s\S]*(?:卡密|兑换)[\s\S]*(?:失败|超时|未找到|不存在)|(?:卡密|兑换)[\s\S]*(?:失败|超时|未找到|不存在)[\s\S]*UPI/i.test(combinedMessage);
 }
 
-function isGpcTaskEndedFailure(error) {
+function isCardHelperTaskEndedFailure(error) {
   const message = String(typeof error === 'string' ? error : error?.message || '');
-  return /GPC_TASK_ENDED::/i.test(message);
+  return /CARD_HELPER_TASK_ENDED::/i.test(message);
 }
 
 function isHostedCheckoutGenericErrorFailure(error) {
@@ -12303,12 +10759,12 @@ function isHostedCheckoutGenericErrorFailure(error) {
 
 function isHostedCheckoutCardFallbackFailure(error) {
   const message = getErrorMessage(error);
-  return /HOSTED_CHECKOUT_CARD_FALLBACK::|hosted checkout[\s\S]*(?:落到|进入).*(?:银行卡|card)[\s\S]*(?:分支|支付)|未进入\s*PayPal|未跳转到\s*PayPal/i.test(message);
+  return /HOSTED_CHECKOUT_CARD_FALLBACK::|hosted checkout[\s\S]*(?:落到|进入).*(?:银行卡|card)[\s\S]*(?:分支|支付)|未进入\s*LegacyWallet|未跳转到\s*LegacyWallet/i.test(message);
 }
 
 function isHostedCheckoutVerificationResendLimitFailure(error) {
   const message = getErrorMessage(error);
-  return /HOSTED_CHECKOUT_VERIFICATION_RESEND_LIMIT::|PayPal 验证码自动 Resend 重试已达到上限|请尝试在页面手动获取验证码并填入/i.test(message);
+  return /HOSTED_CHECKOUT_VERIFICATION_RESEND_LIMIT::|LegacyWallet 验证码自动 Resend 重试已达到上限|请尝试在页面手动获取验证码并填入/i.test(message);
 }
 
 function isHostedCheckoutCardDeclinedFailure(error) {
@@ -12316,9 +10772,9 @@ function isHostedCheckoutCardDeclinedFailure(error) {
   return /HOSTED_CHECKOUT_CARD_DECLINED::|hosted checkout[\s\S]*(?:银行卡被拒绝|card\s+(?:was\s+)?declined|请尝试另一张卡|已关闭“拒卡重试”)/i.test(message);
 }
 
-function isPlusCheckoutStartNewFlowFailure(error) {
+function isChatgptSessionReaderStartNewFlowFailure(error) {
   const message = getErrorMessage(error);
-  return /PLUS_CHECKOUT_START_NEW_FLOW::/i.test(message);
+  return /CHATGPT_SESSION_READER_START_NEW_FLOW::/i.test(message);
 }
 
 function isCloudCheckoutAlreadyPaidFailure(error) {
@@ -12326,78 +10782,17 @@ function isCloudCheckoutAlreadyPaidFailure(error) {
   return /\buser\s+is\s+already\s+paid\b|already\s+(?:paid|subscribed)|already\s+has\s+(?:an?\s+)?(?:active\s+)?subscription|(?:用户|账号|账户)[\s\S]*(?:已|已经)[\s\S]*(?:付费|订阅|开通)|(?:已|已经)[\s\S]*(?:付费|订阅|开通)[\s\S]*(?:用户|账号|账户)|该账号已经开通过\s*ChatGPT\s*订阅套餐/i.test(message);
 }
 
-function isGpcCheckoutRestartRequiredFailure(error) {
+function isCardHelperCheckoutRestartRequiredFailure(error) {
   const rawMessage = String(typeof error === 'string' ? error : error?.message || '');
   const message = getErrorMessage(error);
   const combinedMessage = `${rawMessage}\n${message}`;
-  if (/PLUS_CHECKOUT_NON_FREE_TRIAL::|今日应付金额不是\s*0|没有免费试用资格/i.test(combinedMessage)) {
+  if (/CHATGPT_SESSION_READER_NON_FREE_TRIAL::|今日应付金额不是\s*0|没有免费试用资格/i.test(combinedMessage)) {
     return false;
   }
-  if (/GPC_TASK_ENDED::/i.test(rawMessage)) {
+  if (/CARD_HELPER_TASK_ENDED::/i.test(rawMessage)) {
     return true;
   }
-  return /GPC\s*API\s*请求超时|GPC\s*任务状态超过\s*\d+\s*秒无进展|GPC[\s\S]*请重新创建任务|步骤\s*[67][\s\S]*GPC[\s\S]*(?:access\s*token|accessToken|任务轮询超时|请求超时|超时|timeout|timed\s*out|卡死|无响应|失败)|account\s+already\s+linked|GOPAY已经绑了订阅|(?:账号|账户|GoPay|GOPAY)[\s\S]*(?:已绑定|已经绑定|已绑|绑了订阅|绑定了订阅)|创建\s*GPC\s*订单失败[\s\S]*(?:任务已结束|任务结束|failed|expired|discarded|请求超时|timeout|timed\s*out)/i.test(message);
-}
-
-function isPlusCheckoutRestartStep(step, stepExecutionKey = '', state = {}) {
-  const normalizedKey = String(stepExecutionKey || '').trim();
-  if (normalizedKey) {
-    return normalizedKey === 'plus-checkout-create'
-      || normalizedKey === 'plus-checkout-billing'
-      || normalizedKey === 'gopay-subscription-confirm';
-  }
-  const numericStep = Number(step);
-  return Boolean(state?.plusModeEnabled) && (numericStep === 6 || numericStep === 7);
-}
-
-function isPlusCheckoutRestartRequiredFailure(error) {
-  return !isPlusCheckoutNonFreeTrialFailure(error)
-    && !isHostedCheckoutGenericErrorFailure(error)
-    && !isHostedCheckoutVerificationResendLimitFailure(error)
-    && !isCloudCheckoutAlreadyPaidFailure(error);
-}
-
-function shouldSchedulePayPalCookieCleanupBeforeCheckoutCreate(nodeId, state = {}, error = null) {
-  if (normalizePlusPaymentMethod(state?.plusPaymentMethod) !== PLUS_PAYMENT_METHOD_PAYPAL) {
-    return false;
-  }
-  const normalizedNodeId = String(nodeId || '').trim();
-  if (!normalizedNodeId) {
-    return false;
-  }
-  if (normalizedNodeId === 'paypal-approve') {
-    return true;
-  }
-  if (!['plus-checkout-create', 'plus-checkout-billing', 'plus-checkout-return'].includes(normalizedNodeId)) {
-    return false;
-  }
-  const message = getErrorMessage(error);
-  return isHostedCheckoutGenericErrorFailure(error)
-    || isHostedCheckoutCardFallbackFailure(error)
-    || isHostedCheckoutVerificationResendLimitFailure(error)
-    || /paypal/i.test(message);
-}
-
-async function schedulePayPalCookieCleanupBeforeCheckoutCreateIfNeeded(nodeId, state = {}, error = null) {
-  if (!shouldSchedulePayPalCookieCleanupBeforeCheckoutCreate(nodeId, state, error)) {
-    return false;
-  }
-  const updates = { pendingPayPalCookieCleanupBeforeCheckoutCreate: true };
-  await setState(updates);
-  broadcastDataUpdate(updates);
-  return true;
-}
-
-function shouldRetrySmsOauthNonFreeTrialFromStep7(state = {}, error = null) {
-  return isPlusCheckoutNonFreeTrialFailure(error)
-    && isPlusModeState(state)
-    && normalizePlusPaymentMethod(state?.plusPaymentMethod) === PLUS_PAYMENT_METHOD_PAYPAL
-    && normalizePlusAccountAccessStrategyForState(state) === PLUS_ACCOUNT_ACCESS_STRATEGY_SMS_OAUTH;
-}
-
-function isGoPayCheckoutRestartRequiredFailure(error) {
-  const message = getErrorMessage(error);
-  return /GOPAY_RESTART_FROM_STEP6::|GOPAY_RETRY_REQUIRED::/i.test(message);
+  return /CARD_HELPER\s*API\s*请求超时|CARD_HELPER\s*任务状态超过\s*\d+\s*秒无进展|CARD_HELPER[\s\S]*请重新创建任务|步骤\s*[67][\s\S]*CARD_HELPER[\s\S]*(?:access\s*token|accessToken|任务轮询超时|请求超时|超时|timeout|timed\s*out|卡死|无响应|失败)|account\s+already\s+linked|LEGACY_PAY已经绑了订阅|(?:账号|账户|LegacyPay|LEGACY_PAY)[\s\S]*(?:已绑定|已经绑定|已绑|绑了订阅|绑定了订阅)|创建\s*CARD_HELPER\s*订单失败[\s\S]*(?:任务已结束|任务结束|failed|expired|discarded|请求超时|timeout|timed\s*out)/i.test(message);
 }
 
 function isStep9RecoverableAuthError(error) {
@@ -12476,17 +10871,17 @@ function hasSavedProgress(statuses = {}, stateOverride = null) {
 function getDownstreamStateResets(step, state = {}) {
   const stepKey = getStepExecutionKeyForState(step, state);
   const plusRuntimeResets = {
-    plusCheckoutTabId: null,
-    plusCheckoutUrl: null,
-    plusCheckoutCountry: 'DE',
-    plusCheckoutCurrency: 'EUR',
-    plusCheckoutSource: '',
-    paypalApprovalBranchRecoveryCount: 0,
-    pendingPayPalCookieCleanupBeforeCheckoutCreate: false,
+    chatgptSessionReaderTabId: null,
+    chatgptSessionReaderUrl: null,
+    chatgptSessionReaderCountry: 'DE',
+    chatgptSessionReaderCurrency: 'EUR',
+    chatgptSessionReaderSource: '',
+    legacyWalletApprovalBranchRecoveryCount: 0,
+    pendingLegacyWalletCookieCleanupBeforeCheckoutCreate: false,
     plusBillingCountryText: '',
     plusBillingAddress: null,
-    plusPaypalApprovedAt: null,
-    plusGoPayApprovedAt: null,
+    plusLegacyWalletApprovedAt: null,
+    plusLegacyPayApprovedAt: null,
     plusReturnUrl: '',
     plusManualConfirmationPending: false,
     plusManualConfirmationRequestId: '',
@@ -12494,40 +10889,40 @@ function getDownstreamStateResets(step, state = {}) {
     plusManualConfirmationMethod: '',
     plusManualConfirmationTitle: '',
     plusManualConfirmationMessage: '',
-    gopayHelperReferenceId: '',
-    gopayHelperGoPayGuid: '',
-    gopayHelperRedirectUrl: '',
-    gopayHelperNextAction: '',
-    gopayHelperFlowId: '',
-    gopayHelperChallengeId: '',
-    gopayHelperStartPayload: null,
-    gopayHelperTaskId: '',
-    gopayHelperTaskStatus: '',
-    gopayHelperStatusText: '',
-    gopayHelperRemoteStage: '',
-    gopayHelperApiWaitingFor: '',
-    gopayHelperApiInputDeadlineAt: '',
-    gopayHelperApiInputWaitSeconds: 0,
-    gopayHelperLastInputError: '',
-    gopayHelperOtpInvalidCount: 0,
-    gopayHelperFailureStage: '',
-    gopayHelperFailureDetail: '',
-    gopayHelperTaskPayload: null,
-    gopayHelperOrderCreatedAt: 0,
-    gopayHelperTaskProgressSignature: '',
-    gopayHelperTaskProgressAt: 0,
-    gopayHelperTaskProgressTaskId: '',
-    gopayHelperPinPayload: null,
-    gopayHelperResolvedOtp: '',
-    gopayHelperOtpRequestId: '',
-    gopayHelperOtpReferenceId: '',
+    legacyPayHelperReferenceId: '',
+    legacyPayHelperLegacyPayGuid: '',
+    legacyPayHelperRedirectUrl: '',
+    legacyPayHelperNextAction: '',
+    legacyPayHelperFlowId: '',
+    legacyPayHelperChallengeId: '',
+    legacyPayHelperStartPayload: null,
+    legacyPayHelperTaskId: '',
+    legacyPayHelperTaskStatus: '',
+    legacyPayHelperStatusText: '',
+    legacyPayHelperRemoteStage: '',
+    legacyPayHelperApiWaitingFor: '',
+    legacyPayHelperApiInputDeadlineAt: '',
+    legacyPayHelperApiInputWaitSeconds: 0,
+    legacyPayHelperLastInputError: '',
+    legacyPayHelperOtpInvalidCount: 0,
+    legacyPayHelperFailureStage: '',
+    legacyPayHelperFailureDetail: '',
+    legacyPayHelperTaskPayload: null,
+    legacyPayHelperOrderCreatedAt: 0,
+    legacyPayHelperTaskProgressSignature: '',
+    legacyPayHelperTaskProgressAt: 0,
+    legacyPayHelperTaskProgressTaskId: '',
+    legacyPayHelperPinPayload: null,
+    legacyPayHelperResolvedOtp: '',
+    legacyPayHelperOtpRequestId: '',
+    legacyPayHelperOtpReferenceId: '',
   };
 
   if (step <= 1) {
     return {
       ...plusRuntimeResets,
-      paypalGenericErrorRecoveryCount: 0,
-      paypalApprovalBranchRecoveryCount: 0,
+      legacyWalletGenericErrorRecoveryCount: 0,
+      legacyWalletApprovalBranchRecoveryCount: 0,
       oauthUrl: null,
       localCpaJsonOAuthState: null,
       localCpaJsonPkceCodes: null,
@@ -12563,8 +10958,8 @@ function getDownstreamStateResets(step, state = {}) {
   if (step === 2) {
     return {
       ...plusRuntimeResets,
-      paypalGenericErrorRecoveryCount: 0,
-      paypalApprovalBranchRecoveryCount: 0,
+      legacyWalletGenericErrorRecoveryCount: 0,
+      legacyWalletApprovalBranchRecoveryCount: 0,
       password: null,
       passwordAccountIdentifierType: null,
       passwordAccountIdentifier: '',
@@ -12586,8 +10981,8 @@ function getDownstreamStateResets(step, state = {}) {
   if (step === 3 || step === 4) {
     return {
       ...plusRuntimeResets,
-      paypalGenericErrorRecoveryCount: 0,
-      paypalApprovalBranchRecoveryCount: 0,
+      legacyWalletGenericErrorRecoveryCount: 0,
+      legacyWalletApprovalBranchRecoveryCount: 0,
       lastEmailTimestamp: null,
       signupVerificationRequestedAt: null,
       loginVerificationRequestedAt: null,
@@ -12606,13 +11001,13 @@ function getDownstreamStateResets(step, state = {}) {
   if (step === 5 || step === 6 || step === 7 || step === 8) {
     return {
       ...(step <= 6 ? plusRuntimeResets : {}),
-      ...(step === 5 ? { paypalGenericErrorRecoveryCount: 0 } : {}),
-      ...(step === 5 ? { paypalApprovalBranchRecoveryCount: 0 } : {}),
+      ...(step === 5 ? { legacyWalletGenericErrorRecoveryCount: 0 } : {}),
+      ...(step === 5 ? { legacyWalletApprovalBranchRecoveryCount: 0 } : {}),
       ...(step === 7 ? {
         plusBillingCountryText: '',
         plusBillingAddress: null,
-        plusPaypalApprovedAt: null,
-        plusGoPayApprovedAt: null,
+        plusLegacyWalletApprovedAt: null,
+        plusLegacyPayApprovedAt: null,
         plusReturnUrl: '',
         plusManualConfirmationPending: false,
         plusManualConfirmationRequestId: '',
@@ -12620,14 +11015,14 @@ function getDownstreamStateResets(step, state = {}) {
         plusManualConfirmationMethod: '',
         plusManualConfirmationTitle: '',
         plusManualConfirmationMessage: '',
-        gopayHelperResolvedOtp: '',
-        gopayHelperLastInputError: '',
-        gopayHelperOtpRequestId: '',
-        gopayHelperOtpReferenceId: '',
+        legacyPayHelperResolvedOtp: '',
+        legacyPayHelperLastInputError: '',
+        legacyPayHelperOtpRequestId: '',
+        legacyPayHelperOtpReferenceId: '',
       } : {}),
       ...(step === 8 ? {
-        plusPaypalApprovedAt: null,
-        plusGoPayApprovedAt: null,
+        plusLegacyWalletApprovedAt: null,
+        plusLegacyPayApprovedAt: null,
         plusReturnUrl: '',
       } : {}),
       lastLoginCode: null,
@@ -13020,7 +11415,7 @@ function getAutoRunTimerResumeOptions(plan) {
         autoRunSessionId: normalizedPlan.autoRunSessionId,
         autoRunSkipFailures: normalizedPlan.autoRunSkipFailures,
         autoRunRetryNonFreeTrial: normalizedPlan.autoRunRetryNonFreeTrial,
-        autoRunRetryPaypalCallback: normalizedPlan.autoRunRetryPaypalCallback,
+        autoRunRetryLegacyWalletCallback: normalizedPlan.autoRunRetryLegacyWalletCallback,
         autoRunRetryShortLinkError: normalizedPlan.autoRunRetryShortLinkError,
         mode: normalizedPlan.mode,
       },
@@ -13040,7 +11435,7 @@ function getAutoRunTimerResumeOptions(plan) {
         autoRunSessionId: normalizedPlan.autoRunSessionId,
         autoRunSkipFailures: normalizedPlan.autoRunSkipFailures,
         autoRunRetryNonFreeTrial: normalizedPlan.autoRunRetryNonFreeTrial,
-        autoRunRetryPaypalCallback: normalizedPlan.autoRunRetryPaypalCallback,
+        autoRunRetryLegacyWalletCallback: normalizedPlan.autoRunRetryLegacyWalletCallback,
         autoRunRetryShortLinkError: normalizedPlan.autoRunRetryShortLinkError,
         mode: 'restart',
         resumeCurrentRun: nextRun,
@@ -13061,7 +11456,7 @@ function getAutoRunTimerResumeOptions(plan) {
       autoRunSessionId: normalizedPlan.autoRunSessionId,
       autoRunSkipFailures: normalizedPlan.autoRunSkipFailures,
       autoRunRetryNonFreeTrial: normalizedPlan.autoRunRetryNonFreeTrial,
-      autoRunRetryPaypalCallback: normalizedPlan.autoRunRetryPaypalCallback,
+      autoRunRetryLegacyWalletCallback: normalizedPlan.autoRunRetryLegacyWalletCallback,
       autoRunRetryShortLinkError: normalizedPlan.autoRunRetryShortLinkError,
       mode: 'restart',
       resumeCurrentRun: normalizedPlan.currentRun,
@@ -13158,7 +11553,7 @@ async function launchAutoRunTimerPlan(trigger = 'alarm', options = {}) {
       {
         autoRunSkipFailures: plan.autoRunSkipFailures,
         autoRunRetryNonFreeTrial: plan.autoRunRetryNonFreeTrial,
-        autoRunRetryPaypalCallback: plan.autoRunRetryPaypalCallback,
+        autoRunRetryLegacyWalletCallback: plan.autoRunRetryLegacyWalletCallback,
         autoRunRetryShortLinkError: plan.autoRunRetryShortLinkError,
         autoRunRoundSummaries: serializeAutoRunRoundSummaries(plan.totalRuns, plan.roundSummaries),
         autoRunTimerPlan: null,
@@ -13211,7 +11606,7 @@ async function scheduleAutoRun(totalRuns, options = {}) {
     totalRuns,
     autoRunSkipFailures: options.autoRunSkipFailures,
     autoRunRetryNonFreeTrial: options.autoRunRetryNonFreeTrial,
-    autoRunRetryPaypalCallback: options.autoRunRetryPaypalCallback,
+    autoRunRetryLegacyWalletCallback: options.autoRunRetryLegacyWalletCallback,
     autoRunRetryShortLinkError: options.autoRunRetryShortLinkError,
     autoRunSessionId: sessionId,
     mode: options.mode,
@@ -13225,7 +11620,7 @@ async function scheduleAutoRun(totalRuns, options = {}) {
   await persistAutoRunTimerPlan(timerPlan, {
     autoRunSkipFailures: timerPlan.autoRunSkipFailures,
     autoRunRetryNonFreeTrial: timerPlan.autoRunRetryNonFreeTrial,
-    autoRunRetryPaypalCallback: timerPlan.autoRunRetryPaypalCallback,
+    autoRunRetryLegacyWalletCallback: timerPlan.autoRunRetryLegacyWalletCallback,
     autoRunRetryShortLinkError: timerPlan.autoRunRetryShortLinkError,
     autoRunRoundSummaries: serializeAutoRunRoundSummaries(timerPlan.totalRuns, []),
   });
@@ -13299,7 +11694,7 @@ async function restoreAutoRunTimerIfNeeded() {
     }, {
       autoRunSkipFailures: plan.autoRunSkipFailures,
       autoRunRetryNonFreeTrial: plan.autoRunRetryNonFreeTrial,
-      autoRunRetryPaypalCallback: plan.autoRunRetryPaypalCallback,
+      autoRunRetryLegacyWalletCallback: plan.autoRunRetryLegacyWalletCallback,
       autoRunRetryShortLinkError: plan.autoRunRetryShortLinkError,
       autoRunRoundSummaries: serializeAutoRunRoundSummaries(plan.totalRuns, plan.roundSummaries),
     });
@@ -13320,7 +11715,7 @@ async function restoreAutoRunTimerIfNeeded() {
       autoRunSessionId: plan.autoRunSessionId,
       autoRunSkipFailures: plan.autoRunSkipFailures,
       autoRunRetryNonFreeTrial: plan.autoRunRetryNonFreeTrial,
-      autoRunRetryPaypalCallback: plan.autoRunRetryPaypalCallback,
+      autoRunRetryLegacyWalletCallback: plan.autoRunRetryLegacyWalletCallback,
       autoRunRetryShortLinkError: plan.autoRunRetryShortLinkError,
       autoRunRoundSummaries: serializeAutoRunRoundSummaries(plan.totalRuns, plan.roundSummaries),
       autoRunTimerPlan: plan,
@@ -13724,9 +12119,9 @@ const AUTO_RUN_BACKGROUND_COMPLETED_STEP_KEYS = new Set([
   'fetch-signup-code',
   'wait-registration-success',
   'local-cpa-json-export',
-  'plus-checkout-billing',
-  'paypal-approve',
-  'plus-checkout-return',
+  'chatgpt-session-reader-billing',
+  'legacyWallet-approve',
+  'chatgpt-session-reader-return',
   'sub2api-session-import',
   'cpa-session-import',
   'oauth-login',
@@ -13742,16 +12137,16 @@ const AUTO_RUN_BACKGROUND_COMPLETED_STEP_KEYS = new Set([
 const STEP_COMPLETION_SIGNAL_STEP_KEYS = new Set([
   'fill-password',
   'fill-profile',
-  'plus-checkout-create',
-  'gopay-subscription-confirm',
+  'chatgpt-session-reader-create',
+  'legacyPay-subscription-confirm',
   'platform-verify',
 ]);
 const STEP_COMPLETION_SIGNAL_TIMEOUTS_BY_STEP_KEY = new Map([
   ['fill-profile', 150000],
-  ['gopay-subscription-confirm', 1800000],
+  ['legacyPay-subscription-confirm', 1800000],
 ]);
 const AUTO_RUN_PRE_EXECUTION_DELAYS_BY_STEP_KEY = new Map([
-  ['plus-checkout-create', 5000],
+  ['chatgpt-session-reader-create', 5000],
 ]);
 
 function waitForNodeComplete(nodeId, timeoutMs = 120000) {
@@ -13852,14 +12247,14 @@ function getAutoRunPreExecutionDelayMs(step, state = {}) {
 
 function isHostedCheckoutUploadCompletionNode(nodeId, state = {}) {
   const executionKey = getNodeExecutionKeyForState(nodeId, state);
-  if ((executionKey || nodeId) !== 'plus-checkout-create') {
+  if ((executionKey || nodeId) !== 'chatgpt-session-reader-create') {
     return false;
   }
   const plusModeEnabled = Boolean(state?.plusModeEnabled);
   const plusPaymentMethod = String(state?.plusPaymentMethod || '').trim().toLowerCase();
   const hostedCheckoutWaitEnabled = state?.plusHostedCheckoutIsFinalStep !== false;
   return plusModeEnabled
-    && plusPaymentMethod === 'paypal'
+    && plusPaymentMethod === 'legacyWallet'
     && hostedCheckoutWaitEnabled;
 }
 
@@ -14022,8 +12417,8 @@ async function failNodeFromBackground(nodeId, errorLike = '未知错误') {
   try {
     await runBestEffort('set failed status', () => setNodeStatus(normalizedNodeId, 'failed'));
     await runBestEffort(
-      'schedule PayPal cookie cleanup',
-      () => schedulePayPalCookieCleanupBeforeCheckoutCreateIfNeeded(normalizedNodeId, latestState, errorLike)
+      'schedule LegacyWallet cookie cleanup',
+      () => scheduleLegacyWalletCookieCleanupBeforeCheckoutCreateIfNeeded(normalizedNodeId, latestState, errorLike)
     );
     await runBestEffort('write failure log', () => addLog(`失败：${message}`, 'error', { nodeId: normalizedNodeId }));
     await runBestEffort(
@@ -14060,7 +12455,7 @@ async function finalizeDeferredNodeExecutionError(nodeId, error) {
   }
 
   await setNodeStatus(normalizedNodeId, 'failed');
-  await schedulePayPalCookieCleanupBeforeCheckoutCreateIfNeeded(normalizedNodeId, latestState, error);
+  await scheduleLegacyWalletCookieCleanupBeforeCheckoutCreateIfNeeded(normalizedNodeId, latestState, error);
   await addLog(`失败：${getErrorMessage(error)}`, 'error', { nodeId: normalizedNodeId });
   await appendManualAccountRunRecordIfNeeded(`node:${normalizedNodeId}:failed`, latestState, getErrorMessage(error));
 }
@@ -14399,7 +12794,7 @@ async function requestStop(options = {}) {
       autoRunSessionId: 0,
       autoRunSkipFailures: timerPlan.autoRunSkipFailures,
       autoRunRetryNonFreeTrial: timerPlan.autoRunRetryNonFreeTrial,
-      autoRunRetryPaypalCallback: timerPlan.autoRunRetryPaypalCallback,
+      autoRunRetryLegacyWalletCallback: timerPlan.autoRunRetryLegacyWalletCallback,
       autoRunRetryShortLinkError: timerPlan.autoRunRetryShortLinkError,
       autoRunRoundSummaries: serializeAutoRunRoundSummaries(timerPlan.totalRuns, timerPlan.roundSummaries),
       autoRunTimerPlan: null,
@@ -14675,7 +13070,7 @@ async function executeNodeAndWait(nodeId, delayAfter = 2000) {
   const preExecutionDelayMs = getAutoRunPreExecutionDelayMsForNode(normalizedNodeId, executionState);
   if (preExecutionDelayMs > 0) {
     await addLog(
-      `自动运行：节点 ${normalizedNodeId} 执行前固定等待 ${Math.round(preExecutionDelayMs / 1000)} 秒，确保 Plus Checkout 创建前页面稳定。`,
+      `自动运行：节点 ${normalizedNodeId} 执行前固定等待 ${Math.round(preExecutionDelayMs / 1000)} 秒，确保 ChatGPT 会话读取 创建前页面稳定。`,
       'info'
     );
     await sleepWithStop(preExecutionDelayMs);
@@ -14848,37 +13243,37 @@ function isMail2925PoolExhaustedPauseError(error) {
   return /^MAIL2925_POOL_EXHAUSTED_PAUSE::/.test(message);
 }
 
-const payPalAccountStore = self.MultiPageBackgroundPayPalAccountStore?.createPayPalAccountStore({
+const legacyWalletAccountStore = self.MultiPageBackgroundLegacyWalletAccountStore?.createLegacyWalletAccountStore({
   broadcastDataUpdate,
-  findPayPalAccount,
+  findLegacyWalletAccount,
   getState,
-  normalizePayPalAccount,
-  normalizePayPalAccounts,
+  normalizeLegacyWalletAccount,
+  normalizeLegacyWalletAccounts,
   setPersistentSettings,
   setState,
-  upsertPayPalAccountInList,
+  upsertLegacyWalletAccountInList,
 });
 
-async function syncPayPalAccounts(accounts) {
-  return payPalAccountStore?.syncPayPalAccounts?.(accounts) || [];
+async function syncLegacyWalletAccounts(accounts) {
+  return legacyWalletAccountStore?.syncLegacyWalletAccounts?.(accounts) || [];
 }
 
-async function upsertPayPalAccount(input = {}) {
-  if (!payPalAccountStore?.upsertPayPalAccount) {
-    throw new Error('PayPal 账号存储能力尚未接入。');
+async function upsertLegacyWalletAccount(input = {}) {
+  if (!legacyWalletAccountStore?.upsertLegacyWalletAccount) {
+    throw new Error('LegacyWallet 账号存储能力尚未接入。');
   }
-  return payPalAccountStore.upsertPayPalAccount(input);
+  return legacyWalletAccountStore.upsertLegacyWalletAccount(input);
 }
 
-async function setCurrentPayPalAccount(accountId) {
-  if (!payPalAccountStore?.setCurrentPayPalAccount) {
-    throw new Error('PayPal 账号选择能力尚未接入。');
+async function setCurrentLegacyWalletAccount(accountId) {
+  if (!legacyWalletAccountStore?.setCurrentLegacyWalletAccount) {
+    throw new Error('LegacyWallet 账号选择能力尚未接入。');
   }
-  return payPalAccountStore.setCurrentPayPalAccount(accountId);
+  return legacyWalletAccountStore.setCurrentLegacyWalletAccount(accountId);
 }
 
-function getCurrentPayPalAccount(state = null) {
-  return payPalAccountStore?.getCurrentPayPalAccount?.(state || {}) || null;
+function getCurrentLegacyWalletAccount(state = null) {
+  return legacyWalletAccountStore?.getCurrentLegacyWalletAccount?.(state || {}) || null;
 }
 
 const generatedEmailHelpers = self.MultiPageGeneratedEmailHelpers?.createGeneratedEmailHelpers({
@@ -14976,7 +13371,7 @@ let autoRunTotalRuns = 1;
 let autoRunAttemptRun = 0;
 let autoRunSessionId = 0;
 let autoRunSessionSeed = 0;
-let ipProxyAutoSyncRunning = false;
+let removedNetworkAutoSyncRunning = false;
 const EMAIL_FETCH_MAX_ATTEMPTS = 5;
 const VERIFICATION_POLL_MAX_ROUNDS = 5;
 const STANDARD_MAIL_VERIFICATION_RESEND_INTERVAL_MS = 25000;
@@ -14989,11 +13384,11 @@ const AUTO_RUN_NODE_DELAYS = Object.freeze({
   'fetch-signup-code': 2000,
   'fill-profile': 0,
   'wait-registration-success': 3000,
-  'plus-checkout-create': 3000,
-  'plus-checkout-billing': 2000,
-  'gopay-subscription-confirm': 2000,
-  'paypal-approve': 2000,
-  'plus-checkout-return': 1000,
+  'chatgpt-session-reader-create': 3000,
+  'chatgpt-session-reader-billing': 2000,
+  'legacyPay-subscription-confirm': 2000,
+  'legacyWallet-approve': 2000,
+  'chatgpt-session-reader-return': 1000,
   'sub2api-session-import': 0,
   'cpa-session-import': 0,
   'oauth-login': 2000,
@@ -15075,52 +13470,52 @@ async function deleteAndBroadcastAccountRunHistoryRecords(recordIds = [], stateO
   return result;
 }
 
-function resolveIpProxyCandidateCountForAutoSwitch(state = {}, mode = 'account', provider = DEFAULT_IP_PROXY_SERVICE) {
-  const normalizedMode = typeof normalizeIpProxyMode === 'function'
-    ? normalizeIpProxyMode(mode)
+function resolveRemovedNetworkCandidateCountForAutoSwitch(state = {}, mode = 'account', provider = DEFAULT_REMOVED_NETWORK_SERVICE) {
+  const normalizedMode = typeof normalizeRemovedNetworkMode === 'function'
+    ? normalizeRemovedNetworkMode(mode)
     : String(mode || 'account').trim().toLowerCase();
-  const normalizedProvider = typeof normalizeIpProxyProviderValue === 'function'
-    ? normalizeIpProxyProviderValue(provider)
-    : String(provider || DEFAULT_IP_PROXY_SERVICE).trim().toLowerCase();
+  const normalizedProvider = typeof normalizeRemovedNetworkProviderValue === 'function'
+    ? normalizeRemovedNetworkProviderValue(provider)
+    : String(provider || DEFAULT_REMOVED_NETWORK_SERVICE).trim().toLowerCase();
   if (normalizedMode === 'account' && typeof getAccountModeProxyPoolFromState === 'function') {
     const pool = getAccountModeProxyPoolFromState(state, normalizedProvider);
     return Array.isArray(pool) ? pool.length : 0;
   }
-  if (typeof getIpProxyRuntimeSnapshot === 'function') {
-    const runtime = getIpProxyRuntimeSnapshot(state, normalizedMode, normalizedProvider);
+  if (typeof getRemovedNetworkRuntimeSnapshot === 'function') {
+    const runtime = getRemovedNetworkRuntimeSnapshot(state, normalizedMode, normalizedProvider);
     return Array.isArray(runtime?.pool) ? runtime.pool.length : 0;
   }
   return 0;
 }
 
-function resolveIpProxyAutoSyncIntervalMinutes(value, fallback = IP_PROXY_AUTO_SYNC_DEFAULT_INTERVAL_MINUTES) {
-  return normalizeIpProxyAutoSyncIntervalMinutes(value, fallback);
+function resolveRemovedNetworkAutoSyncIntervalMinutes(value, fallback = REMOVED_NETWORK_AUTO_SYNC_DEFAULT_INTERVAL_MINUTES) {
+  return normalizeRemovedNetworkAutoSyncIntervalMinutes(value, fallback);
 }
 
-async function clearIpProxyAutoSyncAlarm() {
-  await chrome.alarms.clear(IP_PROXY_AUTO_SYNC_ALARM_NAME);
+async function clearRemovedNetworkAutoSyncAlarm() {
+  await chrome.alarms.clear(REMOVED_NETWORK_AUTO_SYNC_ALARM_NAME);
 }
 
-async function ensureIpProxyAutoSyncAlarm(stateOverride = null) {
-  if (!LEGACY_IP_PROXY_FEATURE_ENABLED) {
-    await clearIpProxyAutoSyncAlarm();
+async function ensureRemovedNetworkAutoSyncAlarm(stateOverride = null) {
+  if (!LEGACY_REMOVED_NETWORK_FEATURE_ENABLED) {
+    await clearRemovedNetworkAutoSyncAlarm();
     return false;
   }
   const state = stateOverride || await getState();
-  const enabled = Boolean(state?.ipProxyAutoSyncEnabled);
+  const enabled = Boolean(state?.removedNetworkAutoSyncEnabled);
   if (!enabled) {
-    await clearIpProxyAutoSyncAlarm();
+    await clearRemovedNetworkAutoSyncAlarm();
     return false;
   }
-  const intervalMinutes = resolveIpProxyAutoSyncIntervalMinutes(
-    state?.ipProxyAutoSyncIntervalMinutes,
-    PERSISTED_SETTING_DEFAULTS.ipProxyAutoSyncIntervalMinutes
+  const intervalMinutes = resolveRemovedNetworkAutoSyncIntervalMinutes(
+    state?.removedNetworkAutoSyncIntervalMinutes,
+    PERSISTED_SETTING_DEFAULTS.removedNetworkAutoSyncIntervalMinutes
   );
-  const existingAlarm = await chrome.alarms.get(IP_PROXY_AUTO_SYNC_ALARM_NAME);
+  const existingAlarm = await chrome.alarms.get(REMOVED_NETWORK_AUTO_SYNC_ALARM_NAME);
   const existingPeriod = Number(existingAlarm?.periodInMinutes) || 0;
   if (!existingAlarm || Math.abs(existingPeriod - intervalMinutes) > 0.0001) {
-    await chrome.alarms.clear(IP_PROXY_AUTO_SYNC_ALARM_NAME);
-    await chrome.alarms.create(IP_PROXY_AUTO_SYNC_ALARM_NAME, {
+    await chrome.alarms.clear(REMOVED_NETWORK_AUTO_SYNC_ALARM_NAME);
+    await chrome.alarms.create(REMOVED_NETWORK_AUTO_SYNC_ALARM_NAME, {
       periodInMinutes: intervalMinutes,
       delayInMinutes: intervalMinutes,
     });
@@ -15128,28 +13523,28 @@ async function ensureIpProxyAutoSyncAlarm(stateOverride = null) {
   return true;
 }
 
-async function runIpProxyAutoSync(trigger = 'alarm') {
-  if (!LEGACY_IP_PROXY_FEATURE_ENABLED) {
-    await clearIpProxyAutoSyncAlarm();
+async function runRemovedNetworkAutoSync(trigger = 'alarm') {
+  if (!LEGACY_REMOVED_NETWORK_FEATURE_ENABLED) {
+    await clearRemovedNetworkAutoSyncAlarm();
     return { skipped: true, reason: 'feature_disabled' };
   }
-  if (ipProxyAutoSyncRunning) {
+  if (removedNetworkAutoSyncRunning) {
     return { skipped: true, reason: 'running' };
   }
-  ipProxyAutoSyncRunning = true;
+  removedNetworkAutoSyncRunning = true;
   try {
     const state = await getState();
-    if (!state?.ipProxyAutoSyncEnabled) {
-      await clearIpProxyAutoSyncAlarm();
+    if (!state?.removedNetworkAutoSyncEnabled) {
+      await clearRemovedNetworkAutoSyncAlarm();
       return { skipped: true, reason: 'disabled' };
     }
-    if (!state?.ipProxyEnabled) {
+    if (!state?.removedNetworkEnabled) {
       return { skipped: true, reason: 'proxy_disabled' };
     }
-    const mode = typeof normalizeIpProxyMode === 'function'
-      ? normalizeIpProxyMode(state?.ipProxyMode)
-      : String(state?.ipProxyMode || 'account').trim().toLowerCase();
-    const result = await refreshIpProxyPool({
+    const mode = typeof normalizeRemovedNetworkMode === 'function'
+      ? normalizeRemovedNetworkMode(state?.removedNetworkMode)
+      : String(state?.removedNetworkMode || 'account').trim().toLowerCase();
+    const result = await refreshRemovedNetworkPool({
       state,
       mode,
       skipExitProbe: true,
@@ -15173,51 +13568,51 @@ async function runIpProxyAutoSync(trigger = 'alarm') {
     }
     return { skipped: true, reason: 'error', error: error?.message || String(error || '未知错误') };
   } finally {
-    ipProxyAutoSyncRunning = false;
+    removedNetworkAutoSyncRunning = false;
   }
 }
 
-async function disableLegacyIpProxyFeatureRuntime() {
-  if (typeof clearIpProxyAutoSyncAlarm === 'function') {
-    await clearIpProxyAutoSyncAlarm().catch(() => {});
+async function disableLegacyRemovedNetworkFeatureRuntime() {
+  if (typeof clearRemovedNetworkAutoSyncAlarm === 'function') {
+    await clearRemovedNetworkAutoSyncAlarm().catch(() => {});
   }
-  if (typeof clearIpProxySettings === 'function') {
-    await clearIpProxySettings({ resetLastAppliedAuthSnapshot: true }).catch(() => {});
+  if (typeof clearRemovedNetworkSettings === 'function') {
+    await clearRemovedNetworkSettings({ resetLastAppliedAuthSnapshot: true }).catch(() => {});
   }
-  if (typeof setIpProxyLeakGuardEnabled === 'function') {
-    await setIpProxyLeakGuardEnabled(false).catch(() => {});
+  if (typeof setRemovedNetworkLeakGuardEnabled === 'function') {
+    await setRemovedNetworkLeakGuardEnabled(false).catch(() => {});
   }
 
   const state = await getState().catch(() => ({}));
   const patch = {
-    ipProxyEnabled: false,
-    ipProxyAutoSyncEnabled: false,
-    ipProxyApplied: false,
-    ipProxyAppliedReason: 'feature_removed',
-    ipProxyAppliedAt: 0,
-    ipProxyAppliedHost: '',
-    ipProxyAppliedPort: 0,
-    ipProxyAppliedRegion: '',
-    ipProxyAppliedHasAuth: false,
-    ipProxyAppliedProvider: '',
-    ipProxyAppliedError: '',
-    ipProxyAppliedWarning: '',
-    ipProxyAppliedExitIp: '',
-    ipProxyAppliedExitRegion: '',
-    ipProxyAppliedExitDetecting: false,
-    ipProxyAppliedExitError: '',
-    ipProxyAppliedExitSource: '',
-    ipProxyAppliedExitEndpoint: '',
-    ipProxyPool: [],
-    ipProxyCurrentIndex: 0,
-    ipProxyCurrent: null,
-    ipProxyApiPool: [],
-    ipProxyApiCurrentIndex: 0,
-    ipProxyApiCurrent: null,
-    ipProxyAccountPool: [],
-    ipProxyAccountCurrentIndex: 0,
-    ipProxyAccountCurrent: null,
-    ipProxyExitRegion: '',
+    removedNetworkEnabled: false,
+    removedNetworkAutoSyncEnabled: false,
+    removedNetworkApplied: false,
+    removedNetworkAppliedReason: 'feature_removed',
+    removedNetworkAppliedAt: 0,
+    removedNetworkAppliedHost: '',
+    removedNetworkAppliedPort: 0,
+    removedNetworkAppliedRegion: '',
+    removedNetworkAppliedHasAuth: false,
+    removedNetworkAppliedProvider: '',
+    removedNetworkAppliedError: '',
+    removedNetworkAppliedWarning: '',
+    removedNetworkAppliedExitIp: '',
+    removedNetworkAppliedExitRegion: '',
+    removedNetworkAppliedExitDetecting: false,
+    removedNetworkAppliedExitError: '',
+    removedNetworkAppliedExitSource: '',
+    removedNetworkAppliedExitEndpoint: '',
+    removedNetworkPool: [],
+    removedNetworkCurrentIndex: 0,
+    removedNetworkCurrent: null,
+    removedNetworkApiPool: [],
+    removedNetworkApiCurrentIndex: 0,
+    removedNetworkApiCurrent: null,
+    removedNetworkAccountPool: [],
+    removedNetworkAccountCurrentIndex: 0,
+    removedNetworkAccountCurrent: null,
+    removedNetworkExitRegion: '',
   };
   const shouldUpdateRuntime = Object.keys(patch).some((key) => {
     const nextValue = patch[key];
@@ -15229,16 +13624,16 @@ async function disableLegacyIpProxyFeatureRuntime() {
     broadcastDataUpdate(patch);
   }
   await setPersistentSettings({
-    ipProxyEnabled: false,
-    ipProxyAutoSyncEnabled: false,
+    removedNetworkEnabled: false,
+    removedNetworkAutoSyncEnabled: false,
   }).catch(() => {});
 }
 
-async function maybeSwitchIpProxyAfterAutoRunRoundSuccess(payload = {}) {
-  if (!LEGACY_IP_PROXY_FEATURE_ENABLED) {
+async function maybeSwitchRemovedNetworkAfterAutoRunRoundSuccess(payload = {}) {
+  if (!LEGACY_REMOVED_NETWORK_FEATURE_ENABLED) {
     return null;
   }
-  if (typeof switchIpProxy !== 'function') {
+  if (typeof switchRemovedNetwork !== 'function') {
     return null;
   }
   const successfulRuns = Number(payload?.successfulRuns) || 0;
@@ -15247,24 +13642,24 @@ async function maybeSwitchIpProxyAfterAutoRunRoundSuccess(payload = {}) {
   }
 
   const state = await getState();
-  if (!state?.ipProxyEnabled) {
+  if (!state?.removedNetworkEnabled) {
     return null;
   }
 
-  const mode = typeof normalizeIpProxyMode === 'function'
-    ? normalizeIpProxyMode(state?.ipProxyMode)
-    : String(state?.ipProxyMode || 'account').trim().toLowerCase();
-  const provider = typeof normalizeIpProxyProviderValue === 'function'
-    ? normalizeIpProxyProviderValue(state?.ipProxyService)
-    : String(state?.ipProxyService || DEFAULT_IP_PROXY_SERVICE).trim().toLowerCase();
-  const threshold = typeof resolveIpProxyAutoSwitchThreshold === 'function'
-    ? resolveIpProxyAutoSwitchThreshold(state)
-    : Math.max(1, Math.min(500, Number(state?.ipProxyPoolTargetCount) || 20));
+  const mode = typeof normalizeRemovedNetworkMode === 'function'
+    ? normalizeRemovedNetworkMode(state?.removedNetworkMode)
+    : String(state?.removedNetworkMode || 'account').trim().toLowerCase();
+  const provider = typeof normalizeRemovedNetworkProviderValue === 'function'
+    ? normalizeRemovedNetworkProviderValue(state?.removedNetworkService)
+    : String(state?.removedNetworkService || DEFAULT_REMOVED_NETWORK_SERVICE).trim().toLowerCase();
+  const threshold = typeof resolveRemovedNetworkAutoSwitchThreshold === 'function'
+    ? resolveRemovedNetworkAutoSwitchThreshold(state)
+    : Math.max(1, Math.min(500, Number(state?.removedNetworkPoolTargetCount) || 20));
   if (successfulRuns % threshold !== 0) {
     return null;
   }
 
-  const candidateCount = resolveIpProxyCandidateCountForAutoSwitch(state, mode, provider);
+  const candidateCount = resolveRemovedNetworkCandidateCountForAutoSwitch(state, mode, provider);
   if (candidateCount <= 1) {
     await addLog(
       `任务切换阈值命中（成功 ${successfulRuns} 轮 / 阈值 ${threshold}），但当前仅 ${candidateCount} 条可切换代理，已跳过自动切换。`,
@@ -15279,12 +13674,12 @@ async function maybeSwitchIpProxyAfterAutoRunRoundSuccess(payload = {}) {
     };
   }
 
-  const switchResult = await switchIpProxy('next', {
+  const switchResult = await switchRemovedNetwork('next', {
     mode,
     state,
     forceRefresh: mode === 'api',
-    maxItems: typeof resolveIpProxyPoolTargetCountForMode === 'function'
-      ? resolveIpProxyPoolTargetCountForMode(state, mode)
+    maxItems: typeof resolveRemovedNetworkPoolTargetCountForMode === 'function'
+      ? resolveRemovedNetworkPoolTargetCountForMode(state, mode)
       : undefined,
   });
   const display = String(switchResult?.display || '').trim();
@@ -15298,37 +13693,37 @@ async function maybeSwitchIpProxyAfterAutoRunRoundSuccess(payload = {}) {
   return switchResult;
 }
 
-function resolveGpcHelperBaseUrl(apiUrl = '') {
-  if (self.GoPayUtils?.normalizeGpcHelperBaseUrl) {
-    return self.GoPayUtils.normalizeGpcHelperBaseUrl(apiUrl || DEFAULT_GPC_HELPER_API_URL);
+function resolveCardHelperHelperBaseUrl(apiUrl = '') {
+  if (self.LegacyPayUtils?.normalizeCardHelperHelperBaseUrl) {
+    return self.LegacyPayUtils.normalizeCardHelperHelperBaseUrl(apiUrl || DEFAULT_CARD_HELPER_HELPER_API_URL);
   }
-  let normalized = String(apiUrl || DEFAULT_GPC_HELPER_API_URL).trim().replace(/\/+$/g, '');
+  let normalized = String(apiUrl || DEFAULT_CARD_HELPER_HELPER_API_URL).trim().replace(/\/+$/g, '');
   normalized = normalized.replace(/\/api\/checkout\/start$/i, '');
-  normalized = normalized.replace(/\/api\/gopay\/(?:otp|pin)$/i, '');
+  normalized = normalized.replace(/\/api\/legacyPay\/(?:otp|pin)$/i, '');
   normalized = normalized.replace(/\/api\/gp\/tasks(?:\/[^/?#]+)?(?:\/(?:otp|pin|stop))?(?:\?.*)?$/i, '');
   normalized = normalized.replace(/\/api\/gp\/balance(?:\?.*)?$/i, '');
   normalized = normalized.replace(/\/api\/card\/balance(?:\?.*)?$/i, '');
   normalized = normalized.replace(/\/api\/card\/redeem-api-key(?:\?.*)?$/i, '');
-  return normalized || DEFAULT_GPC_HELPER_API_URL;
+  return normalized || DEFAULT_CARD_HELPER_HELPER_API_URL;
 }
 
-function buildGpcApiKeyBalanceRequestUrl(apiUrl = '') {
-  if (self.GoPayUtils?.buildGpcApiKeyBalanceUrl) {
-    return self.GoPayUtils.buildGpcApiKeyBalanceUrl(apiUrl);
+function buildCardHelperApiKeyBalanceRequestUrl(apiUrl = '') {
+  if (self.LegacyPayUtils?.buildCardHelperApiKeyBalanceUrl) {
+    return self.LegacyPayUtils.buildCardHelperApiKeyBalanceUrl(apiUrl);
   }
-  if (self.GoPayUtils?.buildGpcCardBalanceUrl) {
-    return self.GoPayUtils.buildGpcCardBalanceUrl(apiUrl);
+  if (self.LegacyPayUtils?.buildCardHelperCardBalanceUrl) {
+    return self.LegacyPayUtils.buildCardHelperCardBalanceUrl(apiUrl);
   }
-  const baseUrl = resolveGpcHelperBaseUrl(apiUrl);
+  const baseUrl = resolveCardHelperHelperBaseUrl(apiUrl);
   if (!baseUrl) {
     return '';
   }
   return `${baseUrl}/api/gp/balance`;
 }
 
-function buildGpcApiKeyHeaders(apiKey = '', extraHeaders = {}) {
-  if (self.GoPayUtils?.buildGpcApiKeyHeaders) {
-    return self.GoPayUtils.buildGpcApiKeyHeaders(apiKey, extraHeaders);
+function buildCardHelperApiKeyHeaders(apiKey = '', extraHeaders = {}) {
+  if (self.LegacyPayUtils?.buildCardHelperApiKeyHeaders) {
+    return self.LegacyPayUtils.buildCardHelperApiKeyHeaders(apiKey, extraHeaders);
   }
   const headers = {
     ...(extraHeaders && typeof extraHeaders === 'object' ? extraHeaders : {}),
@@ -15340,9 +13735,9 @@ function buildGpcApiKeyHeaders(apiKey = '', extraHeaders = {}) {
   return headers;
 }
 
-function formatGpcApiKeyBalancePayload(payload = {}) {
-  if (self.GoPayUtils?.formatGpcBalancePayload) {
-    return self.GoPayUtils.formatGpcBalancePayload(payload);
+function formatCardHelperApiKeyBalancePayload(payload = {}) {
+  if (self.LegacyPayUtils?.formatCardHelperBalancePayload) {
+    return self.LegacyPayUtils.formatCardHelperBalancePayload(payload);
   }
   if (!payload || typeof payload !== 'object') {
     return '';
@@ -15360,28 +13755,28 @@ function formatGpcApiKeyBalancePayload(payload = {}) {
   ].filter(Boolean).join('，');
 }
 
-async function refreshGpcApiKeyBalance(state = {}, options = {}) {
-  const apiUrl = resolveGpcHelperBaseUrl(state?.gopayHelperApiUrl || DEFAULT_GPC_HELPER_API_URL);
+async function refreshCardHelperApiKeyBalance(state = {}, options = {}) {
+  const apiUrl = resolveCardHelperHelperBaseUrl(state?.legacyPayHelperApiUrl || DEFAULT_CARD_HELPER_HELPER_API_URL);
   const apiKey = String(
-    state?.gopayHelperApiKey
-    || state?.gpcApiKey
+    state?.legacyPayHelperApiKey
+    || state?.cardHelperApiKey
     || state?.apiKey
     || ''
   ).trim();
   if (!apiUrl) {
-    throw new Error('缺少 GPC API 地址。');
+    throw new Error('缺少 CARD_HELPER API 地址。');
   }
   if (!apiKey) {
-    throw new Error('缺少 GPC API Key。');
+    throw new Error('缺少 CARD_HELPER API Key。');
   }
-  const requestUrl = buildGpcApiKeyBalanceRequestUrl(apiUrl);
+  const requestUrl = buildCardHelperApiKeyBalanceRequestUrl(apiUrl);
   if (!requestUrl) {
-    throw new Error('缺少 GPC API 地址。');
+    throw new Error('缺少 CARD_HELPER API 地址。');
   }
 
   const response = await fetch(requestUrl, {
     method: 'GET',
-    headers: buildGpcApiKeyHeaders(apiKey, { Accept: 'application/json' }),
+    headers: buildCardHelperApiKeyHeaders(apiKey, { Accept: 'application/json' }),
   });
   const rawText = await response.text();
   let payload = {};
@@ -15390,44 +13785,44 @@ async function refreshGpcApiKeyBalance(state = {}, options = {}) {
   } catch {
     payload = { raw: rawText };
   }
-  const balancePayload = self.GoPayUtils?.unwrapGpcResponse
-    ? self.GoPayUtils.unwrapGpcResponse(payload)
+  const balancePayload = self.LegacyPayUtils?.unwrapCardHelperResponse
+    ? self.LegacyPayUtils.unwrapCardHelperResponse(payload)
     : (payload?.data && typeof payload === 'object' ? payload.data : payload);
   const balanceData = balancePayload && typeof balancePayload === 'object' && !Array.isArray(balancePayload)
     ? balancePayload
     : {};
-  const remainingUses = self.GoPayUtils?.getGpcBalanceRemainingUses
-    ? self.GoPayUtils.getGpcBalanceRemainingUses(balanceData)
+  const remainingUses = self.LegacyPayUtils?.getCardHelperBalanceRemainingUses
+    ? self.LegacyPayUtils.getCardHelperBalanceRemainingUses(balanceData)
     : Math.max(0, Number(balanceData.remaining_uses ?? balanceData.remainingUses ?? balanceData.balance ?? balanceData.remaining) || 0);
-  const autoModeEnabled = self.GoPayUtils?.isGpcAutoModeEnabled
-    ? self.GoPayUtils.isGpcAutoModeEnabled(balanceData)
+  const autoModeEnabled = self.LegacyPayUtils?.isCardHelperAutoModeEnabled
+    ? self.LegacyPayUtils.isCardHelperAutoModeEnabled(balanceData)
     : Boolean(balanceData.auto_mode_enabled ?? balanceData.autoModeEnabled);
-  const apiKeyStatus = self.GoPayUtils?.getGpcApiKeyStatus
-    ? self.GoPayUtils.getGpcApiKeyStatus(balanceData)
+  const apiKeyStatus = self.LegacyPayUtils?.getCardHelperApiKeyStatus
+    ? self.LegacyPayUtils.getCardHelperApiKeyStatus(balanceData)
     : String(balanceData.status || balanceData.card_status || balanceData.cardStatus || '').trim();
-  const balanceText = formatGpcApiKeyBalancePayload(payload) || rawText || '未知';
+  const balanceText = formatCardHelperApiKeyBalancePayload(payload) || rawText || '未知';
   const updates = {
-    gopayHelperBalance: balanceText,
-    gopayHelperBalancePayload: Object.keys(balanceData).length > 0 ? balanceData : { raw: String(balancePayload || '') },
-    gopayHelperBalanceUpdatedAt: Date.now(),
-    gopayHelperBalanceError: '',
-    gopayHelperRemainingUses: Math.max(0, Number(remainingUses) || 0),
-    gopayHelperAutoModeEnabled: Boolean(autoModeEnabled),
-    gopayHelperApiKeyStatus: apiKeyStatus,
+    legacyPayHelperBalance: balanceText,
+    legacyPayHelperBalancePayload: Object.keys(balanceData).length > 0 ? balanceData : { raw: String(balancePayload || '') },
+    legacyPayHelperBalanceUpdatedAt: Date.now(),
+    legacyPayHelperBalanceError: '',
+    legacyPayHelperRemainingUses: Math.max(0, Number(remainingUses) || 0),
+    legacyPayHelperAutoModeEnabled: Boolean(autoModeEnabled),
+    legacyPayHelperApiKeyStatus: apiKeyStatus,
   };
   const flowId = String(balancePayload?.flow_id || balancePayload?.flowId || '').trim();
   if (flowId) {
-    updates.gopayHelperFlowId = flowId;
+    updates.legacyPayHelperFlowId = flowId;
   }
 
-  const unifiedOk = self.GoPayUtils?.isGpcUnifiedResponseOk
-    ? self.GoPayUtils.isGpcUnifiedResponseOk(payload)
+  const unifiedOk = self.LegacyPayUtils?.isCardHelperUnifiedResponseOk
+    ? self.LegacyPayUtils.isCardHelperUnifiedResponseOk(payload)
     : true;
   if (!response.ok || payload?.ok === false || !unifiedOk) {
-    const detail = self.GoPayUtils?.extractGpcResponseErrorDetail
-      ? self.GoPayUtils.extractGpcResponseErrorDetail(payload, response.status)
+    const detail = self.LegacyPayUtils?.extractCardHelperResponseErrorDetail
+      ? self.LegacyPayUtils.extractCardHelperResponseErrorDetail(payload, response.status)
       : (payload?.data?.detail || payload?.error || payload?.message || payload?.detail || `HTTP ${response.status}`);
-    const errorUpdates = { ...updates, gopayHelperBalanceError: String(detail || '余额查询失败') };
+    const errorUpdates = { ...updates, legacyPayHelperBalanceError: String(detail || '余额查询失败') };
     await setPersistentSettings(errorUpdates);
     broadcastDataUpdate(errorUpdates);
     throw new Error(String(detail || '余额查询失败'));
@@ -15438,22 +13833,22 @@ async function refreshGpcApiKeyBalance(state = {}, options = {}) {
   const reason = String(options?.reason || '').trim();
   await addLog(
     reason === 'round_success'
-      ? `GPC 余额已更新：${balanceText}`
-      : `GPC 余额查询成功：${balanceText}`,
+      ? `CARD_HELPER 余额已更新：${balanceText}`
+      : `CARD_HELPER 余额查询成功：${balanceText}`,
     'info'
   );
   return {
     balance: balanceText,
     payload,
-    data: updates.gopayHelperBalancePayload,
-    remainingUses: updates.gopayHelperRemainingUses,
-    autoModeEnabled: updates.gopayHelperAutoModeEnabled,
-    apiKeyStatus: updates.gopayHelperApiKeyStatus,
-    updatedAt: updates.gopayHelperBalanceUpdatedAt,
+    data: updates.legacyPayHelperBalancePayload,
+    remainingUses: updates.legacyPayHelperRemainingUses,
+    autoModeEnabled: updates.legacyPayHelperAutoModeEnabled,
+    apiKeyStatus: updates.legacyPayHelperApiKeyStatus,
+    updatedAt: updates.legacyPayHelperBalanceUpdatedAt,
   };
 }
 
-const refreshGpcCardBalance = refreshGpcApiKeyBalance;
+const refreshCardHelperCardBalance = refreshCardHelperApiKeyBalance;
 
 const autoRunController = self.MultiPageBackgroundAutoRunController?.createAutoRunController({
   addLog,
@@ -15478,10 +13873,10 @@ const autoRunController = self.MultiPageBackgroundAutoRunController?.createAutoR
   hasSavedNodeProgress,
   isAddPhoneAuthFailure,
   isCloudCheckoutAlreadyPaidFailure,
-  isPhoneSmsPlatformRateLimitFailure,
-  isPlusCheckoutNonFreeTrialFailure,
+  isRemovedPhonePlatformRateLimitFailure,
+  isChatgptSessionReaderNonFreeTrialFailure,
   isUpiRedeemBackendFailure,
-  isGpcTaskEndedFailure,
+  isCardHelperTaskEndedFailure,
   isHostedCheckoutGenericErrorFailure,
   isHostedCheckoutVerificationResendLimitFailure,
   isRestartCurrentAttemptError,
@@ -15490,8 +13885,8 @@ const autoRunController = self.MultiPageBackgroundAutoRunController?.createAutoR
   isStopError,
   launchAutoRunTimerPlan,
   normalizeAutoRunFallbackThreadIntervalMinutes,
-  onAutoRunRoundSuccess: LEGACY_IP_PROXY_FEATURE_ENABLED
-    ? ((payload = {}) => maybeSwitchIpProxyAfterAutoRunRoundSuccess(payload))
+  onAutoRunRoundSuccess: LEGACY_REMOVED_NETWORK_FEATURE_ENABLED
+    ? ((payload = {}) => maybeSwitchRemovedNetworkAfterAutoRunRoundSuccess(payload))
     : null,
   persistAutoRunTimerPlan,
   resetState,
@@ -15888,25 +14283,15 @@ function getAutoRunWorkflowNodeIds(state = {}) {
 async function runAutoSequenceFromNodeGraph(startNodeId, context = {}) {
   const { targetRun, totalRuns, attemptRuns, continued = false } = context;
   let postStep7RestartCount = 0;
-  let goPayCheckoutRestartCount = 0;
-  let gpcCheckoutRestartCount = 0;
-  let plusCheckoutRestartCount = 0;
-  let smsOauthNonFreeTrialCheckoutRestartCount = 0;
   let step4RestartCount = 0;
   const nodeIdleRestartCounts = new Map();
   let currentStartNodeId = String(startNodeId || '').trim();
   let continueCurrentAttempt = continued;
-  const resolvedSignupMethod = await ensureResolvedSignupMethodForRun();
+  await ensureResolvedSignupMethodForRun();
   await setState({
     signupPhoneExcludedNumbersThisAttempt: [],
     whatsappPhoneVerificationRestartCount: 0,
   });
-  const normalizePlusPaymentMethodForRun = typeof normalizePlusPaymentMethod === 'function'
-    ? normalizePlusPaymentMethod
-    : (value) => (String(value || '').trim().toLowerCase() === 'gpc-helper' ? 'gpc-helper' : String(value || '').trim().toLowerCase());
-  const plusPaymentMethodGpcHelper = typeof PLUS_PAYMENT_METHOD_GPC_HELPER === 'string'
-    ? PLUS_PAYMENT_METHOD_GPC_HELPER
-    : 'gpc-helper';
   const getNodeStatusForNode = (state, nodeId) => (
     String(state?.nodeStatuses?.[nodeId] || 'pending').trim() || 'pending'
   );
@@ -16055,11 +14440,7 @@ async function runAutoSequenceFromNodeGraph(startNodeId, context = {}) {
   if (await shouldRunNamedNode('submit-signup-email')) {
     try {
       await runAutoNodeActionWithIdleLogWatchdog('submit-signup-email', async () => {
-        if (resolvedSignupMethod === SIGNUP_METHOD_PHONE) {
-          await addLog(`=== 目标 ${targetRun}/${totalRuns} 轮：本轮注册方式为手机号注册，将跳过邮箱预获取 ===`, 'info');
-        } else {
-          await ensureAutoEmailReady(targetRun, totalRuns, attemptRuns);
-        }
+        await ensureAutoEmailReady(targetRun, totalRuns, attemptRuns);
         await executeNodeAndWait('submit-signup-email', getAutoRunNodeDelayMs('submit-signup-email'));
       });
     } catch (err) {
@@ -16158,213 +14539,6 @@ async function runAutoSequenceFromNodeGraph(startNodeId, context = {}) {
       }
 
       const step = getDisplayStepForNode(nodeId, latestState);
-      const nodeExecutionKey = getNodeExecutionKey(nodeId, latestState);
-      if (isStep9WhatsAppPageRestartError(err)) {
-        const nextRestartCount = Math.max(0, Number(latestState?.whatsappPhoneVerificationRestartCount) || 0) + 1;
-        await restartStep9WhatsAppAttemptFromNode(nodeId, nextRestartCount, err);
-        setRestartNode('open-chatgpt');
-        restartFromStep1WithCurrentEmail = true;
-        break;
-      }
-      if (shouldRetrySmsOauthNonFreeTrialFromStep7(latestState, err)) {
-        smsOauthNonFreeTrialCheckoutRestartCount += 1;
-        if (smsOauthNonFreeTrialCheckoutRestartCount > AUTO_RUN_MAX_RETRIES_PER_ROUND) {
-          await addLog(
-            `节点 ${getNodeLabel(nodeId, latestState)}：先手机号注册 OAuth 检测到 Plus 今日应付金额非 0，已连续重建 Checkout ${AUTO_RUN_MAX_RETRIES_PER_ROUND} 次仍无免费试用资格，停止当前注册流程的 Checkout 内部重试。原因：${getErrorMessage(err)}`,
-            'error'
-          );
-          throw err;
-        }
-        plusCheckoutRestartCount += 1;
-        const checkoutCreateStep = getDisplayStepForNode('plus-checkout-create', latestState) || 7;
-        await addLog(
-          `节点 ${getNodeLabel(nodeId, latestState)}：先手机号注册 OAuth 检测到 Plus 今日应付金额非 0，将保留当前注册流程并直接回到第 ${checkoutCreateStep} 步 plus-checkout-create 重试（第 ${smsOauthNonFreeTrialCheckoutRestartCount}/${AUTO_RUN_MAX_RETRIES_PER_ROUND} 次）。原因：${getErrorMessage(err)}`,
-          'warn'
-        );
-        const checkoutResetAnchorNodeId = getPreviousNodeId('plus-checkout-create', latestState) || 'fill-profile';
-        await invalidateDownstreamAfterAutoRunNodeRestart(checkoutResetAnchorNodeId, {
-          logLabel: `先手机号注册 OAuth 非 0 金额后回到第 ${checkoutCreateStep} 步 plus-checkout-create 重试（第 ${smsOauthNonFreeTrialCheckoutRestartCount}/${AUTO_RUN_MAX_RETRIES_PER_ROUND} 次）`,
-        });
-        nodeIndex = Math.max(0, getNodeIndex(await getState(), 'plus-checkout-create'));
-        continue;
-      }
-      if (isPlusCheckoutRestartStep(step, nodeExecutionKey, latestState)
-        && isPlusCheckoutStartNewFlowFailure(err)
-        && (latestState?.autoRunRetryShortLinkError !== undefined
-          ? Boolean(latestState.autoRunRetryShortLinkError)
-          : true)) {
-        const reason = getErrorMessage(err);
-        if (
-          typeof markCurrentRegistrationAccountUsed === 'function'
-          && !shouldDeferHotmailUsedMarkForPhoneSignup(latestState)
-        ) {
-          await markCurrentRegistrationAccountUsed(latestState, {
-            reason: 'plus-checkout-error-new-flow',
-            logPrefix: 'Plus Checkout 红色错误框',
-            level: 'warn',
-          });
-        }
-        await addLog(
-          `节点 ${getNodeLabel(nodeId, latestState)}：检测到 Checkout 致命错误提示，准备放弃当前账号并回到节点 open-chatgpt 开始新流程。原因：${reason}`,
-          'warn'
-        );
-        await schedulePayPalCookieCleanupBeforeCheckoutCreateIfNeeded(nodeId, latestState, err);
-        let closedCheckoutTabs = 0;
-        if (chrome?.tabs?.remove) {
-          const checkoutTabIds = new Set();
-          const storedCheckoutTabId = Number(latestState?.plusCheckoutTabId) || 0;
-          const trackedCheckoutTabId = typeof getTabId === 'function'
-            ? Number(await getTabId('plus-checkout').catch(() => 0)) || 0
-            : 0;
-          if (storedCheckoutTabId > 0) checkoutTabIds.add(storedCheckoutTabId);
-          if (trackedCheckoutTabId > 0) checkoutTabIds.add(trackedCheckoutTabId);
-          if (chrome?.tabs?.query) {
-            const tabs = await chrome.tabs.query({}).catch(() => []);
-            for (const tab of tabs || []) {
-              const tabId = Number(tab?.id) || 0;
-              const url = String(tab?.url || '').trim();
-              if (!tabId || !url) continue;
-              if (/paypal\./i.test(url)
-                || /^https:\/\/(?:chatgpt\.com\/checkout|pay\.openai\.com\/c\/pay|checkout\.stripe\.com\/c\/pay)(?:\/|$)/i.test(url)
-                || /^https:\/\/(?:chatgpt\.com|www\.chatgpt\.com|chat\.openai\.com)\/(?:backend-api\/)?payments\/success(?:[/?#]|$)/i.test(url)) {
-                checkoutTabIds.add(tabId);
-              }
-            }
-          }
-          for (const tabId of checkoutTabIds) {
-            await chrome.tabs.remove(tabId).then(() => {
-              closedCheckoutTabs += 1;
-            }).catch(() => {});
-          }
-        }
-        if (closedCheckoutTabs > 0) {
-          await addLog(`节点 ${getNodeLabel(nodeId, latestState)}：开新流程前已关闭 ${closedCheckoutTabs} 个旧的 Checkout / PayPal 标签页。`, 'info');
-        }
-        await invalidateDownstreamAfterAutoRunNodeRestart('open-chatgpt', {
-          logLabel: `节点 ${nodeId} 检测到 Checkout 致命错误提示后准备回到 open-chatgpt 开新流程`,
-        });
-        const resetIdentityUpdates = {
-          ...buildClearedRegistrationEmailStateUpdates(latestState, {
-            preservePrevious: false,
-            preserveAccountIdentity: false,
-            source: 'plus-checkout-error-new-flow',
-          }),
-          password: '',
-          accountIdentifier: '',
-          accountIdentifierType: null,
-          signupPhoneNumber: '',
-          signupPhoneActivation: null,
-          signupPhoneCompletedActivation: null,
-          signupVerificationRequestedAt: null,
-          loginVerificationRequestedAt: null,
-          plusCheckoutTabId: null,
-          plusCheckoutUrl: '',
-          plusReturnUrl: '',
-        };
-        await setState(resetIdentityUpdates);
-        setRestartNode('open-chatgpt');
-        restartFromStep1WithCurrentEmail = true;
-        break;
-      }
-      if (isPlusCheckoutRestartStep(step, nodeExecutionKey, latestState)
-        && isPlusCheckoutStartNewFlowFailure(err)
-        && !((latestState?.autoRunRetryShortLinkError !== undefined
-          ? Boolean(latestState.autoRunRetryShortLinkError)
-          : true))) {
-        plusCheckoutRestartCount += 1;
-        if (plusCheckoutRestartCount > AUTO_RUN_MAX_RETRIES_PER_ROUND) {
-          await addLog(
-            `节点 ${getNodeLabel(nodeId, latestState)}：短链报错自动重开已关闭，Plus Checkout 已连续重建 ${AUTO_RUN_MAX_RETRIES_PER_ROUND} 次仍命中短链错误提示，停止当前轮。原因：${getErrorMessage(err)}`,
-            'error'
-          );
-          throw err;
-        }
-        await addLog(
-          `节点 ${getNodeLabel(nodeId, latestState)}：短链报错自动重开已关闭，检测到 Checkout 致命错误提示，准备回到节点 plus-checkout-create 重新创建 Plus Checkout（第 ${plusCheckoutRestartCount}/${AUTO_RUN_MAX_RETRIES_PER_ROUND} 次）。原因：${getErrorMessage(err)}`,
-          'warn'
-        );
-        const checkoutResetAnchorNodeId = getPreviousNodeId('plus-checkout-create', latestState) || 'fill-profile';
-        await invalidateDownstreamAfterAutoRunNodeRestart(checkoutResetAnchorNodeId, {
-          logLabel: `节点 ${nodeId} 检测到短链错误提示后准备回到 plus-checkout-create 重试（第 ${plusCheckoutRestartCount}/${AUTO_RUN_MAX_RETRIES_PER_ROUND} 次）`,
-        });
-        await schedulePayPalCookieCleanupBeforeCheckoutCreateIfNeeded(nodeId, latestState, err);
-        nodeIndex = Math.max(0, getNodeIndex(await getState(), 'plus-checkout-create'));
-        continue;
-      }
-      if (isPlusCheckoutRestartStep(step, nodeExecutionKey, latestState)
-        && isHostedCheckoutCardDeclinedFailure(err)) {
-        plusCheckoutRestartCount += 1;
-        if (plusCheckoutRestartCount > AUTO_RUN_MAX_RETRIES_PER_ROUND) {
-          await addLog(
-            `节点 ${getNodeLabel(nodeId, latestState)}：Plus Checkout 已连续重建 ${AUTO_RUN_MAX_RETRIES_PER_ROUND} 次仍命中拒卡/拒卡关闭类错误，停止当前轮。原因：${getErrorMessage(err)}`,
-            'error'
-          );
-          throw err;
-        }
-        await addLog(
-          `节点 ${getNodeLabel(nodeId, latestState)}：检测到拒卡/拒卡关闭类错误，准备回到节点 plus-checkout-create 重新创建 Plus Checkout（第 ${plusCheckoutRestartCount}/${AUTO_RUN_MAX_RETRIES_PER_ROUND} 次）。原因：${getErrorMessage(err)}`,
-          'warn'
-        );
-        const checkoutResetAnchorNodeId = getPreviousNodeId('plus-checkout-create', latestState) || 'fill-profile';
-        await invalidateDownstreamAfterAutoRunNodeRestart(checkoutResetAnchorNodeId, {
-          logLabel: `节点 ${nodeId} 检测到拒卡/拒卡关闭类错误后准备回到 plus-checkout-create 重试（第 ${plusCheckoutRestartCount}/${AUTO_RUN_MAX_RETRIES_PER_ROUND} 次）`,
-        });
-        await schedulePayPalCookieCleanupBeforeCheckoutCreateIfNeeded(nodeId, latestState, err);
-        nodeIndex = Math.max(0, getNodeIndex(await getState(), 'plus-checkout-create'));
-        continue;
-      }
-      const isGpcCheckoutStep = normalizePlusPaymentMethodForRun(latestState?.plusPaymentMethod) === plusPaymentMethodGpcHelper
-        || String(latestState?.plusCheckoutSource || '').trim() === plusPaymentMethodGpcHelper;
-      if (isPlusCheckoutRestartStep(step, nodeExecutionKey, latestState)
-        && isPlusCheckoutRestartRequiredFailure(err)) {
-        const isGoPayCheckoutStep = nodeExecutionKey === 'gopay-subscription-confirm'
-          || normalizePlusPaymentMethodForRun(latestState?.plusPaymentMethod) === 'gopay';
-        if (isGpcCheckoutStep) {
-          gpcCheckoutRestartCount += 1;
-        } else if (isGoPayCheckoutStep) {
-          goPayCheckoutRestartCount += 1;
-        } else {
-          plusCheckoutRestartCount += 1;
-        }
-        const checkoutRestartCount = isGpcCheckoutStep
-          ? gpcCheckoutRestartCount
-          : (isGoPayCheckoutStep ? goPayCheckoutRestartCount : plusCheckoutRestartCount);
-        const checkoutLabel = isGpcCheckoutStep
-          ? 'GPC 任务'
-          : (isGoPayCheckoutStep ? 'GoPay 订阅' : 'Plus Checkout');
-        const recreateLabel = isGpcCheckoutStep
-          ? '重新创建 GPC 任务'
-          : (isGoPayCheckoutStep ? '重新创建 GoPay 订阅' : '重新创建 Plus Checkout');
-        await addLog(
-          `节点 ${getNodeLabel(nodeId, latestState)}：检测到 ${checkoutLabel} 失败/卡住，准备回到节点 plus-checkout-create ${recreateLabel}（第 ${checkoutRestartCount} 次）。原因：${getErrorMessage(err)}`,
-          'warn'
-        );
-        const checkoutResetAnchorNodeId = getPreviousNodeId('plus-checkout-create', latestState) || 'fill-profile';
-        await invalidateDownstreamAfterAutoRunNodeRestart(checkoutResetAnchorNodeId, {
-          logLabel: `节点 ${nodeId} ${checkoutLabel}失败后准备回到 plus-checkout-create 重试（第 ${checkoutRestartCount} 次）`,
-        });
-        await schedulePayPalCookieCleanupBeforeCheckoutCreateIfNeeded(nodeId, latestState, err);
-        nodeIndex = Math.max(0, getNodeIndex(await getState(), 'plus-checkout-create'));
-        continue;
-      }
-
-      if (nodeId === 'paypal-approve' && isGoPayCheckoutRestartRequiredFailure(err)) {
-        goPayCheckoutRestartCount += 1;
-        if (goPayCheckoutRestartCount > 3) {
-          await addLog(`节点 paypal-approve：GoPay Checkout 已连续重建 ${goPayCheckoutRestartCount - 1} 次仍失败，停止自动重试。原因：${getErrorMessage(err)}`, 'error');
-          throw err;
-        }
-        await addLog(
-          `节点 paypal-approve：检测到 GoPay 支付页失效/卡死，准备关闭旧页并回到节点 plus-checkout-create 重新创建 Checkout（第 ${goPayCheckoutRestartCount}/3 次）。原因：${getErrorMessage(err)}`,
-          'warn'
-        );
-        await invalidateDownstreamAfterAutoRunNodeRestart(getPreviousNodeId('plus-checkout-create', latestState) || 'fill-profile', {
-          logLabel: `节点 paypal-approve GoPay 支付页失效后准备回到 plus-checkout-create 重试（第 ${goPayCheckoutRestartCount}/3 次）`,
-        });
-        nodeIndex = Math.max(0, getNodeIndex(await getState(), 'plus-checkout-create'));
-        continue;
-      }
-
       if (nodeId === 'fetch-signup-code') {
         if (isSignupUserAlreadyExistsFailure(err)) {
           throw err;
@@ -16555,7 +14729,7 @@ async function resumeAutoRun() {
     autoRunSessionId: normalizeAutoRunSessionId(state.autoRunSessionId),
     autoRunSkipFailures: Boolean(state.autoRunSkipFailures),
     autoRunRetryNonFreeTrial: Boolean(state.autoRunRetryNonFreeTrial),
-    autoRunRetryPaypalCallback: Boolean(state.autoRunRetryPaypalCallback),
+    autoRunRetryLegacyWalletCallback: Boolean(state.autoRunRetryLegacyWalletCallback),
     autoRunRetryShortLinkError: state.autoRunRetryShortLinkError !== undefined
       ? Boolean(state.autoRunRetryShortLinkError)
       : true,
@@ -16692,19 +14866,19 @@ const phoneVerificationHelpers = self.MultiPageBackgroundPhoneVerification?.crea
   DEFAULT_FIVE_SIM_COUNTRY_ORDER,
   DEFAULT_FIVE_SIM_OPERATOR,
   DEFAULT_FIVE_SIM_PRODUCT,
-  DEFAULT_NEX_SMS_BASE_URL,
-  DEFAULT_NEX_SMS_COUNTRY_ORDER,
-  DEFAULT_NEX_SMS_SERVICE_CODE,
-  DEFAULT_SMSBOWER_BASE_URL,
-  DEFAULT_SMSBOWER_SERVICE_CODE,
-  DEFAULT_SMS_BOWER_COUNTRY_ORDER,
-  DEFAULT_SMS_BOWER_SERVICE_CODE,
+  DEFAULT_REMOVED_SMS_VENDOR_BASE_URL,
+  DEFAULT_REMOVED_SMS_VENDOR_COUNTRY_ORDER,
+  DEFAULT_REMOVED_SMS_VENDOR_SERVICE_CODE,
+  DEFAULT_REMOVED_SMS_VENDOR_B_BASE_URL,
+  DEFAULT_REMOVED_SMS_VENDOR_B_SERVICE_CODE,
+  DEFAULT_REMOVED_SMS_VENDOR_B_COUNTRY_ORDER,
+  DEFAULT_REMOVED_SMS_VENDOR_B_SERVICE_CODE,
   DEFAULT_SMS_VERIFICATION_NUMBER_BASE_URL,
   DEFAULT_SMS_VERIFICATION_NUMBER_SERVICE_CODE,
-  DEFAULT_SMSPOOL_BASE_URL,
-  DEFAULT_SMSPOOL_SERVICE_CODE,
-  DEFAULT_HERO_SMS_BASE_URL,
-  DEFAULT_HERO_SMS_REUSE_ENABLED,
+  DEFAULT_REMOVED_TEXT_POOL_BASE_URL,
+  DEFAULT_REMOVED_TEXT_POOL_SERVICE_CODE,
+  DEFAULT_REMOVED_SMS_MAIN_BASE_URL,
+  DEFAULT_REMOVED_SMS_MAIN_REUSE_ENABLED,
   DEFAULT_PHONE_CODE_WAIT_SECONDS,
   DEFAULT_PHONE_CODE_TIMEOUT_WINDOWS,
   DEFAULT_PHONE_CODE_POLL_INTERVAL_SECONDS,
@@ -16738,22 +14912,22 @@ const phoneVerificationHelpers = self.MultiPageBackgroundPhoneVerification?.crea
   getOAuthFlowRemainingMs,
   getOAuthFlowStepTimeoutMs,
   getState,
-  HERO_SMS_COUNTRY_ID,
-  HERO_SMS_COUNTRY_LABEL,
-  HERO_SMS_SERVICE_CODE,
-  HERO_SMS_SERVICE_LABEL,
+  REMOVED_SMS_MAIN_COUNTRY_ID,
+  REMOVED_SMS_MAIN_COUNTRY_LABEL,
+  REMOVED_SMS_MAIN_SERVICE_CODE,
+  REMOVED_SMS_MAIN_SERVICE_LABEL,
   sendToContentScript,
   sendToContentScriptResilient,
   setState,
   sleepWithStop,
   throwIfStopped,
-  createFiveSimProvider: self.PhoneSmsFiveSimProvider?.createProvider,
-  createSmsBowerProvider: self.PhoneSmsBowerProvider?.createProvider,
-  createHostedSmsProvider: self.PhoneSmsHostedSmsProvider?.createProvider,
-  createNexSmsProvider: self.PhoneSmsNexSmsProvider?.createProvider,
-  createSmsVerificationNumberProvider: self.PhoneSmsVerificationNumberProvider?.createProvider,
-  createGrizzlySmsProvider: self.PhoneSmsGrizzlySmsProvider?.createProvider,
-  createSmsPoolProvider: self.PhoneSmsPoolProvider?.createProvider,
+  createFiveSimProvider: self.RemovedPhoneFiveSimProvider?.createProvider,
+  createRemovedSmsVendorBProvider: self.RemovedPhoneBowerProvider?.createProvider,
+  createRemovedSmsProvider: self.RemovedPhoneRemovedSmsProvider?.createProvider,
+  createRemovedSmsVendorProvider: self.RemovedPhoneRemovedSmsVendorProvider?.createProvider,
+  createSmsVerificationNumberProvider: self.RemovedPhoneVerificationNumberProvider?.createProvider,
+  createGrizzlySmsProvider: self.RemovedPhoneGrizzlySmsProvider?.createProvider,
+  createRemovedTextPoolProvider: self.RemovedPhonePoolProvider?.createProvider,
 });
 const step1Executor = self.MultiPageBackgroundStep1?.createStep1Executor({
   addLog,
@@ -16919,7 +15093,7 @@ const step8Executor = self.MultiPageBackgroundStep8?.createStep8Executor({
   STEP7_MAIL_POLLING_RECOVERY_MAX_ATTEMPTS,
   throwIfStopped,
 });
-const plusCheckoutCreateExecutor = self.MultiPageBackgroundPlusCheckoutCreate?.createPlusCheckoutCreateExecutor({
+const chatgptSessionReaderCreateExecutor = self.MultiPageBackgroundChatgptSessionReaderCreate?.createChatgptSessionReaderCreateExecutor({
   addLog,
   broadcastDataUpdate,
   chrome,
@@ -16944,7 +15118,7 @@ const plusCheckoutCreateExecutor = self.MultiPageBackgroundPlusCheckoutCreate?.c
   waitForTabCompleteUntilStopped,
   waitForTabUrlMatchUntilStopped,
 });
-const plusCheckoutBillingExecutor = self.MultiPageBackgroundPlusCheckoutBilling?.createPlusCheckoutBillingExecutor({
+const chatgptSessionReaderBillingExecutor = self.MultiPageBackgroundChatgptSessionReaderBilling?.createChatgptSessionReaderBillingExecutor({
   addLog,
   broadcastDataUpdate,
   chrome,
@@ -16965,9 +15139,9 @@ const plusCheckoutBillingExecutor = self.MultiPageBackgroundPlusCheckoutBilling?
   throwIfStopped,
   waitForTabCompleteUntilStopped,
   waitForTabUrlMatchUntilStopped,
-  probeIpProxyExit: null,
+  probeRemovedNetworkExit: null,
 });
-const goPayManualConfirmExecutor = self.MultiPageBackgroundGoPayManualConfirm?.createGoPayManualConfirmExecutor({
+const legacyPayManualConfirmExecutor = self.MultiPageBackgroundLegacyPayManualConfirm?.createLegacyPayManualConfirmExecutor({
   addLog,
   broadcastDataUpdate,
   chrome,
@@ -16977,7 +15151,7 @@ const goPayManualConfirmExecutor = self.MultiPageBackgroundGoPayManualConfirm?.c
   createAutomationTab,
   setState,
 });
-const payPalApproveExecutor = self.MultiPageBackgroundPayPalApprove?.createPayPalApproveExecutor({
+const legacyWalletApproveExecutor = self.MultiPageBackgroundLegacyWalletApprove?.createLegacyWalletApproveExecutor({
   addLog,
   chrome,
   completeNodeFromBackground,
@@ -16991,7 +15165,7 @@ const payPalApproveExecutor = self.MultiPageBackgroundPayPalApprove?.createPayPa
   waitForTabCompleteUntilStopped,
   waitForTabUrlMatchUntilStopped,
 });
-const goPayApproveExecutor = self.MultiPageBackgroundGoPayApprove?.createGoPayApproveExecutor({
+const legacyPayApproveExecutor = self.MultiPageBackgroundLegacyPayApprove?.createLegacyPayApproveExecutor({
   addLog,
   chrome,
   completeNodeFromBackground,
@@ -17005,8 +15179,8 @@ const goPayApproveExecutor = self.MultiPageBackgroundGoPayApprove?.createGoPayAp
   sleepWithStop,
   waitForTabCompleteUntilStopped,
   clickWithDebugger,
-  requestGoPayOtpInput: (payload = {}) => chrome.runtime.sendMessage({
-    type: 'REQUEST_GOPAY_OTP_INPUT',
+  requestLegacyPayOtpInput: (payload = {}) => chrome.runtime.sendMessage({
+    type: 'REQUEST_LEGACY_PAY_OTP_INPUT',
     payload,
   }),
 });
@@ -17211,10 +15385,6 @@ async function executeReloginBoundEmail(state = {}) {
   });
 }
 
-function throwLegacyFeatureRemoved(featureName = '非 UPI 功能') {
-  throw new Error(`${featureName}已从 UPI 专用版移除。`);
-}
-
 const stepExecutorsByKey = {
   'open-chatgpt': () => step1Executor.executeStep1(),
   'submit-signup-email': (state) => step2Executor.executeStep2(state),
@@ -17223,11 +15393,6 @@ const stepExecutorsByKey = {
   'fill-profile': (state) => step5Executor.executeStep5(state),
   'wait-registration-success': (state) => step6Executor.executeStep6(state),
   'local-cpa-json-export': (state) => step6Executor.executeLocalCpaJsonNoRtExport(state),
-  'plus-checkout-create': () => throwLegacyFeatureRemoved('旧 Plus Checkout'),
-  'plus-checkout-billing': () => throwLegacyFeatureRemoved('旧 Plus Checkout 账单'),
-  'gopay-subscription-confirm': () => throwLegacyFeatureRemoved('GoPay 支付'),
-  'paypal-approve': () => throwLegacyFeatureRemoved('PayPal / GoPay 授权'),
-  'plus-checkout-return': () => throwLegacyFeatureRemoved('PayPal / GoPay 回跳确认'),
   'set-gpt-password': (state) => setGptPasswordExecutor.executeSetGptPassword(state),
   'enable-totp-mfa': (state) => totpMfaExecutor.executeEnableTotpMfa(state),
   'upi-redeem': (state) => upiRedeemExecutor.executeUpiRedeem(state),
@@ -17235,12 +15400,6 @@ const stepExecutorsByKey = {
   'cpa-session-import': (state) => cpaSessionImportExecutor.executeCpaSessionImport(state),
   'oauth-login': (state) => step7Executor.executeStep7(state),
   'fetch-login-code': (state) => step8Executor.executeStep8(state),
-  'post-login-phone-verification': () => throwLegacyFeatureRemoved('手机号接码验证'),
-  'bind-email': (state) => step8Executor.executeBindEmail(state),
-  'fetch-bind-email-code': (state) => step8Executor.executeFetchBindEmailCode(state),
-  'relogin-bound-email': (state) => executeReloginBoundEmail(state),
-  'fetch-bound-email-login-code': (state) => step8Executor.executeBoundEmailLoginCode(state),
-  'post-bound-email-phone-verification': () => throwLegacyFeatureRemoved('手机号接码验证'),
   'confirm-oauth': (state) => step9Executor.executeStep9(state),
   'platform-verify': (state) => executeStep10(state),
 };
@@ -17252,7 +15411,7 @@ const messageRouter = self.MultiPageBackgroundMessageRouter?.createMessageRouter
   buildLuckmailSessionSettingsPayload,
   buildPersistentSettingsPayload,
   broadcastDataUpdate,
-  applyIpProxySettingsFromState: null,
+  applyRemovedNetworkSettingsFromState: null,
   cancelScheduledAutoRun,
   checkIcloudSession,
   clearAccountRunHistory: (...args) => clearAndBroadcastAccountRunHistory(...args),
@@ -17268,7 +15427,6 @@ const messageRouter = self.MultiPageBackgroundMessageRouter?.createMessageRouter
   deleteHotmailAccounts,
   deleteIcloudAlias,
   deleteUsedIcloudAliases,
-  findPayPalAccount,
   disableUsedLuckmailPurchases,
   doesNodeUseCompletionSignal,
   ensureMail2925MailboxSession,
@@ -17295,17 +15453,17 @@ const messageRouter = self.MultiPageBackgroundMessageRouter?.createMessageRouter
   stopUpiCredentialMembershipCheck: (...args) => upiCredentialMembershipChecker.stopUpiCredentialMembershipCheck(...args),
   stopUpiCredentialMembershipRedeem: (...args) => upiCredentialMembershipChecker.stopUpiCredentialMembershipRedeem(...args),
   verifyUpiCredentialMembershipPlus: (...args) => upiCredentialMembershipChecker.verifyUpiCredentialMembershipPlus(...args),
-  executePostRegistrationCheckoutBilling: async () => throwLegacyFeatureRemoved('旧 Plus Checkout 账单'),
+  executePostRegistrationCheckoutBilling: async () => throwLegacyFeatureRemoved('旧 ChatGPT 会话读取 账单'),
   exportSettingsBundle,
   ensureContentScriptReadyOnTabUntilStopped,
-  fetchHostedCheckoutVerificationCodeManually: () => throwLegacyFeatureRemoved('PayPal 托管接码'),
-  testCheckoutConversionProxy: () => throwLegacyFeatureRemoved('Checkout 代理测试'),
+  fetchHostedCheckoutVerificationCodeManually: null,
+  testCheckoutConversionProxy: null,
   fetchGeneratedEmail,
-  refreshGpcCardBalance: () => throwLegacyFeatureRemoved('GPC / GoPay 余额查询'),
+  refreshCardHelperCardBalance: null,
   refreshUpiRedeemCdkeyStatuses: (...args) => upiRedeemExecutor.refreshUpiRedeemCdkeyStatuses(...args),
   checkUpiRedeemSubscriptionStatuses: (...args) => upiRedeemExecutor.checkUpiRedeemSubscriptionStatuses(...args),
-  refreshOAuthTimeoutWindowAfterCheckoutSuccess,
-  finalizePhoneActivationAfterSuccessfulFlow,
+  refreshOAuthTimeoutWindowAfterCheckoutSuccess: null,
+  finalizePhoneActivationAfterSuccessfulFlow: null,
   finalizeStep3Completion: async () => {
     const currentState = await getState();
     const signupTabId = await getTabId('signup-page');
@@ -17346,9 +15504,9 @@ const messageRouter = self.MultiPageBackgroundMessageRouter?.createMessageRouter
   isStopError,
   isTabAlive,
   launchAutoRunTimerPlan,
-  ensureIpProxyAutoSyncAlarm: null,
-  clearIpProxyAutoSyncAlarm: null,
-  runIpProxyAutoSync: null,
+  ensureRemovedNetworkAutoSyncAlarm: null,
+  clearRemovedNetworkAutoSyncAlarm: null,
+  runRemovedNetworkAutoSync: null,
   listIcloudAliases,
   listLuckmailPurchasesForManagement,
   markCurrentCustomEmailPoolEntryUsed,
@@ -17356,36 +15514,34 @@ const messageRouter = self.MultiPageBackgroundMessageRouter?.createMessageRouter
   getCurrentMail2925Account,
   normalizeHotmailAccounts,
   normalizeMail2925Accounts,
-  normalizePayPalAccounts,
   normalizeRunCount,
   AUTO_RUN_TIMER_KIND_SCHEDULED_START,
   notifyNodeComplete,
   notifyNodeError,
-  pausePpBoomJob: () => throwLegacyFeatureRemoved('旧 GPC / GoPay 任务'),
+  pauseRemovedPaymentWorkerJob: null,
   patchHotmailAccount,
   patchMail2925Account,
   registerTab,
   requestStop,
-  probeIpProxyExit: null,
+  probeRemovedNetworkExit: null,
   resetState,
-  resumePpBoomJob: () => throwLegacyFeatureRemoved('旧 GPC / GoPay 任务'),
+  resumeRemovedPaymentWorkerJob: null,
   resumeAutoRun,
   scheduleAutoRun,
   sendTabMessageUntilStopped,
   selectLuckmailPurchase,
   sleepWithStop,
-  switchIpProxy: null,
-  changeIpProxyExit: null,
-  setCurrentPayPalAccount,
+  switchRemovedNetwork: null,
+  changeRemovedNetworkExit: null,
   setCurrentHotmailAccount,
   setCurrentMail2925Account,
   setContributionMode,
   setEmailState,
   setEmailStateSilently,
   persistRegistrationEmailState,
-  setFreeReusablePhoneActivation,
-  setSignupPhoneState,
-  setSignupPhoneStateSilently,
+  setFreeReusablePhoneActivation: null,
+  setSignupPhoneState: null,
+  setSignupPhoneStateSilently: null,
   setIcloudAliasPreservedState,
   setIcloudAliasUsedState,
   setLuckmailPurchaseDisabledState,
@@ -17401,11 +15557,9 @@ const messageRouter = self.MultiPageBackgroundMessageRouter?.createMessageRouter
   waitForTabCompleteUntilStopped,
   pollContributionStatus: (...args) => contributionOAuthManager?.pollContributionStatus?.(...args),
   syncHotmailAccounts,
-  syncPayPalAccounts,
   deleteMail2925Account,
   deleteMail2925Accounts,
   testHotmailAccountMailAccess,
-  upsertPayPalAccount,
   upsertMail2925Account,
   upsertHotmailAccount,
   verifyHotmailAccount,
@@ -17449,27 +15603,7 @@ async function acquireTopLevelAuthChainExecution(step, state = {}) {
 }
 
 const normalStepRegistry = buildStepRegistry(NORMAL_STEP_DEFINITIONS);
-const normalPhoneStepRegistry = buildStepRegistry(NORMAL_PHONE_STEP_DEFINITIONS);
-const normalPhoneBoundEmailReloginStepRegistry = buildStepRegistry(NORMAL_PHONE_BOUND_EMAIL_RELOGIN_STEP_DEFINITIONS);
-const plusPayPalStepRegistry = buildStepRegistry(PLUS_PAYPAL_STEP_DEFINITIONS);
-const plusPayPalSmsOauthStepRegistry = buildStepRegistry(PLUS_PAYPAL_SMS_OAUTH_STEP_DEFINITIONS);
-const plusPayPalPhoneStepRegistry = buildStepRegistry(PLUS_PAYPAL_PHONE_STEP_DEFINITIONS);
-const plusPayPalPhoneBoundEmailReloginStepRegistry = buildStepRegistry(PLUS_PAYPAL_PHONE_BOUND_EMAIL_RELOGIN_STEP_DEFINITIONS);
-const plusPayPalSub2ApiSessionStepRegistry = buildStepRegistry(PLUS_PAYPAL_SUB2API_SESSION_STEP_DEFINITIONS);
-const plusPayPalCpaSessionStepRegistry = buildStepRegistry(PLUS_PAYPAL_CPA_SESSION_STEP_DEFINITIONS);
-const plusGoPayStepRegistry = buildStepRegistry(PLUS_GOPAY_STEP_DEFINITIONS);
-const plusGoPayPhoneStepRegistry = buildStepRegistry(PLUS_GOPAY_PHONE_STEP_DEFINITIONS);
-const plusGoPayPhoneBoundEmailReloginStepRegistry = buildStepRegistry(PLUS_GOPAY_PHONE_BOUND_EMAIL_RELOGIN_STEP_DEFINITIONS);
-const plusGoPaySub2ApiSessionStepRegistry = buildStepRegistry(PLUS_GOPAY_SUB2API_SESSION_STEP_DEFINITIONS);
-const plusGoPayCpaSessionStepRegistry = buildStepRegistry(PLUS_GOPAY_CPA_SESSION_STEP_DEFINITIONS);
-const plusGpcStepRegistry = buildStepRegistry(PLUS_GPC_STEP_DEFINITIONS);
-const plusGpcPhoneStepRegistry = buildStepRegistry(PLUS_GPC_PHONE_STEP_DEFINITIONS);
-const plusGpcPhoneBoundEmailReloginStepRegistry = buildStepRegistry(PLUS_GPC_PHONE_BOUND_EMAIL_RELOGIN_STEP_DEFINITIONS);
-const plusGpcSub2ApiSessionStepRegistry = buildStepRegistry(PLUS_GPC_SUB2API_SESSION_STEP_DEFINITIONS);
-const plusGpcCpaSessionStepRegistry = buildStepRegistry(PLUS_GPC_CPA_SESSION_STEP_DEFINITIONS);
 const plusUpiStepRegistry = buildStepRegistry(PLUS_UPI_STEP_DEFINITIONS);
-const plusUpiPhoneStepRegistry = buildStepRegistry(PLUS_UPI_PHONE_STEP_DEFINITIONS);
-const plusUpiPhoneBoundEmailReloginStepRegistry = buildStepRegistry(PLUS_UPI_PHONE_BOUND_EMAIL_RELOGIN_STEP_DEFINITIONS);
 const plusUpiSub2ApiSessionStepRegistry = buildStepRegistry(PLUS_UPI_SUB2API_SESSION_STEP_DEFINITIONS);
 const plusUpiCpaSessionStepRegistry = buildStepRegistry(PLUS_UPI_CPA_SESSION_STEP_DEFINITIONS);
 const localCpaJsonNoRtStepRegistry = buildStepRegistry(LOCAL_CPA_JSON_NO_RT_STEP_DEFINITIONS);
@@ -17482,68 +15616,17 @@ function getStepRegistryForState(state = {}) {
   if (getPanelMode(state) === 'local-cpa-json-no-rt') {
     return localCpaJsonNoRtStepRegistry;
   }
-  const signupMethod = getSignupMethodForStepDefinitions(state);
-  const useBoundEmailRelogin = signupMethod === SIGNUP_METHOD_PHONE
-    && Boolean(state?.phoneSignupReloginAfterBindEmailEnabled);
   if (!isPlusModeState(state)) {
-    if (signupMethod === SIGNUP_METHOD_PHONE) {
-      return useBoundEmailRelogin ? normalPhoneBoundEmailReloginStepRegistry : normalPhoneStepRegistry;
-    }
     return normalStepRegistry;
   }
-  const paymentMethod = normalizePlusPaymentMethod(state?.plusPaymentMethod);
-  const plusAccountAccessStrategy = signupMethod === SIGNUP_METHOD_PHONE
-    ? PLUS_ACCOUNT_ACCESS_STRATEGY_OAUTH
-    : normalizePlusAccountAccessStrategyForState(state);
-  if (paymentMethod === PLUS_PAYMENT_METHOD_PAYPAL && normalizePlusAccountAccessStrategyForState(state) === PLUS_ACCOUNT_ACCESS_STRATEGY_SMS_OAUTH) {
-    return plusPayPalSmsOauthStepRegistry;
-  }
-  if (paymentMethod === PLUS_PAYMENT_METHOD_GPC_HELPER) {
-    if (plusAccountAccessStrategy === PLUS_ACCOUNT_ACCESS_STRATEGY_SUB2API_CODEX_SESSION) {
-      return plusGpcSub2ApiSessionStepRegistry;
-    }
-    if (plusAccountAccessStrategy === PLUS_ACCOUNT_ACCESS_STRATEGY_CPA_CODEX_SESSION) {
-      return plusGpcCpaSessionStepRegistry;
-    }
-    if (signupMethod === SIGNUP_METHOD_PHONE) {
-      return useBoundEmailRelogin ? plusGpcPhoneBoundEmailReloginStepRegistry : plusGpcPhoneStepRegistry;
-    }
-    return plusGpcStepRegistry;
-  }
-  if (paymentMethod === PLUS_PAYMENT_METHOD_GOPAY) {
-    if (plusAccountAccessStrategy === PLUS_ACCOUNT_ACCESS_STRATEGY_SUB2API_CODEX_SESSION) {
-      return plusGoPaySub2ApiSessionStepRegistry;
-    }
-    if (plusAccountAccessStrategy === PLUS_ACCOUNT_ACCESS_STRATEGY_CPA_CODEX_SESSION) {
-      return plusGoPayCpaSessionStepRegistry;
-    }
-    if (signupMethod === SIGNUP_METHOD_PHONE) {
-      return useBoundEmailRelogin ? plusGoPayPhoneBoundEmailReloginStepRegistry : plusGoPayPhoneStepRegistry;
-    }
-    return plusGoPayStepRegistry;
-  }
-  if (paymentMethod === PLUS_PAYMENT_METHOD_UPI) {
-    if (plusAccountAccessStrategy === PLUS_ACCOUNT_ACCESS_STRATEGY_SUB2API_CODEX_SESSION) {
-      return plusUpiSub2ApiSessionStepRegistry;
-    }
-    if (plusAccountAccessStrategy === PLUS_ACCOUNT_ACCESS_STRATEGY_CPA_CODEX_SESSION) {
-      return plusUpiCpaSessionStepRegistry;
-    }
-    if (signupMethod === SIGNUP_METHOD_PHONE) {
-      return useBoundEmailRelogin ? plusUpiPhoneBoundEmailReloginStepRegistry : plusUpiPhoneStepRegistry;
-    }
-    return plusUpiStepRegistry;
-  }
+  const plusAccountAccessStrategy = normalizePlusAccountAccessStrategyForState(state);
   if (plusAccountAccessStrategy === PLUS_ACCOUNT_ACCESS_STRATEGY_SUB2API_CODEX_SESSION) {
-    return plusPayPalSub2ApiSessionStepRegistry;
+    return plusUpiSub2ApiSessionStepRegistry;
   }
   if (plusAccountAccessStrategy === PLUS_ACCOUNT_ACCESS_STRATEGY_CPA_CODEX_SESSION) {
-    return plusPayPalCpaSessionStepRegistry;
+    return plusUpiCpaSessionStepRegistry;
   }
-  if (signupMethod === SIGNUP_METHOD_PHONE) {
-    return useBoundEmailRelogin ? plusPayPalPhoneBoundEmailReloginStepRegistry : plusPayPalPhoneStepRegistry;
-  }
-  return plusPayPalStepRegistry;
+  return plusUpiStepRegistry;
 }
 
 async function requestOAuthUrlFromPanel(state, options = {}) {
@@ -18000,7 +16083,7 @@ async function getPostStep6AutoRestartDecision(step, error) {
   };
   const isPhoneVerificationLocalFailure = (errorMessage = '') => {
     const normalizedMessage = String(errorMessage || '');
-    if (isPhoneSmsPlatformRateLimitFailure(normalizedMessage)) {
+    if (isRemovedPhonePlatformRateLimitFailure(normalizedMessage)) {
       return false;
     }
     return /HeroSMS|phone verification did not succeed|number replacements|sms_timeout_after(?:_[a-z0-9_]+)?|phone number is already linked|add-phone keeps rejecting current number|手机验证码|短信验证码|接码|步骤\s*9[：:][\s\S]*(?:手机号验证|手机验证码|接码|没有可用手机号|无可用手机号)|(?:手机号验证|手机号码验证|手机号接码|手机号码接码)[\s\S]*(?:失败|超时|未成功|不可用|拒绝)|(?:手机号|手机号码)[\s\S]*(?:已绑定|被占用|不可用|拒绝|失败|超时|没有可用|无可用)|Step\s*9.*phone verification/i.test(normalizedMessage);
@@ -18034,7 +16117,7 @@ async function getPostStep6AutoRestartDecision(step, error) {
     : (isBoundEmailReloginTailStep && Number.isFinite(boundEmailReloginStep) && boundEmailReloginStep > 0
       ? boundEmailReloginStep
       : authChainStartStep);
-  if (isPhoneSmsPlatformRateLimitFailure(errorMessage)) {
+  if (isRemovedPhonePlatformRateLimitFailure(errorMessage)) {
     return {
       shouldRestart: false,
       blockedByAddPhone: false,
@@ -18102,7 +16185,7 @@ async function getPostStep6AutoRestartDecision(step, error) {
     });
   }
 
-  if (isAddPhoneAuthState(authState) && !isPhoneSmsPlatformRateLimitFailure(errorMessage)) {
+  if (isAddPhoneAuthState(authState) && !isRemovedPhonePlatformRateLimitFailure(errorMessage)) {
     return {
       shouldRestart: false,
       blockedByAddPhone: true,
@@ -19411,8 +17494,8 @@ chrome.alarms.onAlarm.addListener((alarm) => {
     });
     return;
   }
-  if (LEGACY_IP_PROXY_FEATURE_ENABLED && alarm.name === IP_PROXY_AUTO_SYNC_ALARM_NAME) {
-    runIpProxyAutoSync('alarm').catch((err) => {
+  if (LEGACY_REMOVED_NETWORK_FEATURE_ENABLED && alarm.name === REMOVED_NETWORK_AUTO_SYNC_ALARM_NAME) {
+    runRemovedNetworkAutoSync('alarm').catch((err) => {
       console.error(LOG_PREFIX, 'Failed to run IP proxy auto sync alarm:', err);
     });
   }
@@ -19428,7 +17511,7 @@ chrome.runtime.onStartup.addListener(() => {
   restoreAutoRunTimerIfNeeded().catch((err) => {
     handleBackgroundStartupError('restore auto run timer on startup', err);
   });
-  disableLegacyIpProxyFeatureRuntime().catch((err) => {
+  disableLegacyRemovedNetworkFeatureRuntime().catch((err) => {
     handleBackgroundStartupError('disable legacy IP proxy feature on startup', err);
   });
 });
@@ -19437,7 +17520,7 @@ chrome.runtime.onInstalled.addListener(() => {
   restoreAutoRunTimerIfNeeded().catch((err) => {
     handleBackgroundStartupError('restore auto run timer on install/update', err);
   });
-  disableLegacyIpProxyFeatureRuntime().catch((err) => {
+  disableLegacyRemovedNetworkFeatureRuntime().catch((err) => {
     handleBackgroundStartupError('disable legacy IP proxy feature on install/update', err);
   });
 });
@@ -19445,6 +17528,16 @@ chrome.runtime.onInstalled.addListener(() => {
 restoreAutoRunTimerIfNeeded().catch((err) => {
   handleBackgroundStartupError('restore auto run timer', err);
 });
-disableLegacyIpProxyFeatureRuntime().catch((err) => {
+disableLegacyRemovedNetworkFeatureRuntime().catch((err) => {
   handleBackgroundStartupError('disable legacy IP proxy feature', err);
 });
+
+
+
+
+
+
+
+
+
+

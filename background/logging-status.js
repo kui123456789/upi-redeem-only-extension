@@ -39,9 +39,9 @@
         'moemail': 'MoeMail',
         'yydsmail': 'YYDS Mail',
         'outlook-email-plus': 'Outlook Email Plus',
-        'plus-checkout': 'Plus Checkout',
-        'paypal-flow': 'PayPal 授权页',
-        'gopay-flow': 'GoPay 授权页',
+        'chatgpt-session-reader': 'ChatGPT 会话读取',
+        'legacyWallet-flow': 'LegacyWallet 授权页',
+        'legacyPay-flow': 'LegacyPay 授权页',
         'unknown-source': '未知来源',
       };
       return labels[source] || source || '未知来源';
@@ -97,7 +97,7 @@
 
     function getErrorMessage(error) {
       return String(typeof error === 'string' ? error : error?.message || '')
-        .replace(/^GPC_TASK_ENDED::/i, '')
+        .replace(/^CARD_HELPER_TASK_ENDED::/i, '')
         .replace(/^AUTO_RUN_STEP_IDLE_RESTART::/i, '');
     }
 
@@ -254,3 +254,6 @@
     createLoggingStatus,
   };
 });
+
+
+

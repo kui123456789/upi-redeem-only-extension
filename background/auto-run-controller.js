@@ -27,11 +27,11 @@
       hasSavedNodeProgress,
       isAddPhoneAuthFailure,
       isCloudCheckoutAlreadyPaidFailure,
-      isGpcTaskEndedFailure,
+      isCardHelperTaskEndedFailure,
       isHostedCheckoutGenericErrorFailure,
       isHostedCheckoutVerificationResendLimitFailure,
-      isPhoneSmsPlatformRateLimitFailure,
-      isPlusCheckoutNonFreeTrialFailure,
+      isRemovedPhonePlatformRateLimitFailure,
+      isChatgptSessionReaderNonFreeTrialFailure,
       isUpiRedeemBackendFailure,
       isRestartCurrentAttemptError,
       isStep4Route405RecoveryLimitFailure,
@@ -234,7 +234,7 @@
       if (!message) {
         return false;
       }
-      const hasGlobalNoSupplySignal = /Step\s*9:\s*all\s+provider\s+candidates\s+failed\s+to\s+acquire\s+number|(?:HeroSMS|5sim|NexSMS)\s+no\s+numbers\s+available\s+across|no\s+numbers\s+within\s+maxPrice|no\s+free\s+phones|numbers?\s+not\s+found/i.test(message);
+      const hasGlobalNoSupplySignal = /Step\s*9:\s*all\s+provider\s+candidates\s+failed\s+to\s+acquire\s+number|(?:HeroSMS|5sim|RemovedSMSVendor)\s+no\s+numbers\s+available\s+across|no\s+numbers\s+within\s+maxPrice|no\s+free\s+phones|numbers?\s+not\s+found/i.test(message);
       if (!hasGlobalNoSupplySignal) {
         return false;
       }
@@ -338,7 +338,7 @@
       const {
         autoRunSkipFailures = false,
         autoRunRetryNonFreeTrial = false,
-        autoRunRetryPaypalCallback = false,
+        autoRunRetryLegacyWalletCallback = false,
         roundSummaries = [],
       } = options;
       if (totalRuns <= 1 || targetRun >= totalRuns) {
@@ -367,14 +367,14 @@
         autoRunSessionId: currentRuntime.autoRunSessionId,
         autoRunSkipFailures,
         autoRunRetryNonFreeTrial,
-        autoRunRetryPaypalCallback,
+        autoRunRetryLegacyWalletCallback,
         roundSummaries,
         countdownTitle: '线程间隔中',
         countdownNote: `第 ${Math.min(targetRun + 1, totalRuns)}/${totalRuns} 轮即将开始`,
       }, {
         autoRunSkipFailures,
         autoRunRetryNonFreeTrial,
-        autoRunRetryPaypalCallback,
+        autoRunRetryLegacyWalletCallback,
         autoRunRoundSummaries: serializeAutoRunRoundSummaries(totalRuns, roundSummaries),
       });
       runtime.set({ autoRunActive: false });
@@ -385,7 +385,7 @@
       const {
         autoRunSkipFailures = false,
         autoRunRetryNonFreeTrial = false,
-        autoRunRetryPaypalCallback = false,
+        autoRunRetryLegacyWalletCallback = false,
         roundSummaries = [],
       } = options;
       const fallbackThreadIntervalMinutes = normalizeAutoRunFallbackThreadIntervalMinutes(
@@ -408,14 +408,14 @@
         autoRunSessionId: runtime.get().autoRunSessionId,
         autoRunSkipFailures,
         autoRunRetryNonFreeTrial,
-        autoRunRetryPaypalCallback,
+        autoRunRetryLegacyWalletCallback,
         roundSummaries,
         countdownTitle: '线程间隔中',
         countdownNote: `第 ${targetRun}/${totalRuns} 轮第 ${nextAttemptRun} 次尝试即将开始`,
       }, {
         autoRunSkipFailures,
         autoRunRetryNonFreeTrial,
-        autoRunRetryPaypalCallback,
+        autoRunRetryLegacyWalletCallback,
         autoRunRoundSummaries: serializeAutoRunRoundSummaries(totalRuns, roundSummaries),
       });
       runtime.set({ autoRunActive: false });
@@ -479,7 +479,7 @@
 
       const autoRunSkipFailures = Boolean(options.autoRunSkipFailures);
       const autoRunRetryNonFreeTrial = Boolean(options.autoRunRetryNonFreeTrial);
-      const autoRunRetryPaypalCallback = Boolean(options.autoRunRetryPaypalCallback);
+      const autoRunRetryLegacyWalletCallback = Boolean(options.autoRunRetryLegacyWalletCallback);
       const initialMode = options.mode === 'continue' ? 'continue' : 'restart';
       const resumeCurrentRun = Number.isInteger(options.resumeCurrentRun) && options.resumeCurrentRun > 0
         ? Math.min(totalRuns, options.resumeCurrentRun)
@@ -516,7 +516,7 @@
         autoRunSessionId: sessionId,
         autoRunSkipFailures,
         autoRunRetryNonFreeTrial,
-        autoRunRetryPaypalCallback,
+        autoRunRetryLegacyWalletCallback,
         autoRunRoundSummaries: serializeAutoRunRoundSummaries(totalRuns, roundSummaries),
         ...getAutoRunStatusPayload(initialPhase, {
           currentRun: showResumePosition ? resumeCurrentRun : 0,
@@ -535,7 +535,7 @@
         const currentRoundState = await getState();
         const keepSameEmailUntilAddPhone = autoRunSkipFailures && shouldKeepCustomMailProviderPoolEmail(currentRoundState);
         const maxKeepSameEmailAttemptsForRound = AUTO_RUN_MAX_KEEP_SAME_EMAIL_RETRIES_PER_ROUND + 1;
-        const maxAttemptsForRound = autoRunSkipFailures || autoRunRetryNonFreeTrial || autoRunRetryPaypalCallback
+        const maxAttemptsForRound = autoRunSkipFailures || autoRunRetryNonFreeTrial || autoRunRetryLegacyWalletCallback
           ? (keepSameEmailUntilAddPhone ? maxKeepSameEmailAttemptsForRound : AUTO_RUN_MAX_RETRIES_PER_ROUND + 1)
           : Math.max(AUTO_RUN_MAX_RETRIES_PER_ROUND + 1, attemptRun);
 
@@ -576,15 +576,15 @@
               plusModeEnabled: prevState.plusModeEnabled,
               plusPaymentMethod: prevState.plusPaymentMethod,
               plusAccountAccessStrategy: prevState.plusAccountAccessStrategy,
-              plusCheckoutMode: prevState.plusCheckoutMode,
-              plusCheckoutProfiles: prevState.plusCheckoutProfiles,
+              chatgptSessionReaderMode: prevState.chatgptSessionReaderMode,
+              chatgptSessionReaderProfiles: prevState.chatgptSessionReaderProfiles,
               plusHostedCheckoutOauthDelaySeconds: prevState.plusHostedCheckoutOauthDelaySeconds,
               hostedCheckoutVerificationPopupDelaySeconds: prevState.hostedCheckoutVerificationPopupDelaySeconds,
               hostedCheckoutVerificationUrl: prevState.hostedCheckoutVerificationUrl,
               hostedCheckoutPhoneNumber: prevState.hostedCheckoutPhoneNumber,
-              hostedCheckoutSmsPoolText: prevState.hostedCheckoutSmsPoolText,
-              hostedCheckoutSmsPoolUsage: prevState.hostedCheckoutSmsPoolUsage,
-              hostedCheckoutSmsPoolAutoDisableEnabled: prevState.hostedCheckoutSmsPoolAutoDisableEnabled,
+              hostedCheckoutRemovedTextPoolText: prevState.hostedCheckoutRemovedTextPoolText,
+              hostedCheckoutRemovedTextPoolUsage: prevState.hostedCheckoutRemovedTextPoolUsage,
+              hostedCheckoutRemovedTextPoolAutoDisableEnabled: prevState.hostedCheckoutRemovedTextPoolAutoDisableEnabled,
               hostedCheckoutFirstDirectResendEnabled: prevState.hostedCheckoutFirstDirectResendEnabled,
               hostedCheckoutFirstResendWaitSeconds: prevState.hostedCheckoutFirstResendWaitSeconds,
               hostedCheckoutSubsequentResendWaitSeconds: prevState.hostedCheckoutSubsequentResendWaitSeconds,
@@ -597,13 +597,13 @@
               upiRedeemContinueAfterRedeem: prevState.upiRedeemContinueAfterRedeem,
               upiRedeemCdkeyPoolText: prevState.upiRedeemCdkeyPoolText,
               upiRedeemCdkeyUsage: prevState.upiRedeemCdkeyUsage,
-              paypalEmail: prevState.paypalEmail,
-              paypalPassword: prevState.paypalPassword,
-              paypalAccounts: prevState.paypalAccounts,
-              currentPayPalAccountId: prevState.currentPayPalAccountId,
+              legacyWalletEmail: prevState.legacyWalletEmail,
+              legacyWalletPassword: prevState.legacyWalletPassword,
+              legacyWalletAccounts: prevState.legacyWalletAccounts,
+              currentLegacyWalletAccountId: prevState.currentLegacyWalletAccountId,
               autoRunSkipFailures: prevState.autoRunSkipFailures,
               autoRunRetryNonFreeTrial: prevState.autoRunRetryNonFreeTrial,
-              autoRunRetryPaypalCallback: prevState.autoRunRetryPaypalCallback,
+              autoRunRetryLegacyWalletCallback: prevState.autoRunRetryLegacyWalletCallback,
               autoRunFallbackThreadIntervalMinutes: prevState.autoRunFallbackThreadIntervalMinutes,
               autoRunDelayEnabled: prevState.autoRunDelayEnabled,
               autoRunDelayMinutes: prevState.autoRunDelayMinutes,
@@ -637,7 +637,7 @@
               autoRunSessionId: sessionId,
               autoRunSkipFailures,
               autoRunRetryNonFreeTrial,
-              autoRunRetryPaypalCallback,
+              autoRunRetryLegacyWalletCallback,
               autoRunRoundSummaries: serializeAutoRunRoundSummaries(totalRuns, roundSummaries),
               ...getAutoRunStatusPayload('running', { currentRun: targetRun, totalRuns, attemptRun, sessionId }),
             });
@@ -714,23 +714,23 @@
 
             const reason = getErrorMessage(err);
             roundSummary.failureReasons.push(reason);
-            const blockedByPhoneSmsRateLimit = typeof isPhoneSmsPlatformRateLimitFailure === 'function'
-              && isPhoneSmsPlatformRateLimitFailure(err);
-            const blockedByPhoneNoSupply = !blockedByPhoneSmsRateLimit
+            const blockedByRemovedPhoneRateLimit = typeof isRemovedPhonePlatformRateLimitFailure === 'function'
+              && isRemovedPhonePlatformRateLimitFailure(err);
+            const blockedByPhoneNoSupply = !blockedByRemovedPhoneRateLimit
               && isPhoneNumberSupplyExhaustedFailure(err);
-            const blockedByAddPhone = !blockedByPhoneSmsRateLimit
+            const blockedByAddPhone = !blockedByRemovedPhoneRateLimit
               && !blockedByPhoneNoSupply
               && typeof isAddPhoneAuthFailure === 'function'
               && isAddPhoneAuthFailure(err);
             const blockedByUpiAccountIneligible = isUpiAccountIneligibleFailure(err);
             const blockedByPlusNonFreeTrial = !blockedByUpiAccountIneligible
-              && typeof isPlusCheckoutNonFreeTrialFailure === 'function'
-              && isPlusCheckoutNonFreeTrialFailure(err);
+              && typeof isChatgptSessionReaderNonFreeTrialFailure === 'function'
+              && isChatgptSessionReaderNonFreeTrialFailure(err);
             const blockedByUpiRedeemBackendFailure = typeof isUpiRedeemBackendFailure === 'function'
               && isUpiRedeemBackendFailure(err);
-            const blockedByGpcTaskEnded = typeof isGpcTaskEndedFailure === 'function'
-              ? isGpcTaskEndedFailure(err)
-              : /GPC_TASK_ENDED::/i.test(err?.message || String(err || ''));
+            const blockedByCardHelperTaskEnded = typeof isCardHelperTaskEndedFailure === 'function'
+              ? isCardHelperTaskEndedFailure(err)
+              : /CARD_HELPER_TASK_ENDED::/i.test(err?.message || String(err || ''));
             const blockedByHostedCheckoutGenericError = typeof isHostedCheckoutGenericErrorFailure === 'function'
               ? isHostedCheckoutGenericErrorFailure(err)
               : /HOSTED_CHECKOUT_GENERIC_ERROR::/i.test(err?.message || String(err || ''));
@@ -755,7 +755,7 @@
             const retryableUpiRedeemBackendFailure = blockedByUpiRedeemBackendFailure
               && attemptRun < maxPlusNonFreeTrialAttempts;
             const retryableHostedCheckoutGenericError = blockedByHostedCheckoutGenericError
-              && autoRunRetryPaypalCallback
+              && autoRunRetryLegacyWalletCallback
               && attemptRun < maxPlusNonFreeTrialAttempts;
             const retryableHostedCheckoutCardFallback = blockedByHostedCheckoutCardFallback
               && attemptRun < maxPlusNonFreeTrialAttempts;
@@ -764,7 +764,7 @@
               && !blockedByUpiAccountIneligible
               && !blockedByPlusNonFreeTrial
               && !blockedByUpiRedeemBackendFailure
-              && !blockedByGpcTaskEnded
+              && !blockedByCardHelperTaskEnded
               && !blockedByHostedCheckoutGenericError
               && !blockedByHostedCheckoutCardFallback
               && !blockedByHostedCheckoutVerificationResendLimit
@@ -778,7 +778,7 @@
               && !blockedByUpiAccountIneligible
               && !blockedByPlusNonFreeTrial
               && !blockedByUpiRedeemBackendFailure
-              && !blockedByGpcTaskEnded
+              && !blockedByCardHelperTaskEnded
               && !blockedByHostedCheckoutGenericError
               && !blockedByHostedCheckoutCardFallback
               && !blockedByHostedCheckoutVerificationResendLimit
@@ -829,7 +829,7 @@
                 const parkedForRetry = await waitBeforeAutoRunRetry(targetRun, totalRuns, attemptRun + 1, {
                   autoRunSkipFailures,
                   autoRunRetryNonFreeTrial,
-                  autoRunRetryPaypalCallback,
+                  autoRunRetryLegacyWalletCallback,
                   roundSummaries,
                 });
                 if (parkedForRetry) {
@@ -893,7 +893,7 @@
                 const parkedForRetry = await waitBeforeAutoRunRetry(targetRun, totalRuns, attemptRun + 1, {
                   autoRunSkipFailures,
                   autoRunRetryNonFreeTrial,
-                  autoRunRetryPaypalCallback,
+                  autoRunRetryLegacyWalletCallback,
                   roundSummaries,
                 });
                 if (parkedForRetry) {
@@ -922,8 +922,8 @@
 
             if (retryableHostedCheckoutGenericError) {
               const retryIndex = attemptRun;
-              await addLog(`第 ${targetRun}/${totalRuns} 轮第 ${attemptRun} 次尝试遇到 PayPal Checkout 异常：${reason}`, 'warn');
-              cancelPendingCommands('当前尝试因 PayPal Checkout 异常已放弃。');
+              await addLog(`第 ${targetRun}/${totalRuns} 轮第 ${attemptRun} 次尝试遇到 LegacyWallet Checkout 异常：${reason}`, 'warn');
+              cancelPendingCommands('当前尝试因 LegacyWallet Checkout 异常已放弃。');
               await broadcastStopToContentScripts();
               await broadcastAutoRunStatus('retrying', {
                 currentRun: targetRun,
@@ -933,7 +933,7 @@
               });
               forceFreshTabsNextRun = true;
               await addLog(
-                `PayPal Checkout 异常自动重试：${Math.round(AUTO_RUN_RETRY_DELAY_MS / 1000)} 秒后换新邮箱，开始第 ${targetRun}/${totalRuns} 轮第 ${attemptRun + 1} 次尝试（第 ${retryIndex}/${AUTO_RUN_MAX_RETRIES_PER_ROUND} 次重试）。`,
+                `LegacyWallet Checkout 异常自动重试：${Math.round(AUTO_RUN_RETRY_DELAY_MS / 1000)} 秒后换新邮箱，开始第 ${targetRun}/${totalRuns} 轮第 ${attemptRun + 1} 次尝试（第 ${retryIndex}/${AUTO_RUN_MAX_RETRIES_PER_ROUND} 次重试）。`,
                 'warn'
               );
               try {
@@ -957,7 +957,7 @@
                 const parkedForRetry = await waitBeforeAutoRunRetry(targetRun, totalRuns, attemptRun + 1, {
                   autoRunSkipFailures,
                   autoRunRetryNonFreeTrial,
-                  autoRunRetryPaypalCallback,
+                  autoRunRetryLegacyWalletCallback,
                   roundSummaries,
                 });
                 if (parkedForRetry) {
@@ -1021,7 +1021,7 @@
                 const parkedForRetry = await waitBeforeAutoRunRetry(targetRun, totalRuns, attemptRun + 1, {
                   autoRunSkipFailures,
                   autoRunRetryNonFreeTrial,
-                  autoRunRetryPaypalCallback,
+                  autoRunRetryLegacyWalletCallback,
                   roundSummaries,
                 });
                 if (parkedForRetry) {
@@ -1200,18 +1200,18 @@
               break;
             }
 
-            if (blockedByGpcTaskEnded) {
+            if (blockedByCardHelperTaskEnded) {
               roundSummary.status = 'failed';
               roundSummary.finalFailureReason = reason;
               await setState({
                 autoRunRoundSummaries: serializeAutoRunRoundSummaries(totalRuns, roundSummaries),
               });
               await appendRoundRecordIfNeeded('failed', reason, err);
-              cancelPendingCommands('当前轮因 GPC 任务已结束。');
+              cancelPendingCommands('当前轮因 CARD_HELPER 任务已结束。');
               await broadcastStopToContentScripts();
               if (!autoRunSkipFailures) {
                 await addLog(
-                  `第 ${targetRun}/${totalRuns} 轮 GPC 任务已结束，自动重试未开启，当前自动运行将停止。`,
+                  `第 ${targetRun}/${totalRuns} 轮 CARD_HELPER 任务已结束，自动重试未开启，当前自动运行将停止。`,
                   'warn'
                 );
                 stoppedEarly = true;
@@ -1224,11 +1224,11 @@
                 break;
               }
 
-              await addLog(`第 ${targetRun}/${totalRuns} 轮 GPC 任务已结束，本轮将直接失败并跳过剩余重试。`, 'warn');
+              await addLog(`第 ${targetRun}/${totalRuns} 轮 CARD_HELPER 任务已结束，本轮将直接失败并跳过剩余重试。`, 'warn');
               await addLog(
                 targetRun < totalRuns
-                  ? `第 ${targetRun}/${totalRuns} 轮因 GPC 任务结束提前结束，自动流程将继续下一轮。`
-                  : `第 ${targetRun}/${totalRuns} 轮因 GPC 任务结束提前结束，已无后续轮次，本次自动运行结束。`,
+                  ? `第 ${targetRun}/${totalRuns} 轮因 CARD_HELPER 任务结束提前结束，自动流程将继续下一轮。`
+                  : `第 ${targetRun}/${totalRuns} 轮因 CARD_HELPER 任务结束提前结束，已无后续轮次，本次自动运行结束。`,
                 'warn'
               );
               forceFreshTabsNextRun = true;
@@ -1243,15 +1243,15 @@
               });
               await appendRoundRecordIfNeeded('failed', reason, err);
               cancelPendingCommands(
-                autoRunRetryPaypalCallback
-                  ? '当前轮因 PayPal Checkout genericError 已达到自动重试上限。'
-                  : '当前轮因 PayPal Checkout genericError 已终止，等待用户选择检查或重试。'
+                autoRunRetryLegacyWalletCallback
+                  ? '当前轮因 LegacyWallet Checkout genericError 已达到自动重试上限。'
+                  : '当前轮因 LegacyWallet Checkout genericError 已终止，等待用户选择检查或重试。'
               );
               await broadcastStopToContentScripts();
               await addLog(
-                autoRunRetryPaypalCallback
-                  ? `第 ${targetRun}/${totalRuns} 轮检测到 PayPal Checkout genericError，已达到 PAYPAL回调自动重试上限，当前自动运行将停止。`
-                  : `第 ${targetRun}/${totalRuns} 轮检测到 PayPal Checkout genericError，当前自动运行已停止，请在弹窗中选择“检查”或“重试”。`,
+                autoRunRetryLegacyWalletCallback
+                  ? `第 ${targetRun}/${totalRuns} 轮检测到 LegacyWallet Checkout genericError，已达到 LEGACY_WALLET回调自动重试上限，当前自动运行将停止。`
+                  : `第 ${targetRun}/${totalRuns} 轮检测到 LegacyWallet Checkout genericError，当前自动运行已停止，请在弹窗中选择“检查”或“重试”。`,
                 'warn'
               );
               stoppedEarly = true;
@@ -1294,10 +1294,10 @@
                 autoRunRoundSummaries: serializeAutoRunRoundSummaries(totalRuns, roundSummaries),
               });
               await appendRoundRecordIfNeeded('failed', reason, err);
-              cancelPendingCommands('当前轮因 PayPal 验证码自动 Resend 达到上限已终止。');
+              cancelPendingCommands('当前轮因 LegacyWallet 验证码自动 Resend 达到上限已终止。');
               await broadcastStopToContentScripts();
               await addLog(
-                `第 ${targetRun}/${totalRuns} 轮 PayPal 验证码自动 Resend 已达到上限，当前自动运行已停止；请尝试在页面手动获取验证码并填入。`,
+                `第 ${targetRun}/${totalRuns} 轮 LegacyWallet 验证码自动 Resend 已达到上限，当前自动运行已停止；请尝试在页面手动获取验证码并填入。`,
                 'warn'
               );
               stoppedEarly = true;
@@ -1446,7 +1446,7 @@
                 const parkedForRetry = await waitBeforeAutoRunRetry(targetRun, totalRuns, attemptRun + 1, {
                   autoRunSkipFailures,
                   autoRunRetryNonFreeTrial,
-                  autoRunRetryPaypalCallback,
+                  autoRunRetryLegacyWalletCallback,
                   roundSummaries,
                 });
                 if (parkedForRetry) {
@@ -1557,7 +1557,7 @@
           const parkedForNextRound = await waitBetweenAutoRunRounds(targetRun, totalRuns, roundSummary, {
             autoRunSkipFailures,
             autoRunRetryNonFreeTrial,
-            autoRunRetryPaypalCallback,
+            autoRunRetryLegacyWalletCallback,
             roundSummaries,
           });
           if (parkedForNextRound) {
@@ -1654,3 +1654,8 @@
     createAutoRunController,
   };
 });
+
+
+
+
+

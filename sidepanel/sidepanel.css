@@ -5,7 +5,7 @@
    Themes: Light (default) + Dark (toggle)
    ============================================================ */
 
-#ip-proxy-section {
+#removed-network-section {
   display: none !important;
 }
 
@@ -35,32 +35,32 @@ body.upi-only #row-codex2api-url,
 body.upi-only #row-codex2api-admin-key,
 body.upi-only #row-export-current-session-json,
 body.upi-only #row-plus-mode,
-body.upi-only #plus-checkout-mode-switch-group,
-body.upi-only #row-paypal-account,
-body.upi-only #row-plus-hosted-checkout-oauth-delay,
-body.upi-only #row-plus-checkout-conversion-proxy,
-body.upi-only #row-plus-checkout-conversion-proxy-test,
-body.upi-only #row-hosted-checkout-verification-url,
-body.upi-only #row-hosted-checkout-manual-fetch,
-body.upi-only #row-hosted-checkout-phone,
-body.upi-only #row-hosted-checkout-sms-pool,
-body.upi-only #row-hosted-checkout-resend-settings,
-body.upi-only #row-gpc-helper-api,
-body.upi-only #row-gpc-helper-card-key,
-body.upi-only #row-gpc-helper-phone-mode,
-body.upi-only #row-gpc-helper-country-code,
-body.upi-only #row-gpc-helper-phone,
-body.upi-only #row-gpc-helper-otp-channel,
-body.upi-only #row-gpc-helper-local-sms-enabled,
-body.upi-only #row-gpc-helper-local-sms-url,
-body.upi-only #row-gpc-helper-pin,
-body.upi-only #row-gopay-country-code,
-body.upi-only #row-gopay-phone,
-body.upi-only #row-gopay-otp,
-body.upi-only #row-gopay-pin,
-body.upi-only #ppboom-section,
-body.upi-only #ip-proxy-section,
-body.upi-only #phone-verification-section,
+body.upi-only #chatgpt-session-reader-mode-switch-group,
+body.upi-only #row-legacyWallet-account,
+body.upi-only #row-plus-removed-contact-oauth-delay,
+body.upi-only #row-chatgpt-session-reader-conversion-proxy,
+body.upi-only #row-chatgpt-session-reader-conversion-proxy-test,
+body.upi-only #row-removed-contact-verification-url,
+body.upi-only #row-removed-contact-manual-fetch,
+body.upi-only #row-removed-contact-phone,
+body.upi-only #row-removed-contact-sms-pool,
+body.upi-only #row-removed-contact-resend-settings,
+body.upi-only #row-upiInfo-helper-api,
+body.upi-only #row-upiInfo-helper-card-key,
+body.upi-only #row-upiInfo-helper-phone-mode,
+body.upi-only #row-upiInfo-helper-country-code,
+body.upi-only #row-upiInfo-helper-phone,
+body.upi-only #row-upiInfo-helper-otp-channel,
+body.upi-only #row-upiInfo-helper-local-sms-enabled,
+body.upi-only #row-upiInfo-helper-local-sms-url,
+body.upi-only #row-upiInfo-helper-pin,
+body.upi-only #row-legacyPay-country-code,
+body.upi-only #row-legacyPay-phone,
+body.upi-only #row-legacyPay-otp,
+body.upi-only #row-legacyPay-pin,
+body.upi-only #removedPaymentWorker-section,
+body.upi-only #removed-network-section,
+body.upi-only #auth-verification-section,
 body.upi-only #oauth-status-section {
   display: none !important;
 }
@@ -891,24 +891,24 @@ header {
   min-width: 0;
 }
 
-#ppboom-section {
-  --ppboom-label-width: 154px;
+#removedPaymentWorker-section {
+  --removedPaymentWorker-label-width: 154px;
 }
 
-#ppboom-section .data-row {
+#removedPaymentWorker-section .data-row {
   align-items: flex-start;
   gap: 10px;
 }
 
-#ppboom-settings-shell {
+#removedPaymentWorker-settings-shell {
   display: flex;
   flex-direction: column;
   gap: 9px;
 }
 
-#ppboom-section .data-row > .data-label {
-  flex: 0 0 var(--ppboom-label-width);
-  width: var(--ppboom-label-width);
+#removedPaymentWorker-section .data-row > .data-label {
+  flex: 0 0 var(--removedPaymentWorker-label-width);
+  width: var(--removedPaymentWorker-label-width);
   padding-top: 8px;
   white-space: nowrap;
   text-transform: none;
@@ -916,19 +916,19 @@ header {
   line-height: 1.35;
 }
 
-#ppboom-section .data-row > .data-input,
-#ppboom-section .data-row > .data-select,
-#ppboom-section .data-row > .data-inline {
+#removedPaymentWorker-section .data-row > .data-input,
+#removedPaymentWorker-section .data-row > .data-select,
+#removedPaymentWorker-section .data-row > .data-inline {
   flex: 1 1 0;
   min-width: 0;
 }
 
-#ppboom-section .data-row > .data-input,
-#ppboom-section .data-row > .data-select {
+#removedPaymentWorker-section .data-row > .data-input,
+#removedPaymentWorker-section .data-row > .data-select {
   width: auto;
 }
 
-#ppboom-section .data-label .setting-caption {
+#removedPaymentWorker-section .data-label .setting-caption {
   margin-left: 4px;
   min-width: 0;
   font-size: 11px;
@@ -936,53 +936,53 @@ header {
   text-align: left;
 }
 
-#ppboom-section .data-inline-stack {
+#removedPaymentWorker-section .data-inline-stack {
   flex-direction: column;
   align-items: stretch;
   gap: 6px;
 }
 
-#ppboom-section .data-inline-stack .setting-caption {
+#removedPaymentWorker-section .data-inline-stack .setting-caption {
   white-space: normal;
   text-align: left;
   line-height: 1.4;
 }
 
-.ppboom-window-id-field .data-input {
+.removedPaymentWorker-window-id-field .data-input {
   width: 100%;
   flex: 0 0 auto;
 }
 
-#row-ppboom-enabled > .data-label {
+#row-removedPaymentWorker-enabled > .data-label {
   padding-top: 2px;
 }
 
-#row-ppboom-enabled .setting-caption,
-#ppboom-section .data-inline > .setting-caption {
+#row-removedPaymentWorker-enabled .setting-caption,
+#removedPaymentWorker-section .data-inline > .setting-caption {
   min-width: 0;
   white-space: normal;
   text-align: left;
   line-height: 1.4;
 }
 
-#ppboom-section .data-value-actions .data-value-fill {
+#removedPaymentWorker-section .data-value-actions .data-value-fill {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 @media (max-width: 340px) {
-  #ppboom-section {
-    --ppboom-label-width: 100%;
+  #removedPaymentWorker-section {
+    --removedPaymentWorker-label-width: 100%;
   }
 
-  #ppboom-section .data-row {
+  #removedPaymentWorker-section .data-row {
     flex-direction: column;
     align-items: stretch;
     gap: 5px;
   }
 
-  #ppboom-section .data-row > .data-label {
+  #removedPaymentWorker-section .data-row > .data-label {
     padding-top: 0;
   }
 }
@@ -1008,24 +1008,24 @@ header {
   line-height: 1.4;
 }
 
-.ip-proxy-fold-row {
+.removed-network-fold-row {
   display: block;
 }
 
-.ip-proxy-card {
+.removed-network-card {
   margin-top: 10px;
 }
 
-.ip-proxy-header-actions {
+.removed-network-header-actions {
   flex: 0 0 auto;
   align-items: center;
 }
 
-#btn-toggle-ip-proxy-section {
+#btn-toggle-removed-network-section {
   white-space: nowrap;
 }
 
-.ip-proxy-fold {
+.removed-network-fold {
   width: 100%;
   border: none;
   border-radius: 0;
@@ -1033,7 +1033,7 @@ header {
   padding: 0;
 }
 
-.ip-proxy-fold-body {
+.removed-network-fold-body {
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -1042,20 +1042,20 @@ header {
 }
 
 
-.phone-verification-card {
+.auth-verification-card {
   margin-top: 10px;
   display: flex;
   flex-direction: column;
   gap: 9px;
 }
 
-#settings-card > #phone-verification-section.module-divider-start {
+#settings-card > #auth-verification-section.module-divider-start {
   position: relative;
   margin-top: 10px;
   padding-top: 12px;
 }
 
-#settings-card > #phone-verification-section.module-divider-start::before {
+#settings-card > #auth-verification-section.module-divider-start::before {
   content: '';
   position: absolute;
   top: 0;
@@ -1064,20 +1064,20 @@ header {
   border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent);
 }
 
-.phone-verification-header-actions {
+.auth-verification-header-actions {
   flex: 0 0 auto;
   align-items: center;
 }
 
-#btn-toggle-phone-verification-section {
+#btn-toggle-auth-verification-section {
   white-space: nowrap;
 }
 
-.phone-verification-fold-row {
+.auth-verification-fold-row {
   display: block;
 }
 
-.phone-verification-fold {
+.auth-verification-fold {
   width: 100%;
   border: none;
   border-radius: 0;
@@ -1085,7 +1085,7 @@ header {
   padding: 0;
 }
 
-.phone-verification-fold-body {
+.auth-verification-fold-body {
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -1093,20 +1093,20 @@ header {
   padding-top: 0;
 }
 
-.ip-proxy-layout-row {
+.removed-network-layout-row {
   display: block;
 }
 
-.ip-proxy-layout {
+.removed-network-layout {
   width: 100%;
   display: block;
 }
 
-.ip-proxy-layout.is-account-only {
+.removed-network-layout.is-account-only {
   display: block;
 }
 
-.ip-proxy-column {
+.removed-network-column {
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -1116,74 +1116,74 @@ header {
   background: transparent;
 }
 
-.ip-proxy-column-header {
+.removed-network-column-header {
   display: none;
 }
 
-.ip-proxy-column-hint {
+.removed-network-column-hint {
   font-size: 12px;
   line-height: 1.5;
   color: var(--text-secondary);
 }
 
-.ip-proxy-column-mode-btn {
+.removed-network-column-mode-btn {
   width: 100%;
   justify-content: center;
 }
 
-.ip-proxy-column-api.is-disabled {
+.removed-network-column-api.is-disabled {
   opacity: 0.55;
 }
 
-.ip-proxy-column-api.is-disabled .data-input,
-.ip-proxy-column-api.is-disabled .data-select,
-.ip-proxy-column-api.is-disabled .data-textarea,
-.ip-proxy-column-api.is-disabled .input-icon-btn,
-.ip-proxy-column-api.is-disabled .btn,
-.ip-proxy-column-api.is-disabled .choice-btn {
+.removed-network-column-api.is-disabled .data-input,
+.removed-network-column-api.is-disabled .data-select,
+.removed-network-column-api.is-disabled .data-textarea,
+.removed-network-column-api.is-disabled .input-icon-btn,
+.removed-network-column-api.is-disabled .btn,
+.removed-network-column-api.is-disabled .choice-btn {
   cursor: not-allowed;
 }
 
 @media (max-width: 900px) {
-  .ip-proxy-layout {
+  .removed-network-layout {
     display: block;
   }
 }
 
-.ip-proxy-actions-inline {
+.removed-network-actions-inline {
   flex-wrap: wrap;
   align-items: flex-start;
   row-gap: 6px;
 }
 
-#row-ip-proxy-actions {
+#row-removed-network-actions {
   align-items: flex-start;
 }
 
-#row-ip-proxy-actions > .data-label {
+#row-removed-network-actions > .data-label {
   padding-top: 9px;
 }
 
-.ip-proxy-action-grid {
+.removed-network-action-grid {
   width: 100%;
   display: flex;
   flex-wrap: nowrap;
   gap: 8px;
 }
 
-.ip-proxy-action-grid .data-inline-btn {
+.removed-network-action-grid .data-inline-btn {
   flex: 1 1 0;
   min-width: 0;
 }
 
-.ip-proxy-action-hint {
+.removed-network-action-hint {
   flex: 1 1 100%;
   font-size: 11px;
   line-height: 1.5;
   color: var(--text-secondary);
 }
 
-.ip-proxy-runtime-status {
+.removed-network-runtime-status {
   display: inline-flex;
   align-items: flex-start;
   gap: 8px;
@@ -1195,7 +1195,7 @@ header {
   background: var(--bg-surface);
 }
 
-.ip-proxy-runtime-content {
+.removed-network-runtime-content {
   flex: 1;
   min-width: 0;
   display: flex;
@@ -1203,20 +1203,20 @@ header {
   gap: 4px;
 }
 
-.ip-proxy-runtime-main {
+.removed-network-runtime-main {
   min-width: 0;
   font-size: 12px;
   line-height: 1.45;
 }
 
-.ip-proxy-runtime-meta {
+.removed-network-runtime-meta {
   display: flex;
   align-items: center;
   justify-content: flex-start;
   gap: 8px;
 }
 
-.ip-proxy-check-ip-btn {
+.removed-network-check-ip-btn {
   min-width: 0;
   padding-inline: 8px;
   flex-shrink: 0;
@@ -1226,26 +1226,26 @@ header {
   right: 0;
 }
 
-.ip-proxy-runtime-current {
+.removed-network-runtime-current {
   flex: 1;
   min-width: 0;
   font-size: 12px;
   color: var(--text-secondary);
 }
 
-.ip-proxy-runtime-current.has-value {
+.removed-network-runtime-current.has-value {
   color: var(--text-primary);
 }
 
-#row-ip-proxy-runtime-status {
+#row-removed-network-runtime-status {
   align-items: flex-start;
 }
 
-#row-ip-proxy-runtime-status > .data-label {
+#row-removed-network-runtime-status > .data-label {
   padding-top: 9px;
 }
 
-.ip-proxy-runtime-dot {
+.removed-network-runtime-dot {
   width: 8px;
   height: 8px;
   border-radius: 999px;
@@ -1255,22 +1255,22 @@ header {
   margin-top: 6px;
 }
 
-.ip-proxy-runtime-status.state-applied .ip-proxy-runtime-dot {
+.removed-network-runtime-status.state-applied .removed-network-runtime-dot {
   background: var(--green);
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--green) 28%, transparent);
 }
 
-.ip-proxy-runtime-status.state-warning .ip-proxy-runtime-dot {
+.removed-network-runtime-status.state-warning .removed-network-runtime-dot {
   background: var(--orange);
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--orange) 28%, transparent);
 }
 
-.ip-proxy-runtime-status.state-error .ip-proxy-runtime-dot {
+.removed-network-runtime-status.state-error .removed-network-runtime-dot {
   background: var(--red);
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--red) 28%, transparent);
 }
 
-.ip-proxy-runtime-details {
+.removed-network-runtime-details {
   margin: 0;
   padding: 0;
   min-width: 0;
@@ -1278,14 +1278,14 @@ header {
   padding-right: 84px;
 }
 
-.ip-proxy-runtime-details-row {
+.removed-network-runtime-details-row {
   position: relative;
   min-width: 0;
   width: 100%;
   min-height: 24px;
 }
 
-.ip-proxy-runtime-details summary {
+.removed-network-runtime-details summary {
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -1298,11 +1298,11 @@ header {
   list-style: none;
 }
 
-.ip-proxy-runtime-details summary::-webkit-details-marker {
+.removed-network-runtime-details summary::-webkit-details-marker {
   display: none;
 }
 
-.ip-proxy-runtime-details summary::after {
+.removed-network-runtime-details summary::after {
   content: '▾';
   font-size: 10px;
   line-height: 1;
@@ -1312,15 +1312,15 @@ header {
   transition: transform var(--transition);
 }
 
-.ip-proxy-runtime-details[open] summary {
+.removed-network-runtime-details[open] summary {
   color: var(--text-primary);
 }
 
-.ip-proxy-runtime-details[open] summary::after {
+.removed-network-runtime-details[open] summary::after {
   transform: rotate(0deg);
 }
 
-.ip-proxy-runtime-details-text {
+.removed-network-runtime-details-text {
   margin-top: 4px;
   font-size: 11px;
   line-height: 1.5;
@@ -1348,60 +1348,60 @@ header {
   justify-content: space-between;
 }
 
-.hosted-checkout-manual-fetch-inline {
+.removed-contact-manual-fetch-inline {
   flex: 1;
   min-width: 0;
 }
 
-.hosted-checkout-resend-settings-inline {
+.removed-contact-resend-settings-inline {
   flex-wrap: wrap;
   justify-content: flex-start;
   row-gap: 6px;
 }
 
-#row-hosted-checkout-resend-settings > .data-label {
+#row-removed-contact-resend-settings > .data-label {
   width: 76px;
   text-transform: none;
   letter-spacing: 0.02em;
 }
 
-.hosted-checkout-setting-field,
-.hosted-checkout-setting-toggle {
+.removed-contact-setting-field,
+.removed-contact-setting-toggle {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   flex: 0 0 auto;
 }
 
-.hosted-checkout-setting-toggle .toggle-switch {
+.removed-contact-setting-toggle .toggle-switch {
   flex: 0 0 auto;
 }
 
-.plus-checkout-conversion-proxy-test-inline {
+.chatgpt-session-reader-conversion-proxy-test-inline {
   flex: 1;
   min-width: 0;
 }
 
-.hosted-checkout-manual-fetch-code {
+.removed-contact-manual-fetch-code {
   margin-left: auto;
   text-align: right;
 }
 
-.plus-checkout-conversion-proxy-test-result {
+.chatgpt-session-reader-conversion-proxy-test-result {
   margin-left: auto;
   text-align: right;
   color: var(--text-secondary);
 }
 
-.plus-checkout-conversion-proxy-test-result.status-running {
+.chatgpt-session-reader-conversion-proxy-test-result.status-running {
   color: var(--blue);
 }
 
-.plus-checkout-conversion-proxy-test-result.status-success {
+.chatgpt-session-reader-conversion-proxy-test-result.status-success {
   color: var(--green);
 }
 
-.plus-checkout-conversion-proxy-test-result.status-error {
+.chatgpt-session-reader-conversion-proxy-test-result.status-error {
   color: var(--red);
 }
 
@@ -1752,46 +1752,46 @@ header {
   justify-content: flex-end;
 }
 
-.hosted-sms-pool-box {
+.removed-text-pool-box {
   width: 100%;
 }
 
-.hosted-sms-pool-shell {
+.removed-text-pool-shell {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-.hosted-sms-pool-shell[hidden] {
+.removed-text-pool-shell[hidden] {
   display: none;
 }
 
-.hosted-sms-pool-toolbar {
+.removed-text-pool-toolbar {
   justify-content: flex-end;
 }
 
-.hosted-sms-pool-import-actions {
+.removed-text-pool-import-actions {
   justify-content: space-between;
   flex-wrap: wrap;
 }
 
-.hosted-sms-pool-auto-disable-toggle {
+.removed-text-pool-auto-disable-toggle {
   margin-left: auto;
 }
 
-.hosted-sms-pool-phone {
+.removed-text-pool-phone {
   display: flex;
   align-items: center;
   gap: 6px;
   min-width: 0;
 }
 
-.hosted-sms-pool-phone-local {
+.removed-text-pool-phone-local {
   color: var(--text-muted);
   font-size: 11px;
 }
 
-.hosted-sms-pool-current-label {
+.removed-text-pool-current-label {
   display: inline-flex;
   align-items: center;
   flex: 0 0 auto;
@@ -1807,7 +1807,7 @@ header {
   opacity: 0.72;
 }
 
-.hosted-sms-pool-disabled-reason {
+.removed-text-pool-disabled-reason {
   color: var(--red);
   font-size: 11px;
 }
@@ -2345,7 +2345,7 @@ header {
   cursor: default;
 }
 
-.gpc-helper-api-input {
+.upiInfo-helper-api-input {
   font-family: 'JetBrains Mono', monospace;
 }
 
@@ -2492,17 +2492,17 @@ header {
   justify-content: flex-end;
 }
 
-.plus-checkout-mode-switch-group {
+.chatgpt-session-reader-mode-switch-group {
   gap: 8px;
   min-width: 0;
   flex-wrap: wrap;
 }
 
-.plus-checkout-mode-switch-caption {
+.chatgpt-session-reader-mode-switch-caption {
   flex: 0 0 auto;
 }
 
-.plus-checkout-mode-switch {
+.chatgpt-session-reader-mode-switch {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -2510,20 +2510,20 @@ header {
   justify-content: flex-end;
 }
 
-.plus-checkout-mode-option {
+.chatgpt-session-reader-mode-option {
   position: relative;
   display: inline-flex;
   align-items: center;
   cursor: pointer;
 }
 
-.plus-checkout-mode-option input {
+.chatgpt-session-reader-mode-option input {
   position: absolute;
   opacity: 0;
   pointer-events: none;
 }
 
-.plus-checkout-mode-option span {
+.chatgpt-session-reader-mode-option span {
   display: inline-flex;
   align-items: center;
   min-height: 28px;
@@ -2537,14 +2537,14 @@ header {
   transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
 }
 
-.plus-checkout-mode-option input:checked + span {
+.chatgpt-session-reader-mode-option input:checked + span {
   border-color: rgba(95, 188, 255, 0.5);
   background: rgba(95, 188, 255, 0.14);
   color: var(--text-primary, #fff);
   box-shadow: 0 0 0 1px rgba(95, 188, 255, 0.18) inset;
 }
 
-.plus-checkout-mode-option input:disabled + span {
+.chatgpt-session-reader-mode-option input:disabled + span {
   opacity: 0.45;
   cursor: not-allowed;
 }
@@ -2573,7 +2573,7 @@ header {
   white-space: nowrap;
 }
 
-.auto-run-retry-paypal-callback-setting {
+.auto-run-retry-legacyWallet-callback-setting {
   flex: 0 1 auto;
   gap: 8px;
   white-space: nowrap;
@@ -2591,7 +2591,7 @@ header {
 }
 
 .auto-run-retry-setting-pair .auto-run-retry-non-free-trial-setting,
-.auto-run-retry-setting-pair .auto-run-retry-paypal-callback-setting {
+.auto-run-retry-setting-pair .auto-run-retry-legacyWallet-callback-setting {
   flex: 0 0 auto;
 }
 
@@ -2708,7 +2708,7 @@ header {
   text-align: center;
 }
 
-.hero-sms-country-stack {
+.removed-sms-main-country-stack {
   flex: 1;
   min-width: 0;
   display: flex;
@@ -2717,7 +2717,7 @@ header {
   gap: 6px;
 }
 
-.hero-sms-country-mainline {
+.removed-sms-main-country-mainline {
   width: 100%;
   display: flex;
   align-items: center;
@@ -2725,12 +2725,12 @@ header {
   min-width: 0;
 }
 
-.hero-sms-country-note {
+.removed-sms-main-country-note {
   font-size: 12px;
   color: var(--text-muted);
 }
 
-.hero-sms-reuse-max-inline {
+.removed-sms-main-reuse-max-inline {
   width: 100%;
   display: flex;
   align-items: center;
@@ -2738,14 +2738,14 @@ header {
   flex-wrap: nowrap;
 }
 
-.hero-sms-reuse-max-left {
+.removed-sms-main-reuse-max-left {
   flex: 1 1 auto;
   min-width: 0;
   display: flex;
   align-items: center;
 }
 
-.hero-sms-reuse-max-right {
+.removed-sms-main-reuse-max-right {
   flex: 0 0 auto;
   display: flex;
   align-items: center;
@@ -2753,18 +2753,18 @@ header {
   margin-left: auto;
 }
 
-.hero-sms-max-price-input {
+.removed-sms-main-max-price-input {
   width: 72px;
   text-align: center;
 }
 
-.hero-sms-country-menu {
+.removed-sms-main-country-menu {
   position: relative;
   flex: 1;
   min-width: 260px;
 }
 
-.hero-sms-country-menu-btn {
+.removed-sms-main-country-menu-btn {
   width: 100%;
   height: 33px;
   min-height: 33px;
@@ -2775,13 +2775,13 @@ header {
   text-overflow: ellipsis;
 }
 
-.hero-sms-country-menu-btn[aria-expanded="true"] {
+.removed-sms-main-country-menu-btn[aria-expanded="true"] {
   border-color: var(--blue);
   color: var(--blue);
   background: var(--blue-soft);
 }
 
-.hero-sms-country-menu-dropdown {
+.removed-sms-main-country-menu-dropdown {
   position: absolute;
   top: calc(100% + 6px);
   left: 0;
@@ -2799,20 +2799,20 @@ header {
   box-shadow: var(--shadow-md);
 }
 
-.hero-sms-country-menu-search {
+.removed-sms-main-country-menu-search {
   padding-bottom: 6px;
   border-bottom: 1px solid var(--border-subtle);
 }
 
-.hero-sms-country-menu-search-input {
+.removed-sms-main-country-menu-search-input {
   width: 100%;
 }
 
-.hero-sms-country-menu-dropdown[hidden] {
+.removed-sms-main-country-menu-dropdown[hidden] {
   display: none !important;
 }
 
-.hero-sms-country-menu-item {
+.removed-sms-main-country-menu-item {
   width: 100%;
   display: flex;
   align-items: center;
@@ -2821,7 +2821,7 @@ header {
   text-align: left;
 }
 
-.hero-sms-country-menu-item-label {
+.removed-sms-main-country-menu-item-label {
   flex: 1 1 auto;
   min-width: 0;
   overflow: hidden;
@@ -2829,7 +2829,7 @@ header {
   white-space: nowrap;
 }
 
-.hero-sms-country-menu-item-badge {
+.removed-sms-main-country-menu-item-badge {
   flex: 0 0 auto;
   min-width: 42px;
   text-align: right;
@@ -2837,25 +2837,25 @@ header {
   font-weight: 700;
 }
 
-.hero-sms-runtime-grid {
+.removed-sms-main-runtime-grid {
   width: 100%;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 4px 12px;
 }
 
-.hero-sms-runtime-cell {
+.removed-sms-main-runtime-cell {
   display: flex;
   align-items: center;
   gap: 6px;
   min-width: 0;
 }
 
-.hero-sms-runtime-cell-span2 {
+.removed-sms-main-runtime-cell-span2 {
   grid-column: 1 / -1;
 }
 
-.hero-sms-runtime-key {
+.removed-sms-main-runtime-key {
   flex: 0 0 auto;
   font-size: 12px;
   font-weight: 600;
@@ -2863,12 +2863,12 @@ header {
   white-space: nowrap;
 }
 
-.hero-sms-runtime-value {
+.removed-sms-main-runtime-value {
   flex: 1 1 auto;
   min-width: 0;
 }
 
-.hero-sms-runtime-select {
+.removed-sms-main-runtime-select {
   flex: 1 1 auto;
   min-width: 0;
   width: 100%;
@@ -2876,16 +2876,16 @@ header {
   min-height: 33px;
 }
 
-.hero-sms-free-phone-cell {
+.removed-sms-main-free-phone-cell {
   flex-wrap: wrap;
 }
 
-.hero-sms-manual-phone-input {
+.removed-sms-main-manual-phone-input {
   flex: 1 1 150px;
   min-width: 120px;
 }
 
-.hero-sms-free-phone-country {
+.removed-sms-main-free-phone-country {
   flex: 0 0 auto;
   white-space: nowrap;
 }
@@ -2895,14 +2895,14 @@ header {
   width: 100%;
 }
 
-.hero-sms-price-preview-stack {
+.removed-sms-main-price-preview-stack {
   width: 100%;
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
-.hero-sms-price-preview-head {
+.removed-sms-main-price-preview-head {
   width: 100%;
   display: flex;
   align-items: center;
@@ -2911,7 +2911,7 @@ header {
   gap: 8px;
 }
 
-#btn-hero-sms-price-preview {
+#btn-removed-sms-main-price-preview {
   height: 33px;
   min-height: 33px;
   padding-top: 0;
@@ -2919,14 +2919,14 @@ header {
   align-self: flex-start;
 }
 
-.hero-sms-price-controls-grid {
+.removed-sms-main-price-controls-grid {
   width: 100%;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 6px 12px;
 }
 
-.hero-sms-price-control {
+.removed-sms-main-price-control {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -2934,32 +2934,32 @@ header {
   min-width: 0;
 }
 
-.hero-sms-price-control .setting-controls {
+.removed-sms-main-price-control .setting-controls {
   margin-left: auto;
   width: 104px;
   justify-content: flex-start;
 }
 
-.hero-sms-price-control-reuse {
+.removed-sms-main-price-control-reuse {
   justify-content: space-between;
 }
 
-#row-hero-sms-max-price,
+#row-removed-sms-main-max-price,
 #row-phone-code-settings-group {
   align-items: flex-start;
 }
 
-#row-hero-sms-max-price > .data-label,
+#row-removed-sms-main-max-price > .data-label,
 #row-phone-code-settings-group > .data-label {
   padding-top: 9px;
 }
 
-.hero-sms-toggle-controls {
+.removed-sms-main-toggle-controls {
   width: 104px;
   justify-content: flex-start;
 }
 
-.hero-sms-price-preview-result {
+.removed-sms-main-price-preview-result {
   width: 100%;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-sm);
@@ -2967,20 +2967,20 @@ header {
   padding: 6px 8px;
 }
 
-.hero-sms-price-preview-text {
+.removed-sms-main-price-preview-text {
   display: block;
   white-space: pre-line;
   line-height: 1.45;
 }
 
-.hero-sms-settings-grid {
+.removed-sms-main-settings-grid {
   width: 100%;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 6px 12px;
 }
 
-.hero-sms-settings-cell {
+.removed-sms-main-settings-cell {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -2988,11 +2988,11 @@ header {
   min-width: 0;
 }
 
-.hero-sms-settings-cell .setting-controls {
+.removed-sms-main-settings-cell .setting-controls {
   margin-left: auto;
 }
 
-.hero-sms-settings-caption {
+.removed-sms-main-settings-caption {
   flex: 0 0 auto;
   font-size: 12px;
   font-weight: 600;
@@ -3000,16 +3000,16 @@ header {
   white-space: nowrap;
 }
 
-.hero-sms-price-control.is-disabled,
-.hero-sms-settings-cell.is-disabled,
-.hero-sms-runtime-cell.is-disabled {
+.removed-sms-main-price-control.is-disabled,
+.removed-sms-main-settings-cell.is-disabled,
+.removed-sms-main-runtime-cell.is-disabled {
   opacity: 0.56;
 }
 
-.hero-sms-price-control.is-disabled .toggle-switch,
-.hero-sms-settings-cell.is-disabled .toggle-switch,
-.hero-sms-runtime-cell.is-disabled .data-input,
-.hero-sms-runtime-cell.is-disabled .btn {
+.removed-sms-main-price-control.is-disabled .toggle-switch,
+.removed-sms-main-settings-cell.is-disabled .toggle-switch,
+.removed-sms-main-runtime-cell.is-disabled .data-input,
+.removed-sms-main-runtime-cell.is-disabled .btn {
   cursor: not-allowed;
 }
 
@@ -4463,3 +4463,9 @@ header {
     transition-duration: 0.01ms !important;
   }
 }
+
+
+
+
+
+

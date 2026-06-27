@@ -5,9 +5,9 @@
     const {
       addLog = async () => {},
       buildOutlookEmailPlusHeaders,
-      buildOutlookEmailPlusPayPalAliasAddress,
+      buildOutlookEmailPlusAliasNumberAddress,
       deriveOutlookEmailPlusBaseAddress,
-      getOutlookEmailPlusPayPalAliasIndex,
+      getOutlookEmailPlusAliasNumberIndex,
       isOutlookEmailPlusTaggedAlias,
       joinOutlookEmailPlusUrl,
       normalizeOutlookEmailPlusAddress,
@@ -347,12 +347,12 @@
         || normalizeOutlookEmailPlusAddress(storedClaim.address);
       const aliasMax = getAliasMaxForState(state, storedClaim.aliasMax);
       const aliasIndex = Math.min(aliasMax, Math.max(
-        getOutlookEmailPlusPayPalAliasIndex(storedClaim.registrationEmail, baseAddress) || 0,
+        getOutlookEmailPlusAliasNumberIndex(storedClaim.registrationEmail, baseAddress) || 0,
         Math.floor(Number(storedClaim.aliasIndex) || 0)
       ));
       let usage = normalizeAliasUsage(state.hotmailAliasUsage);
       for (let index = 1; index <= aliasMax; index += 1) {
-        const aliasEmail = buildOutlookEmailPlusPayPalAliasAddress(baseAddress, index);
+        const aliasEmail = buildOutlookEmailPlusAliasNumberAddress(baseAddress, index);
         if (!aliasEmail) continue;
         const shouldBeUsed = index < aliasIndex || Boolean(storedClaim.aliasUsed && index === aliasIndex);
         const currentEntry = usage[usageKey]?.aliases?.[normalizeOutlookEmailPlusAddress(aliasEmail)] || null;
@@ -437,7 +437,7 @@
         ...claim,
         address: claimedAddress,
         baseAddress,
-        registrationEmail: buildOutlookEmailPlusPayPalAliasAddress(baseAddress, 1),
+        registrationEmail: buildOutlookEmailPlusAliasNumberAddress(baseAddress, 1),
         isAliasClaim,
         aliasIndex: 1,
         aliasMax,
@@ -473,8 +473,8 @@
 
     function sortAliasEntriesByIndex(entries = [], baseAddress = '') {
       return [...entries].sort((left, right) => {
-        const leftIndex = getOutlookEmailPlusPayPalAliasIndex(left?.email, baseAddress);
-        const rightIndex = getOutlookEmailPlusPayPalAliasIndex(right?.email, baseAddress);
+        const leftIndex = getOutlookEmailPlusAliasNumberIndex(left?.email, baseAddress);
+        const rightIndex = getOutlookEmailPlusAliasNumberIndex(right?.email, baseAddress);
         return (leftIndex ?? Number.MAX_SAFE_INTEGER) - (rightIndex ?? Number.MAX_SAFE_INTEGER);
       });
     }
@@ -509,7 +509,7 @@
       const unusedEntry = sortAliasEntriesByIndex(entries, storedClaim.baseAddress)
         .find((entry) => !entry.used);
       if (unusedEntry) {
-        const aliasIndex = getOutlookEmailPlusPayPalAliasIndex(unusedEntry.email, storedClaim.baseAddress)
+        const aliasIndex = getOutlookEmailPlusAliasNumberIndex(unusedEntry.email, storedClaim.baseAddress)
           || Math.max(1, Math.floor(Number(storedClaim.aliasIndex) || 1));
         return {
           ...storedClaim,
@@ -524,7 +524,7 @@
 
       const knownAliases = new Set(entries.map((entry) => normalizeOutlookEmailPlusAddress(entry.email)).filter(Boolean));
       for (let index = 1; index <= aliasMax; index += 1) {
-        const registrationEmail = buildOutlookEmailPlusPayPalAliasAddress(storedClaim.baseAddress, index);
+        const registrationEmail = buildOutlookEmailPlusAliasNumberAddress(storedClaim.baseAddress, index);
         const emailKey = normalizeOutlookEmailPlusAddress(registrationEmail);
         if (registrationEmail && !knownAliases.has(emailKey)) {
           return {
@@ -649,7 +649,7 @@
       const registrationEmail = String(storedClaim.registrationEmail || storedClaim.address || '').trim();
       const normalizedAliasIndex = Math.max(
         1,
-        getOutlookEmailPlusPayPalAliasIndex(registrationEmail, storedClaim.baseAddress)
+        getOutlookEmailPlusAliasNumberIndex(registrationEmail, storedClaim.baseAddress)
           || Math.floor(Number(storedClaim.aliasIndex) || 1)
       );
       const hotmailAliasUsage = await ensureOutlookEmailPlusClaimAliasUsage(latestState, storedClaim);
@@ -836,3 +836,6 @@
     createOutlookEmailPlusProvider,
   };
 });
+
+
+
