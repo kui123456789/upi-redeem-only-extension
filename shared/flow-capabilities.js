@@ -29,8 +29,8 @@
   const FLOW_CAPABILITIES = Object.freeze({
     openai: Object.freeze({
       ...DEFAULT_FLOW_CAPABILITIES,
-      supportsPhoneSignup: true,
-      supportsPhoneVerificationSettings: true,
+      supportsPhoneSignup: false,
+      supportsPhoneVerificationSettings: false,
       supportsPlusMode: true,
       supportsContributionMode: true,
       supportsPlatformBinding: ['local-cpa-json', LOCAL_CPA_JSON_NO_RT_PANEL_MODE, 'cpa', 'sub2api', 'codex2api'],
@@ -41,7 +41,7 @@
   });
 
   const DEFAULT_PANEL_CAPABILITIES = Object.freeze({
-    supportsPhoneSignup: true,
+    supportsPhoneSignup: false,
     supportedPlusAccountAccessStrategies: Object.freeze([PLUS_ACCOUNT_ACCESS_STRATEGY_OAUTH]),
   });
   const MODE_SWITCH_RELEVANT_KEYS = Object.freeze([
@@ -56,41 +56,31 @@
 
   const PANEL_CAPABILITIES = Object.freeze({
     cpa: Object.freeze({
-      supportsPhoneSignup: true,
+      supportsPhoneSignup: false,
       supportedPlusAccountAccessStrategies: Object.freeze([
         PLUS_ACCOUNT_ACCESS_STRATEGY_OAUTH,
-        PLUS_ACCOUNT_ACCESS_STRATEGY_SMS_OAUTH,
-        PLUS_ACCOUNT_ACCESS_STRATEGY_PHONE_BIND_OAUTH,
-        PLUS_ACCOUNT_ACCESS_STRATEGY_CPA_CODEX_SESSION,
       ]),
     }),
     'local-cpa-json': Object.freeze({
-      supportsPhoneSignup: true,
+      supportsPhoneSignup: false,
       supportedPlusAccountAccessStrategies: Object.freeze([
         PLUS_ACCOUNT_ACCESS_STRATEGY_OAUTH,
-        PLUS_ACCOUNT_ACCESS_STRATEGY_SMS_OAUTH,
-        PLUS_ACCOUNT_ACCESS_STRATEGY_PHONE_BIND_OAUTH,
       ]),
     }),
     [LOCAL_CPA_JSON_NO_RT_PANEL_MODE]: Object.freeze({
-      supportsPhoneSignup: true,
+      supportsPhoneSignup: false,
       supportedPlusAccountAccessStrategies: Object.freeze([
         PLUS_ACCOUNT_ACCESS_STRATEGY_OAUTH,
-        PLUS_ACCOUNT_ACCESS_STRATEGY_SMS_OAUTH,
-        PLUS_ACCOUNT_ACCESS_STRATEGY_PHONE_BIND_OAUTH,
       ]),
     }),
     sub2api: Object.freeze({
-      supportsPhoneSignup: true,
+      supportsPhoneSignup: false,
       supportedPlusAccountAccessStrategies: Object.freeze([
         PLUS_ACCOUNT_ACCESS_STRATEGY_OAUTH,
-        PLUS_ACCOUNT_ACCESS_STRATEGY_SMS_OAUTH,
-        PLUS_ACCOUNT_ACCESS_STRATEGY_PHONE_BIND_OAUTH,
-        PLUS_ACCOUNT_ACCESS_STRATEGY_SUB2API_CODEX_SESSION,
       ]),
     }),
     codex2api: Object.freeze({
-      supportsPhoneSignup: true,
+      supportsPhoneSignup: false,
     }),
   });
 

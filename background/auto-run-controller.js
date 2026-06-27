@@ -869,7 +869,7 @@
               });
               forceFreshTabsNextRun = true;
               await addLog(
-                `UPI 卡密失败自动重试：${Math.round(AUTO_RUN_RETRY_DELAY_MS / 1000)} 秒后换新邮箱，开始第 ${targetRun}/${totalRuns} 轮第 ${attemptRun + 1} 次尝试（第 ${retryIndex}/${AUTO_RUN_MAX_RETRIES_PER_ROUND} 次重试）。`,
+                `UPI 兑换失败自动重试：${Math.round(AUTO_RUN_RETRY_DELAY_MS / 1000)} 秒后换新邮箱，开始第 ${targetRun}/${totalRuns} 轮第 ${attemptRun + 1} 次尝试（第 ${retryIndex}/${AUTO_RUN_MAX_RETRIES_PER_ROUND} 次重试）。`,
                 'warn'
               );
               try {

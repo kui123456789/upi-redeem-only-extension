@@ -283,6 +283,8 @@ const inputUpiRedeemExternalApiKey = document.getElementById('input-upi-redeem-e
 const btnToggleUpiRedeemExternalApiKey = document.getElementById('btn-toggle-upi-redeem-external-api-key');
 const rowUpiRedeemClientId = document.getElementById('row-upi-redeem-client-id');
 const inputUpiRedeemClientId = document.getElementById('input-upi-redeem-client-id');
+const rowUpiRedeemFailedAccountRetryLimit = document.getElementById('row-upi-redeem-failed-account-retry-limit');
+const inputUpiRedeemFailedAccountRetryLimit = document.getElementById('input-upi-redeem-failed-account-retry-limit');
 const rowTotpMfaAfterProfileEnabled = document.getElementById('row-totp-mfa-after-profile-enabled');
 const inputTotpMfaAfterProfileEnabled = document.getElementById('input-totp-mfa-after-profile-enabled');
 const rowSetGptPasswordVerificationWaitSeconds = document.getElementById('row-set-gpt-password-verification-wait-seconds');
@@ -808,6 +810,8 @@ const DEFAULT_PHONE_AUTO_RELEASE_ON_STOP_ENABLED = true;
 const DEFAULT_TOTP_MFA_AFTER_PROFILE_ENABLED = true;
 const DEFAULT_SET_GPT_PASSWORD_VERIFICATION_WAIT_SECONDS = 10;
 const SET_GPT_PASSWORD_VERIFICATION_WAIT_MAX_SECONDS = 300;
+const DEFAULT_UPI_REDEEM_FAILED_ACCOUNT_RETRY_LIMIT = 3;
+const UPI_REDEEM_FAILED_ACCOUNT_RETRY_LIMIT_MAX = 20;
 const DEFAULT_SIGNUP_VERIFICATION_CODE_WAIT_SECONDS = 10;
 const SIGNUP_VERIFICATION_CODE_WAIT_MAX_SECONDS = 300;
 const PHONE_SIGNUP_REUSE_LOCK_TITLE = '手机号注册流程不使用号码复用，切回邮箱注册后会恢复原设置';
@@ -1781,6 +1785,7 @@ let settingsDirty = false;
 let settingsSaveInFlight = false;
 let settingsAutoSaveTimer = null;
 let settingsSaveRevision = 0;
+let customPasswordSaveRevision = 0;
 let signupPhoneInputDirty = false;
 let signupPhoneInputFocused = false;
 let signupPhoneInputPersistPromise = null;
@@ -3095,6 +3100,12 @@ function normalizeUpiRedeemCdkeyUsageValue(value = {}) {
       lastError: String(item.lastError || '').trim(),
       enabled: item.enabled !== false,
       email: String(item.email || item.accountEmail || item.credentialEmail || '').trim().toLowerCase(),
+      accessToken: String(item.accessToken || item.access_token || item.upiRedeemAccessToken || '').trim(),
+      accessTokenMasked: String(item.accessTokenMasked || '').trim(),
+      accessTokenUpdatedAt: Math.max(0, Number(item.accessTokenUpdatedAt) || Number(item.tokenUpdatedAt) || 0),
+      lastFailedEmail: String(item.lastFailedEmail || '').trim().toLowerCase(),
+      lastFailedAt: Math.max(0, Number(item.lastFailedAt) || 0),
+      lastFailedReason: String(item.lastFailedReason || '').trim(),
       releasedEmail: String(item.releasedEmail || item.approveBlockedEmail || '').trim().toLowerCase(),
       releaseReason: String(item.releaseReason || '').trim(),
       releasedAt: Math.max(0, Number(item.releasedAt) || 0),
@@ -3130,6 +3141,7 @@ const UPI_REDEEM_REMOTE_STATUS_LABELS = Object.freeze({
   timeout: '兑换超时',
   not_found: '后端无记录',
   rejected: '提交失败',
+  approve_blocked: '审核阻塞',
   canceled: '已取消',
   cancelled: '充值失败',
   unused: '可用',
@@ -3178,6 +3190,9 @@ function isUpiRedeemDuplicateCdkeyMessage(message = '') {
 
 function normalizeUpiRedeemRemoteStatusValue(status = '') {
   const normalized = String(status || '').trim().toLowerCase().replace(/[\s-]+/g, '_');
+  if (normalized === 'approve_blocked') {
+    return 'approve_blocked';
+  }
   if (/兑换成功|成功|已兑换|已使用|已用/.test(normalized)) {
     return 'success';
   }
@@ -3195,6 +3210,9 @@ function normalizeUpiRedeemRemoteStatusValue(status = '') {
   }
   if (/未使用|未兑换|可用/.test(normalized)) {
     return 'unused';
+  }
+  if (/waiting|queue|br_recharge|进入兑换队列|兑换队列|等待系统处理|等待.*接单|任务.*等待/.test(normalized)) {
+    return 'queued';
   }
   if (/等待处理|待处理|待兑换|待派发/.test(normalized)) {
     return 'pending_dispatch';
@@ -3227,7 +3245,7 @@ function normalizeUpiRedeemRemoteStatusValue(status = '') {
 }
 
 function isRetryableUpiRedeemRemoteStatus(status = '') {
-  return ['failed', 'timeout', 'rejected', 'canceled'].includes(normalizeUpiRedeemRemoteStatusValue(status));
+  return ['failed', 'timeout', 'rejected', 'approve_blocked'].includes(normalizeUpiRedeemRemoteStatusValue(status));
 }
 
 function isUpiRedeemRemoteActiveStatus(status = '') {
@@ -3251,12 +3269,18 @@ function isUpiRedeemCdkeySelectableForRedeem(entry = {}) {
   if (!entry || entry.enabled === false) {
     return false;
   }
-  if (entry.subscriptionActive === true || entry.subscriptionActive === false) {
+  const remoteStatus = normalizeUpiRedeemRemoteStatusValue(entry.remoteStatus);
+  const remoteMessageStatus = normalizeUpiRedeemRemoteStatusValue(entry.remoteMessage);
+  const canceledRemote = remoteStatus === 'canceled' || remoteMessageStatus === 'canceled';
+  if (entry.subscriptionActive === true || (entry.subscriptionActive === false && !canceledRemote)) {
     return false;
   }
-  const remoteStatus = normalizeUpiRedeemRemoteStatusValue(entry.remoteStatus);
   if (
     remoteStatus === 'success'
+    || (
+      (remoteStatus === 'pending_dispatch' || remoteMessageStatus === 'pending_dispatch')
+      && Boolean(String(entry.email || entry.accessToken || entry.access_token || entry.upiRedeemAccessToken || '').trim())
+    )
     || isUpiRedeemRemoteActiveStatus(remoteStatus)
     || isUpiRedeemRemoteActiveStatus(entry.remoteMessage)
     || entry.retrying === true
@@ -3281,6 +3305,9 @@ function getUpiRedeemRemoteStatusClass(status = '', used = false, enabled = true
   if (isRetryableUpiRedeemRemoteStatus(normalized) || normalized === 'invalid') {
     return 'failed';
   }
+  if (normalized === 'canceled') {
+    return 'failed';
+  }
   if (['pending', 'pending_token', 'pending_dispatch', 'dispatched', 'dispatching', 'queued', 'accepted', 'submitted'].includes(normalized)) {
     return 'pending';
   }
@@ -3288,6 +3315,22 @@ function getUpiRedeemRemoteStatusClass(status = '', used = false, enabled = true
     return 'running';
   }
   return enabled ? 'active' : '';
+}
+
+function getRestartableCanceledUpiRedeemCdkeyDisplay(entry = {}, used = false) {
+  if (used || entry?.enabled === false || entry?.subscriptionActive === true) {
+    return null;
+  }
+  const remoteStatus = normalizeUpiRedeemRemoteStatusValue(entry?.remoteStatus);
+  const remoteMessageStatus = normalizeUpiRedeemRemoteStatusValue(entry?.remoteMessage);
+  if (remoteStatus !== 'canceled' && remoteMessageStatus !== 'canceled') {
+    return null;
+  }
+  return {
+    label: '可重启',
+    className: 'active',
+    title: '后端已取消，可通过“一键兑换卡密”重新发起兑换',
+  };
 }
 
 function getUpiRedeemSubscriptionPlanLabel(value = '') {
@@ -3620,6 +3663,10 @@ async function refreshUpiRedeemCdkeyStatuses(options = {}) {
         cdkeys,
         upiRedeemExternalApiKey,
         upiRedeemClientId,
+        upiRedeemFailedAccountRetryLimit: normalizeUpiRedeemFailedAccountRetryLimit(
+          inputUpiRedeemFailedAccountRetryLimit?.value,
+          latestState?.upiRedeemFailedAccountRetryLimit
+        ),
         autoRefresh: Boolean(options.autoRefresh),
         upiRedeemCdkeyPoolText: normalizeUpiRedeemCdkeyPoolTextValue(inputUpiRedeemCdkeyPool?.value || latestState?.upiRedeemCdkeyPoolText || latestState?.pixRedeemCdkeyPoolText || ''),
       },
@@ -3633,7 +3680,12 @@ async function refreshUpiRedeemCdkeyStatuses(options = {}) {
     renderUpiRedeemCdkeyStatusList(latestState);
     updateUpiRedeemCdkeyPoolSummary(latestState, { skipRender: true });
     if (!silent) {
-      showToast(`UPI 卡密状态已刷新：${response?.checkedCount || cdkeys.length} 条。`, 'success');
+      const autoRetrySubmitted = Math.max(0, Math.floor(Number(response?.autoRetry?.submitted) || 0));
+      const autoRetryAttempted = Math.max(0, Math.floor(Number(response?.autoRetry?.attempted) || 0));
+      const autoRetryText = autoRetrySubmitted || autoRetryAttempted
+        ? `失败账号已随机换卡提交 ${autoRetrySubmitted || autoRetryAttempted} 个。`
+        : '';
+      showToast(`UPI 卡密状态已刷新：${response?.checkedCount || cdkeys.length} 条。${autoRetryText}`, 'success');
     }
     return response || {};
   } catch (error) {
@@ -3704,6 +3756,7 @@ function renderUpiRedeemCdkeyStatusList(state = latestState) {
     const remoteStatus = String(entry.remoteStatus || '').trim().toLowerCase();
     const remoteLabel = getUpiRedeemRemoteStatusLabel(remoteStatus);
     const subscriptionDisplay = getUpiRedeemCdkeySubscriptionDisplay(entry);
+    const restartableCanceledDisplay = getRestartableCanceledUpiRedeemCdkeyDisplay(entry, used);
     const duplicateCdkeyStatusDisplay = (
       isUpiRedeemDuplicateCdkeyMessage(remoteStatus)
       || isUpiRedeemDuplicateCdkeyMessage(entry.remoteMessage)
@@ -3743,12 +3796,14 @@ function renderUpiRedeemCdkeyStatusList(state = latestState) {
     cdkeyText.textContent = cdkey;
 
     const status = document.createElement(used ? 'button' : 'span');
-    status.className = `icloud-tag ${duplicateCdkeyStatusDisplay?.className || statusSubscriptionDisplay?.className || getUpiRedeemRemoteStatusClass(remoteStatus, used, enabled)}${used ? ' upi-redeem-cdkey-status-action' : ''}`;
+    status.className = `icloud-tag ${duplicateCdkeyStatusDisplay?.className || restartableCanceledDisplay?.className || statusSubscriptionDisplay?.className || getUpiRedeemRemoteStatusClass(remoteStatus, used, enabled)}${used ? ' upi-redeem-cdkey-status-action' : ''}`;
     status.textContent = duplicateCdkeyStatusDisplay?.label
+      || restartableCanceledDisplay?.label
       || statusSubscriptionDisplay?.label
       || remoteLabel
       || (used ? '已使用' : enabled ? '启用' : '停用');
     status.title = duplicateCdkeyStatusDisplay?.title
+      || restartableCanceledDisplay?.title
       || statusSubscriptionDisplay?.title
       || remoteStatusTitle
       || (used ? '点击清除旧的已用标记；已确认兑换的卡密不会再次提交' : '远端状态');
@@ -3858,6 +3913,22 @@ function normalizeSetGptPasswordVerificationWaitSeconds(value, fallback = DEFAUL
     return fallbackValue;
   }
   return Math.max(0, Math.min(SET_GPT_PASSWORD_VERIFICATION_WAIT_MAX_SECONDS, numeric));
+}
+
+function normalizeUpiRedeemFailedAccountRetryLimit(value, fallback = DEFAULT_UPI_REDEEM_FAILED_ACCOUNT_RETRY_LIMIT) {
+  const rawValue = String(value ?? '').trim();
+  const fallbackNumber = Number.parseInt(String(fallback ?? '').trim(), 10);
+  const fallbackValue = Number.isFinite(fallbackNumber)
+    ? Math.max(0, Math.min(UPI_REDEEM_FAILED_ACCOUNT_RETRY_LIMIT_MAX, fallbackNumber))
+    : DEFAULT_UPI_REDEEM_FAILED_ACCOUNT_RETRY_LIMIT;
+  if (!rawValue) {
+    return fallbackValue;
+  }
+  const numeric = Number.parseInt(rawValue, 10);
+  if (!Number.isFinite(numeric)) {
+    return fallbackValue;
+  }
+  return Math.max(0, Math.min(UPI_REDEEM_FAILED_ACCOUNT_RETRY_LIMIT_MAX, numeric));
 }
 
 function normalizeSignupVerificationCodeWaitSeconds(value, fallback = DEFAULT_SIGNUP_VERIFICATION_CODE_WAIT_SECONDS) {
@@ -5438,16 +5509,16 @@ function getLockedRunCountFromEmailPool(provider = selectMailProvider.value) {
 }
 
 function shouldLockRunCountToEmailPool(provider = (typeof selectMailProvider !== 'undefined' ? selectMailProvider?.value : undefined)) {
-  return false;
+  return getLockedRunCountFromEmailPool(provider) > 0;
 }
 
 function syncRunCountFromCustomEmailPool() {
   if (!usesCustomEmailPoolGenerator()) {
     return;
   }
-  const currentRunCount = parseInt(inputRunCount.value, 10);
-  if (!Number.isFinite(currentRunCount) || currentRunCount < 1) {
-    inputRunCount.value = String(getCustomEmailPoolSize() || 1);
+  const poolSize = getCustomEmailPoolSize();
+  if (poolSize > 0) {
+    inputRunCount.value = String(poolSize);
   }
 }
 
@@ -5455,21 +5526,24 @@ function syncRunCountFromCustomMailProviderPool() {
   if (!usesCustomMailProviderPool()) {
     return;
   }
-  const currentRunCount = parseInt(inputRunCount.value, 10);
-  if (!Number.isFinite(currentRunCount) || currentRunCount < 1) {
-    inputRunCount.value = String(getCustomMailProviderPoolSize() || 1);
+  const poolSize = getCustomMailProviderPoolSize();
+  if (poolSize > 0) {
+    inputRunCount.value = String(poolSize);
   }
 }
 
 function syncRunCountFromConfiguredEmailPool(provider = selectMailProvider.value) {
   const poolSize = getLockedRunCountFromEmailPool(provider);
-  const currentRunCount = parseInt(inputRunCount.value, 10);
-  if (poolSize > 0 && (!Number.isFinite(currentRunCount) || currentRunCount < 1)) {
+  if (poolSize > 0) {
     inputRunCount.value = String(poolSize);
   }
 }
 
 function getRunCountValue() {
+  const poolSize = getLockedRunCountFromEmailPool();
+  if (poolSize > 0) {
+    return poolSize;
+  }
   return Math.max(1, parseInt(inputRunCount.value, 10) || 1);
 }
 
@@ -6915,6 +6989,10 @@ function collectSettingsPayload() {
     upiSubscriptionApiBaseUrl: String(inputUpiSubscriptionApiBaseUrl?.value || '').trim(),
     upiRedeemExternalApiKey: String(inputUpiRedeemExternalApiKey?.value || '').trim(),
     upiRedeemClientId: String(inputUpiRedeemClientId?.value || '').trim(),
+    upiRedeemFailedAccountRetryLimit: normalizeUpiRedeemFailedAccountRetryLimit(
+      inputUpiRedeemFailedAccountRetryLimit?.value,
+      latestState?.upiRedeemFailedAccountRetryLimit
+    ),
     upiRedeemStopAfterRedeem: true,
     upiRedeemContinueAfterRedeem: false,
     totpMfaAfterProfileEnabled: getSelectedTotpMfaAfterProfileEnabled(latestState),
@@ -6980,9 +7058,7 @@ function collectSettingsPayload() {
         ? inputGpcHelperLocalSmsUrl.value
         : (latestState?.gopayHelperLocalSmsHelperUrl || '')
     ),
-    ...(contributionModeEnabled ? {} : {
-      customPassword: inputPassword.value,
-    }),
+    customPassword: inputPassword.value,
     mailProvider: supportedMailProviderNormalizer(selectMailProvider?.value || latestState?.mailProvider),
     mail2925Mode: getSelectedMail2925Mode(),
     mail2925UseAccountPool,
@@ -13319,7 +13395,10 @@ function updatePlusModeUI() {
   const gpcValue = typeof PLUS_PAYMENT_METHOD_GPC_HELPER !== 'undefined' ? PLUS_PAYMENT_METHOD_GPC_HELPER : 'gpc-helper';
   const upiValue = typeof PLUS_PAYMENT_METHOD_UPI !== 'undefined' ? PLUS_PAYMENT_METHOD_UPI : 'upi';
   const defaultMethod = typeof DEFAULT_PLUS_PAYMENT_METHOD !== 'undefined' ? DEFAULT_PLUS_PAYMENT_METHOD : paypalValue;
-  const rawEnabled = typeof inputPlusModeEnabled !== 'undefined' && inputPlusModeEnabled
+  const isUpiOnlyMode = Boolean(document.body?.classList?.contains('upi-only'));
+  const rawEnabled = isUpiOnlyMode
+    ? true
+    : typeof inputPlusModeEnabled !== 'undefined' && inputPlusModeEnabled
     ? Boolean(inputPlusModeEnabled.checked)
     : false;
   const capabilityState = typeof resolveCurrentSidepanelCapabilities === 'function'
@@ -13352,7 +13431,7 @@ function updatePlusModeUI() {
     ? Boolean(capabilityState.canShowPlusSettings)
     : true;
   const enabled = supportsPlusMode && rawEnabled;
-  const method = enabled ? getSelectedPlusPaymentMethod() : defaultMethod;
+  const method = isUpiOnlyMode ? upiValue : (enabled ? getSelectedPlusPaymentMethod() : defaultMethod);
   const gpcPhoneMode = normalizeGpcHelperPhoneModeValue(
     typeof selectGpcHelperPhoneMode !== 'undefined' && selectGpcHelperPhoneMode
       ? selectGpcHelperPhoneMode.value
@@ -13378,11 +13457,11 @@ function updatePlusModeUI() {
   const localSmsControlsVisible = gpcRowsVisible && !isGpcAutoMode;
   const effectiveLocalSmsEnabled = !isGpcAutoMode && localSmsEnabled;
   if (typeof rowPlusMode !== 'undefined' && rowPlusMode) {
-    rowPlusMode.style.display = supportsPlusMode ? '' : 'none';
+    rowPlusMode.style.display = supportsPlusMode && !isUpiOnlyMode ? '' : 'none';
   }
   const checkoutModeSwitchVisible = supportsPlusMode && enabled && selectedMethod === paypalValue;
   if (plusCheckoutModeSwitchGroup) {
-    plusCheckoutModeSwitchGroup.style.display = supportsPlusMode ? '' : 'none';
+    plusCheckoutModeSwitchGroup.style.display = supportsPlusMode && !isUpiOnlyMode ? '' : 'none';
   }
   [inputPlusCheckoutModeUs, inputPlusCheckoutModeJp].filter(Boolean).forEach((input) => {
     input.disabled = !checkoutModeSwitchVisible;
@@ -13397,7 +13476,7 @@ function updatePlusModeUI() {
     plusPaymentMethodCaption.textContent = selectedMethod === gpcValue
       ? `GPC ${isGpcAutoMode ? '自动' : '手动'}订阅链路`
       : selectedMethod === upiValue
-      ? 'UPI 注册验资链路'
+      ? 'UPI 资格检测与手动卡密兑换链路'
       : selectedMethod === gopayValue
       ? 'GoPay 印尼订阅链路'
       : 'PayPal 订阅链路';
@@ -13418,7 +13497,7 @@ function updatePlusModeUI() {
       row.style.display = 'none';
       return;
     }
-    row.style.display = enabled ? '' : 'none';
+    row.style.display = enabled && !isUpiOnlyMode ? '' : 'none';
   });
   [
     typeof rowPlusHostedCheckoutOauthDelay !== 'undefined' ? rowPlusHostedCheckoutOauthDelay : null,
@@ -13458,6 +13537,7 @@ function updatePlusModeUI() {
     typeof rowUpiSubscriptionApiBaseUrl !== 'undefined' ? rowUpiSubscriptionApiBaseUrl : null,
     typeof rowUpiRedeemExternalApiKey !== 'undefined' ? rowUpiRedeemExternalApiKey : null,
     typeof rowUpiRedeemClientId !== 'undefined' ? rowUpiRedeemClientId : null,
+    typeof rowUpiRedeemFailedAccountRetryLimit !== 'undefined' ? rowUpiRedeemFailedAccountRetryLimit : null,
     typeof rowTotpMfaAfterProfileEnabled !== 'undefined' ? rowTotpMfaAfterProfileEnabled : null,
     typeof rowSetGptPasswordVerificationWaitSeconds !== 'undefined' ? rowSetGptPasswordVerificationWaitSeconds : null,
     typeof rowUpiCredentialMembershipTotpApiBaseUrl !== 'undefined' ? rowUpiCredentialMembershipTotpApiBaseUrl : null,
@@ -14075,6 +14155,41 @@ function scheduleSettingsAutoSave() {
   }, 500);
 }
 
+function shouldUseSettingsCardAutosave(target) {
+  if (!target || typeof target.matches !== 'function') {
+    return false;
+  }
+  if (!target.matches('input, select, textarea')) {
+    return false;
+  }
+  const type = String(target.type || '').trim().toLowerCase();
+  if (['button', 'submit', 'reset', 'file', 'hidden'].includes(type)) {
+    return false;
+  }
+  return ![
+    'input-custom-email-pool-search',
+    'select-custom-email-pool-filter',
+    'checkbox-custom-email-pool-select-all',
+  ].includes(String(target.id || '').trim());
+}
+
+function queueSettingsCardAutosaveFromEvent(event) {
+  const target = event?.target;
+  if (!shouldUseSettingsCardAutosave(target)) {
+    return;
+  }
+  markSettingsDirty(true);
+  scheduleSettingsAutoSave();
+}
+
+function flushDirtySettingsBeforePanelUnload() {
+  clearTimeout(settingsAutoSaveTimer);
+  if (!settingsDirty || settingsSaveInFlight) {
+    return;
+  }
+  saveSettings({ silent: true }).catch(() => { });
+}
+
 async function sendRuntimeMessageWithTimeout(message, timeoutMs = 20000, timeoutLabel = '请求') {
   const effectiveTimeoutMs = Math.max(1000, Number(timeoutMs) || 20000);
   let timer = null;
@@ -14144,6 +14259,36 @@ async function saveSettings(options = {}) {
   }
 }
 
+async function persistCustomPasswordInput(options = {}) {
+  const { silent = true } = options;
+  const customPassword = inputPassword.value;
+  const saveRevision = customPasswordSaveRevision + 1;
+  customPasswordSaveRevision = saveRevision;
+  syncLatestState({ customPassword });
+
+  try {
+    const response = await sendRuntimeMessageWithTimeout({
+      type: 'SAVE_SETTING',
+      source: 'sidepanel',
+      payload: { customPassword },
+    }, 8000, '保存账户密码');
+
+    if (response?.error) {
+      throw new Error(response.error);
+    }
+    if (saveRevision === customPasswordSaveRevision) {
+      syncLatestState({ customPassword });
+    }
+  } catch (err) {
+    markSettingsDirty(true);
+    if (!silent) {
+      showToast(`账户密码保存失败：${err.message}`, 'error');
+    } else {
+      console.warn('账户密码保存失败：', err);
+    }
+  }
+}
+
 async function persistCurrentSettingsForAction() {
   clearTimeout(settingsAutoSaveTimer);
   await waitForSettingsSaveIdle();
@@ -14162,7 +14307,10 @@ function applyAutoRunStatus(payload = currentAutoRun) {
   setSettingsCardLocked(settingsCardLocked);
   setFreePhoneReuseControlsLocked(settingsCardLocked);
 
-  inputRunCount.disabled = currentAutoRun.autoRunning;
+  inputRunCount.disabled = currentAutoRun.autoRunning || shouldLockRunCountToEmailPool();
+  inputRunCount.title = shouldLockRunCountToEmailPool()
+    ? '运行次数已跟随当前可用邮箱数量'
+    : '';
   btnAutoRun.disabled = currentAutoRun.autoRunning;
   btnFetchEmail.disabled = locked
     || isCustomMailProvider()
@@ -14551,6 +14699,12 @@ function applySettingsState(state) {
   }
   if (typeof inputUpiRedeemClientId !== 'undefined' && inputUpiRedeemClientId) {
     inputUpiRedeemClientId.value = String(state?.upiRedeemClientId ?? state?.pixRedeemClientId ?? '').trim();
+  }
+  if (typeof inputUpiRedeemFailedAccountRetryLimit !== 'undefined' && inputUpiRedeemFailedAccountRetryLimit) {
+    inputUpiRedeemFailedAccountRetryLimit.value = String(normalizeUpiRedeemFailedAccountRetryLimit(
+      state?.upiRedeemFailedAccountRetryLimit,
+      DEFAULT_UPI_REDEEM_FAILED_ACCOUNT_RETRY_LIMIT
+    ));
   }
   if (typeof inputTotpMfaAfterProfileEnabled !== 'undefined' && inputTotpMfaAfterProfileEnabled) {
     inputTotpMfaAfterProfileEnabled.checked = state?.totpMfaAfterProfileEnabled !== false;
@@ -14946,6 +15100,9 @@ function applySettingsState(state) {
     : 'openai';
   const defaultNexSmsServiceCode = typeof DEFAULT_NEX_SMS_SERVICE_CODE !== 'undefined'
     ? DEFAULT_NEX_SMS_SERVICE_CODE
+    : 'dr';
+  const defaultSmsBowerServiceCode = typeof DEFAULT_SMS_BOWER_SERVICE_CODE !== 'undefined'
+    ? DEFAULT_SMS_BOWER_SERVICE_CODE
     : 'dr';
   setPhoneSmsProviderSelectValue(restoredPhoneSmsProvider);
   const restoredPhoneSmsProviderOrder = typeof applyPhoneSmsProviderOrderSelection === 'function'
@@ -15684,7 +15841,7 @@ async function refreshContributionContentHint() {
 }
 
 function syncPasswordField(state) {
-  inputPassword.value = state?.contributionMode ? '' : (state.customPassword || '');
+  inputPassword.value = state?.customPassword || '';
 }
 
 function isCustomMailProvider(provider = selectMailProvider.value) {
@@ -16286,6 +16443,8 @@ function updateMailProviderUI() {
     allowedEmailGenerators = new Set([YYDSMAIL_GENERATOR]);
   } else if (useOutlookEmailPlusProvider) {
     allowedEmailGenerators = new Set([OUTLOOK_EMAIL_PLUS_GENERATOR]);
+  } else if (isIcloudMailProvider(selectMailProvider.value)) {
+    allowedEmailGenerators = new Set(['icloud', customEmailPoolGenerator]);
   } else if (useGmail) {
     allowedEmailGenerators = new Set([gmailAliasGenerator, customEmailPoolGenerator]);
   }
@@ -16570,11 +16729,11 @@ function updateMailProviderUI() {
   }
   if (autoHintText && useCustomEmailPool) {
     autoHintText.textContent = getCustomEmailPoolSize() > 0
-      ? `当前邮箱池共 ${getCustomEmailPoolSize()} 个邮箱，可手动设置运行次数；实际收码仍走当前邮箱服务`
-      : '请先在邮箱池里每行填写一个邮箱，再手动设置运行次数';
+      ? `当前邮箱池可用 ${getCustomEmailPoolSize()} 个邮箱，自动运行 ${getCustomEmailPoolSize()} 次；已用/停用不会计入`
+      : '请先在邮箱池里每行填写一个邮箱，运行次数会自动同步';
   }
   if (autoHintText && useCustomEmail && useCustomMailProviderPool) {
-    autoHintText.textContent = `当前自定义号池共 ${getCustomMailProviderPoolSize()} 个邮箱，可手动设置运行次数；第 4/8 步仍需手动输入验证码`;
+    autoHintText.textContent = `当前自定义号池共 ${getCustomMailProviderPoolSize()} 个邮箱，自动运行 ${getCustomMailProviderPoolSize()} 次；第 4 步仍需手动输入验证码`;
   }
   if (autoHintText && useGmail && useGeneratedAlias) {
     autoHintText.textContent = '请先填写 Gmail 原邮箱，步骤 3 会自动生成 Gmail +tag 地址';
@@ -16585,8 +16744,8 @@ function updateMailProviderUI() {
   if (autoHintText && useMail2925AccountPool && !useCustomEmailPool) {
     autoHintText.textContent = getMail2925Accounts().length
       ? (useGeneratedAlias
-        ? '当前已启用 2925 号池模式，步骤 3 会基于下拉框选中的号池邮箱生成别名地址'
-        : '当前已启用 2925 号池模式，步骤 4 / 8 遇到登录页时会优先使用下拉框选中的账号自动登录')
+          ? '当前已启用 2925 号池模式，步骤 3 会基于下拉框选中的号池邮箱生成别名地址'
+        : '当前已启用 2925 号池模式，步骤 4 遇到验证码页时会优先使用下拉框选中的账号自动登录')
       : '当前已启用 2925 号池模式，请先在下方 2925 账号池中添加账号并选择邮箱';
   }
   if (autoHintText && showCloudflareTempEmailReceiveMailbox && !useCustomEmailPool) {
@@ -16600,7 +16759,7 @@ function updateMailProviderUI() {
     const forwardProviderLabel = ICLOUD_FORWARD_MAIL_PROVIDER_LABELS[forwardProvider]
       || MAIL_PROVIDER_LOGIN_CONFIGS[forwardProvider]?.label
       || '目标邮箱';
-    autoHintText.textContent = `iCloud ${isIcloudComCnHost ? 'com.cn' : ''} 当前使用转发收码：第 4/8 步会从 ${forwardProviderLabel} 轮询验证码。`;
+    autoHintText.textContent = `iCloud ${isIcloudComCnHost ? 'com.cn' : ''} 当前使用转发收码：第 4 步会从 ${forwardProviderLabel} 轮询验证码。`;
   }
   if (autoHintText && useIcloudApiProvider) {
     autoHintText.textContent = 'iCloud API 模式会通过侧栏配置的 Worker 拉取 QQ 转发验证码；自定义邮箱池需导入“隐藏邮箱地址----密钥”。';
@@ -16620,7 +16779,11 @@ function updateMailProviderUI() {
     syncRunCountFromCustomMailProviderPool();
   }
   if (typeof inputRunCount !== 'undefined' && inputRunCount) {
-    inputRunCount.disabled = currentAutoRun.autoRunning;
+    const runCountLockedToEmailPool = shouldLockRunCountToEmailPool(selectMailProvider.value);
+    inputRunCount.disabled = currentAutoRun.autoRunning || runCountLockedToEmailPool;
+    inputRunCount.title = runCountLockedToEmailPool
+      ? '运行次数已跟随当前可用邮箱数量'
+      : '';
   }
   renderPayPalAccounts();
   renderHotmailAccounts();
@@ -18152,6 +18315,10 @@ btnToggleLocalCpaJsonAuthDir?.addEventListener('click', () => {
   updateLocalCpaJsonAuthDirUI(!localCpaJsonAuthDirExpanded);
 });
 
+function isUpiOnlySidepanelMode() {
+  return Boolean(typeof document !== 'undefined' && document.body?.classList?.contains('upi-only'));
+}
+
 function validateLocalCpaJsonPluginDir(options = {}) {
   if (typeof inputLocalCpaJsonPluginDir === 'undefined' || !inputLocalCpaJsonPluginDir) {
     return {
@@ -18183,7 +18350,8 @@ function validateLocalCpaJsonPluginDir(options = {}) {
   const localCpaJsonNoRtMode = typeof LOCAL_CPA_JSON_NO_RT_PANEL_MODE === 'string'
     ? LOCAL_CPA_JSON_NO_RT_PANEL_MODE
     : 'local-cpa-json-no-rt';
-  const required = panelMode === localCpaJsonMode || panelMode === localCpaJsonNoRtMode;
+  const required = !isUpiOnlySidepanelMode()
+    && (panelMode === localCpaJsonMode || panelMode === localCpaJsonNoRtMode);
   const pluginDir = String(inputLocalCpaJsonPluginDir?.value || '').trim();
   const valid = !required || Boolean(pluginDir);
 
@@ -18279,6 +18447,7 @@ const accountRecordsManager = window.SidepanelAccountRecordsManager?.createAccou
     inputUpiCredentialMembershipTotpLookupKey,
     inputUpiRedeemExternalApiKey,
     inputUpiRedeemClientId,
+    inputUpiRedeemFailedAccountRetryLimit,
     inputUpiRedeemCdkeyPool,
     btnExportUpiRedeemSuccessRecords,
     upiCredentialBackupPreviewWrap,
@@ -18787,6 +18956,11 @@ btnSaveSettings.addEventListener('click', async () => {
   await saveSettings({ silent: false }).catch(() => { });
 });
 
+if (settingsCard) {
+  settingsCard.addEventListener('input', queueSettingsCardAutosaveFromEvent);
+  settingsCard.addEventListener('change', queueSettingsCardAutosaveFromEvent);
+}
+
 btnStop.addEventListener('click', async () => {
   btnStop.disabled = true;
   await chrome.runtime.sendMessage({ type: 'STOP_FLOW', source: 'sidepanel', payload: {} });
@@ -18876,6 +19050,7 @@ autoStartMessage?.addEventListener('click', (event) => {
 btnAutoStartClose?.addEventListener('click', () => resolveModalChoice(null));
 
 async function startAutoRunFromCurrentSettings() {
+  syncRunCountFromConfiguredEmailPool();
   const requestedTotalRuns = getRunCountValue();
   registerPendingAutoRunStartRunCount(requestedTotalRuns);
 
@@ -18948,7 +19123,10 @@ async function startAutoRunFromCurrentSettings() {
   if (customEmailPoolEnabled && lockedRunCount <= 0) {
     throw new Error('请先在邮箱池里至少填写 1 个邮箱。');
   }
-  const totalRuns = requestedTotalRuns;
+  const totalRuns = lockedRunCount > 0 ? lockedRunCount : requestedTotalRuns;
+  if (lockedRunCount > 0) {
+    inputRunCount.value = String(totalRuns);
+  }
   registerPendingAutoRunStartRunCount(totalRuns);
   let mode = 'restart';
   const autoRunSkipFailures = inputAutoSkipFailures.checked;
@@ -19249,11 +19427,14 @@ selectLuckmailEmailType?.addEventListener('change', () => {
 });
 
 inputPassword.addEventListener('input', () => {
+  syncLatestState({ customPassword: inputPassword.value });
   markSettingsDirty(true);
   updateButtonStates();
+  persistCustomPasswordInput({ silent: true }).catch(() => { });
   scheduleSettingsAutoSave();
 });
 inputPassword.addEventListener('blur', () => {
+  persistCustomPasswordInput({ silent: true }).catch(() => { });
   saveSettings({ silent: true }).catch(() => { });
 });
 
@@ -19386,6 +19567,7 @@ btnUpiRedeemCdkeyStatusRefresh?.addEventListener('click', () => {
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
     clearUpiRedeemCdkeyStatusAutoRefresh();
+    flushDirtySettingsBeforePanelUnload();
     return;
   }
   scheduleUpiRedeemCdkeyStatusAutoRefresh({ immediate: true });
@@ -19393,10 +19575,12 @@ document.addEventListener('visibilitychange', () => {
 
 window.addEventListener('pagehide', () => {
   clearUpiRedeemCdkeyStatusAutoRefresh();
+  flushDirtySettingsBeforePanelUnload();
 });
 
 window.addEventListener('beforeunload', () => {
   clearUpiRedeemCdkeyStatusAutoRefresh();
+  flushDirtySettingsBeforePanelUnload();
 });
 
 selectPlusPaymentMethod?.addEventListener('change', () => {
@@ -19439,8 +19623,11 @@ selectPlusPaymentMethod?.addEventListener('change', () => {
   inputUpiSubscriptionApiBaseUrl,
   inputUpiRedeemExternalApiKey,
   inputUpiRedeemClientId,
+  inputUpiRedeemFailedAccountRetryLimit,
   inputTotpMfaAfterProfileEnabled,
   inputSetGptPasswordVerificationWaitSeconds,
+  inputUpiCredentialMembershipTotpApiBaseUrl,
+  inputUpiCredentialMembershipTotpLookupKey,
   selectUpiRedeemAfterMode,
   inputUpiRedeemStopAfterRedeem,
   inputUpiRedeemCdkeyPool,
@@ -22346,6 +22533,13 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
     case 'DATA_UPDATED': {
       syncLatestState(message.payload);
+      if (
+        message.payload.upiCredentialMembershipCheckResults !== undefined
+        || message.payload.upiRedeemCdkeyUsage !== undefined
+        || message.payload.pixRedeemCdkeyUsage !== undefined
+      ) {
+        renderAccountRecords(latestState);
+      }
       if (message.payload.operationDelayEnabled !== undefined && typeof applyOperationDelayState === 'function') {
         applyOperationDelayState(message.payload);
       }
@@ -22714,6 +22908,12 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       }
       if ((message.payload.upiRedeemClientId !== undefined || message.payload.pixRedeemClientId !== undefined) && inputUpiRedeemClientId) {
         inputUpiRedeemClientId.value = String(message.payload.upiRedeemClientId ?? message.payload.pixRedeemClientId ?? '').trim();
+      }
+      if (message.payload.upiRedeemFailedAccountRetryLimit !== undefined && inputUpiRedeemFailedAccountRetryLimit) {
+        inputUpiRedeemFailedAccountRetryLimit.value = String(normalizeUpiRedeemFailedAccountRetryLimit(
+          message.payload.upiRedeemFailedAccountRetryLimit,
+          latestState?.upiRedeemFailedAccountRetryLimit
+        ));
       }
       if (
         (message.payload.upiRedeemStopAfterRedeem !== undefined
@@ -23695,12 +23895,7 @@ updateButtonStates();
 initializeReleaseInfo().catch((err) => {
   console.error('Failed to initialize release info:', err);
 });
-const initialPhoneCountryLoadPromise = Promise.allSettled([
-  loadHeroSmsCountries(),
-  loadFiveSimCountries(),
-  loadNexSmsCountries({ silent: true }),
-  loadSmsBowerCountries(),
-]);
+const initialPhoneCountryLoadPromise = Promise.resolve([]);
 void restoreState().then(async () => {
   await initialPhoneCountryLoadPromise;
   rehydratePhoneVerificationSelectionsFromState(latestState);
@@ -23724,22 +23919,4 @@ void restoreState().then(async () => {
     .then(() => maybeShowNewUserGuidePrompt());
 }).catch((err) => {
   console.error('Failed to initialize sidepanel state:', err);
-});
-initialPhoneCountryLoadPromise.then((results) => {
-  const heroResult = results[0];
-  const fiveSimResult = results[1];
-  const nexSmsResult = results[2];
-  const smsBowerResult = results[3];
-  if (heroResult?.status === 'rejected') {
-    console.debug('加载 HeroSMS 国家列表初始化失败，已保留内置/已有列表：', heroResult.reason);
-  }
-  if (fiveSimResult?.status === 'rejected') {
-    console.debug('加载 5sim 国家列表初始化失败，已保留内置/已有列表：', fiveSimResult.reason);
-  }
-  if (nexSmsResult?.status === 'rejected') {
-    console.debug('加载 NexSMS 国家列表初始化失败，已保留内置/已有列表：', nexSmsResult.reason);
-  }
-  if (smsBowerResult?.status === 'rejected') {
-    console.debug('加载 SMSBower 国家列表初始化失败，已保留内置/已有列表：', smsBowerResult.reason);
-  }
 });

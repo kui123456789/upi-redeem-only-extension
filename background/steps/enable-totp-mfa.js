@@ -20,6 +20,11 @@
     return String(value || '').trim();
   }
 
+  function normalizeEmail(value = '') {
+    const email = normalizeString(value).toLowerCase();
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : '';
+  }
+
   function normalizeTotpSecret(secret = '') {
     return normalizeString(secret).replace(/\s+/g, '').toUpperCase();
   }
@@ -444,17 +449,35 @@
       return /request timeout|timed out|\btimeout\b|mfa_info\s+http\s+5\d\d|http\s*(?:429|500|502|503|504)|fetch-error|server-error|network|abort/i.test(message);
     }
 
-    function resolveAccountEmail(state = {}, session = {}) {
-      return normalizeString(
+    function resolveTargetAccountEmail(state = {}) {
+      return normalizeEmail(
         state.email
         || state.step8VerificationTargetEmail
         || state.boundEmail
         || state.registrationEmailState?.current
+        || (normalizeString(state.accountIdentifierType).toLowerCase() === 'email' ? state.accountIdentifier : '')
         || state.accountIdentifier
-        || session.email
+      );
+    }
+
+    function resolveSessionAccountEmail(session = {}) {
+      return normalizeEmail(
+        session.email
         || session.session?.user?.email
+        || session.session?.email
+        || session.session?.user_email
         || session.user?.email
-      ).toLowerCase();
+        || session.user_email
+      );
+    }
+
+    function resolveAccountEmail(state = {}, session = {}) {
+      const targetEmail = resolveTargetAccountEmail(state);
+      const sessionEmail = resolveSessionAccountEmail(session);
+      if (targetEmail && sessionEmail && targetEmail !== sessionEmail) {
+        throw new Error(`步骤 7：当前 ChatGPT 登录态邮箱 ${sessionEmail} 与本轮目标邮箱 ${targetEmail} 不一致，已停止，避免把 2FA/Free 分组写到错误账号。`);
+      }
+      return sessionEmail || targetEmail;
     }
 
     async function getMergedState(state = {}) {
@@ -798,7 +821,7 @@
       const runtimeState = await getMergedState(state);
       const visibleStep = resolveVisibleStep(runtimeState);
       if (shouldRequireGptPasswordBeforeTotp(runtimeState) && !runtimeState.gptPasswordSet) {
-        throw new Error(`步骤 ${visibleStep}：UPI 2FA 流程必须先完成“设置 GPT 密码”，已停止当前账号，避免继续开通 2FA 或消耗 UPI 卡密。`);
+        throw new Error(`步骤 ${visibleStep}：UPI 2FA 流程必须先完成“设置 GPT 密码”，已停止当前账号，避免继续开通 2FA 或检测资格。`);
       }
       await setState({
         totpMfaEnabled: false,
@@ -954,7 +977,7 @@
           totpMfaOtpauthUrl: '',
           totpMfaApiPersisted: Boolean(payload.persisted),
         });
-        throw new Error('账号已开通 2FA，但接口没有返回 TOTP 密钥，已停止当前账号，避免消耗 UPI 卡密。');
+        throw new Error('账号已开通 2FA，但接口没有返回 TOTP 密钥，已停止当前账号，避免继续资格检测。');
       }
       if (!secret) {
         throw new Error(`开通 2FA 失败：接口未返回 TOTP secret${reason ? `（reason=${reason}）` : ''}。`);
@@ -1032,7 +1055,9 @@
         });
       }
       await addStepLog(visibleStep, `ChatGPT 2FA 已通过 Nerver API 开通，TOTP 密钥：${secretMasked}`, 'success');
-      await completeNodeFromBackground(state?.nodeId || 'enable-totp-mfa', patch);
+      if (state?.suppressNodeCompletion !== true) {
+        await completeNodeFromBackground(state?.nodeId || 'enable-totp-mfa', patch);
+      }
       return patch;
     }
 

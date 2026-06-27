@@ -7,25 +7,9 @@ importScripts(
   'background/local-cli-proxy-api.js',
   'managed-alias-utils.js',
   'mail2925-utils.js',
-  'paypal-utils.js',
-  'gopay-utils.js',
-  'phone-sms/providers/hero-sms.js',
-  'phone-sms/providers/five-sim.js',
-  'phone-sms/providers/nexsms.js',
-  'phone-sms/providers/hosted-sms.js',
-  'phone-sms/providers/smsbower.js',
-  'phone-sms/providers/sms-verification-number.js',
-  'phone-sms/providers/grizzlysms.js',
-  'phone-sms/providers/smspool.js',
-  'phone-sms/providers/chatgpt-api.js',
-  'phone-sms/providers/registry.js',
-  'background/phone-verification-flow.js',
   'background/account-run-history.js',
   'background/contribution-oauth.js',
   'background/mail-2925-session.js',
-  'background/paypal-account-store.js',
-  'background/ip-proxy-provider-711proxy.js',
-  'background/ip-proxy-core.js',
   'background/cpa-api.js',
   'background/sub2api-api.js',
   'background/panel-bridge.js',
@@ -53,12 +37,6 @@ importScripts(
   'background/steps/fetch-signup-code.js',
   'background/steps/fill-profile.js',
   'background/steps/wait-registration-success.js',
-  'background/steps/create-plus-checkout.js',
-  'background/steps/fill-plus-checkout.js',
-  'background/steps/gopay-manual-confirm.js',
-  'background/steps/paypal-approve.js',
-  'background/steps/gopay-approve.js',
-  'background/steps/plus-return-confirm.js',
   'background/steps/set-gpt-password.js',
   'background/steps/enable-totp-mfa.js',
   'background/steps/upi-redeem.js',
@@ -1904,6 +1882,160 @@ function normalizeIpProxyAutoSyncIntervalMinutes(value, fallback = IP_PROXY_AUTO
     IP_PROXY_AUTO_SYNC_INTERVAL_MAX_MINUTES,
     Math.max(IP_PROXY_AUTO_SYNC_INTERVAL_MIN_MINUTES, Math.floor(numeric))
   );
+}
+
+function normalizeIpProxyProviderForSettings(value = '') {
+  if (typeof normalizeIpProxyProviderValue === 'function') {
+    return normalizeIpProxyProviderValue(value);
+  }
+  const normalized = String(value || '').trim().toLowerCase();
+  if (IP_PROXY_ENABLED_SERVICE_VALUES.includes(normalized)) {
+    return normalized;
+  }
+  if (IP_PROXY_SERVICE_VALUES.includes(normalized)) {
+    return DEFAULT_IP_PROXY_SERVICE;
+  }
+  return DEFAULT_IP_PROXY_SERVICE;
+}
+
+function normalizeIpProxyModeForSettings(value = '') {
+  if (typeof normalizeIpProxyMode === 'function') {
+    return normalizeIpProxyMode(value);
+  }
+  const normalized = String(value || '').trim().toLowerCase();
+  return IP_PROXY_MODE_VALUES.includes(normalized) ? normalized : DEFAULT_IP_PROXY_MODE;
+}
+
+function normalizeIpProxyProtocolForSettings(value = '') {
+  if (typeof normalizeIpProxyProtocol === 'function') {
+    return normalizeIpProxyProtocol(value);
+  }
+  const normalized = String(value || '').trim().toLowerCase();
+  return IP_PROXY_PROTOCOL_VALUES.includes(normalized) ? normalized : DEFAULT_IP_PROXY_PROTOCOL;
+}
+
+function normalizeIpProxyPortForSettings(value = '') {
+  if (typeof normalizeIpProxyPort === 'function') {
+    return normalizeIpProxyPort(value);
+  }
+  const numeric = Number.parseInt(String(value || '').trim(), 10);
+  return Number.isInteger(numeric) && numeric > 0 && numeric <= 65535 ? numeric : 0;
+}
+
+function normalizeIpProxyAccountListForSettings(value = '') {
+  if (typeof normalizeIpProxyAccountList === 'function') {
+    return normalizeIpProxyAccountList(value || '');
+  }
+  return String(value || '')
+    .replace(/\r/g, '')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .join('\n');
+}
+
+function normalizeIpProxyAccountSessionPrefixForSettings(value = '') {
+  if (typeof normalizeIpProxyAccountSessionPrefix === 'function') {
+    return normalizeIpProxyAccountSessionPrefix(value || '');
+  }
+  return String(value || '').trim().replace(/[^A-Za-z0-9_-]/g, '').slice(0, 32);
+}
+
+function normalizeIpProxyAccountLifeMinutesForSettings(value = '', fallback = '') {
+  if (typeof normalizeIpProxyAccountLifeMinutes === 'function') {
+    return normalizeIpProxyAccountLifeMinutes(value || '', fallback);
+  }
+  const rawValue = String(value ?? '').trim();
+  if (!rawValue) {
+    return String(fallback || '').trim();
+  }
+  const numeric = Number.parseInt(rawValue, 10);
+  return Number.isInteger(numeric) ? String(Math.max(1, Math.min(1440, numeric))) : String(fallback || '').trim();
+}
+
+function normalizeIpProxyPoolTargetCountForSettings(value = '', fallback = 20) {
+  if (typeof normalizeIpProxyPoolTargetCount === 'function') {
+    return normalizeIpProxyPoolTargetCount(value || '', fallback);
+  }
+  const rawValue = String(value ?? '').trim();
+  const numeric = rawValue ? Number.parseInt(rawValue, 10) : Number(fallback);
+  return String(Math.max(1, Math.min(500, Number.isInteger(numeric) ? numeric : Number(fallback) || 20)));
+}
+
+function normalizeIpProxyCurrentIndexForSettings(value = 0, fallback = 0) {
+  if (typeof normalizeIpProxyCurrentIndex === 'function') {
+    return normalizeIpProxyCurrentIndex(value, fallback);
+  }
+  const numeric = Number.parseInt(String(value ?? '').trim(), 10);
+  return Number.isInteger(numeric) && numeric >= 0 ? numeric : Math.max(0, Number(fallback) || 0);
+}
+
+function normalizeProxyPoolEntriesForSettings(value = [], provider = DEFAULT_IP_PROXY_SERVICE) {
+  if (typeof normalizeProxyPoolEntries === 'function') {
+    return normalizeProxyPoolEntries(value, provider);
+  }
+  const fallbackProvider = normalizeIpProxyProviderForSettings(provider);
+  return (Array.isArray(value) ? value : [])
+    .map((entry) => {
+      if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
+        return null;
+      }
+      return {
+        ...entry,
+        provider: normalizeIpProxyProviderForSettings(entry.provider || fallbackProvider),
+        host: String(entry.host || '').trim(),
+        port: String(normalizeIpProxyPortForSettings(entry.port || '') || ''),
+        protocol: normalizeIpProxyProtocolForSettings(entry.protocol || DEFAULT_IP_PROXY_PROTOCOL),
+        username: String(entry.username || '').trim(),
+        password: String(entry.password || ''),
+        region: String(entry.region || '').trim(),
+      };
+    })
+    .filter(Boolean);
+}
+
+function buildIpProxyServiceProfileForSettings(state = {}) {
+  if (typeof buildIpProxyServiceProfileFromState === 'function') {
+    return buildIpProxyServiceProfileFromState(state);
+  }
+  return {
+    mode: normalizeIpProxyModeForSettings(state?.ipProxyMode || DEFAULT_IP_PROXY_MODE),
+    apiUrl: String(state?.ipProxyApiUrl || '').trim(),
+    accountList: normalizeIpProxyAccountListForSettings(state?.ipProxyAccountList || ''),
+    accountSessionPrefix: normalizeIpProxyAccountSessionPrefixForSettings(state?.ipProxyAccountSessionPrefix || ''),
+    accountLifeMinutes: normalizeIpProxyAccountLifeMinutesForSettings(state?.ipProxyAccountLifeMinutes || ''),
+    poolTargetCount: normalizeIpProxyPoolTargetCountForSettings(state?.ipProxyPoolTargetCount || '', 20),
+    host: String(state?.ipProxyHost || '').trim(),
+    port: String(normalizeIpProxyPortForSettings(state?.ipProxyPort || '') || ''),
+    protocol: normalizeIpProxyProtocolForSettings(state?.ipProxyProtocol || DEFAULT_IP_PROXY_PROTOCOL),
+    username: String(state?.ipProxyUsername || '').trim(),
+    password: String(state?.ipProxyPassword || ''),
+    region: String(state?.ipProxyRegion || '').trim(),
+  };
+}
+
+function normalizeIpProxyServiceProfilesForSettings(value = {}, fallbackState = {}) {
+  if (typeof normalizeIpProxyServiceProfiles === 'function') {
+    return normalizeIpProxyServiceProfiles(value || {}, fallbackState);
+  }
+  const raw = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  const fallbackProfile = buildIpProxyServiceProfileForSettings(fallbackState || {});
+  const services = Array.from(new Set([
+    normalizeIpProxyProviderForSettings(fallbackState?.ipProxyService || DEFAULT_IP_PROXY_SERVICE),
+    DEFAULT_IP_PROXY_SERVICE,
+    ...Object.keys(raw).map((key) => normalizeIpProxyProviderForSettings(key)),
+  ]));
+  const profiles = {};
+  services.forEach((service) => {
+    const source = raw[service] && typeof raw[service] === 'object' && !Array.isArray(raw[service])
+      ? raw[service]
+      : fallbackProfile;
+    profiles[service] = buildIpProxyServiceProfileForSettings({
+      ...(fallbackState || {}),
+      ...source,
+    });
+  });
+  return profiles;
 }
 
 function normalizeAutoStepDelaySeconds(value, fallback = null) {
@@ -4118,21 +4250,21 @@ function normalizePersistentSettingValue(key, value) {
     case 'ipProxyEnabled':
       return Boolean(value);
     case 'ipProxyService':
-      return normalizeIpProxyProviderValue(value);
+      return normalizeIpProxyProviderForSettings(value);
     case 'ipProxyMode':
-      return normalizeIpProxyMode(value);
+      return normalizeIpProxyModeForSettings(value);
     case 'ipProxyApiUrl':
       return String(value || '').trim();
     case 'ipProxyServiceProfiles':
-      return normalizeIpProxyServiceProfiles(value || {}, PERSISTED_SETTING_DEFAULTS);
+      return normalizeIpProxyServiceProfilesForSettings(value || {}, PERSISTED_SETTING_DEFAULTS);
     case 'ipProxyAccountList':
-      return normalizeIpProxyAccountList(value || '');
+      return normalizeIpProxyAccountListForSettings(value || '');
     case 'ipProxyAccountSessionPrefix':
-      return normalizeIpProxyAccountSessionPrefix(value || '');
+      return normalizeIpProxyAccountSessionPrefixForSettings(value || '');
     case 'ipProxyAccountLifeMinutes':
-      return normalizeIpProxyAccountLifeMinutes(value || '');
+      return normalizeIpProxyAccountLifeMinutesForSettings(value || '');
     case 'ipProxyPoolTargetCount':
-      return normalizeIpProxyPoolTargetCount(value || '', 20);
+      return normalizeIpProxyPoolTargetCountForSettings(value || '', 20);
     case 'ipProxyAutoSyncEnabled':
       return Boolean(value);
     case 'ipProxyAutoSyncIntervalMinutes':
@@ -4143,9 +4275,9 @@ function normalizePersistentSettingValue(key, value) {
     case 'ipProxyHost':
       return String(value || '').trim();
     case 'ipProxyPort':
-      return String(normalizeIpProxyPort(value || '') || '');
+      return String(normalizeIpProxyPortForSettings(value || '') || '');
     case 'ipProxyProtocol':
-      return normalizeIpProxyProtocol(value);
+      return normalizeIpProxyProtocolForSettings(value);
     case 'ipProxyUsername':
       return String(value || '').trim();
     case 'ipProxyPassword':
@@ -4153,32 +4285,32 @@ function normalizePersistentSettingValue(key, value) {
     case 'ipProxyRegion':
       return String(value || '').trim();
     case 'ipProxyApiPool':
-      return normalizeProxyPoolEntries(
+      return normalizeProxyPoolEntriesForSettings(
         value,
-        normalizeIpProxyProviderValue(value?.provider || DEFAULT_IP_PROXY_SERVICE)
+        normalizeIpProxyProviderForSettings(value?.provider || DEFAULT_IP_PROXY_SERVICE)
       );
     case 'ipProxyApiCurrentIndex':
-      return normalizeIpProxyCurrentIndex(value, 0);
+      return normalizeIpProxyCurrentIndexForSettings(value, 0);
     case 'ipProxyApiCurrent':
-      return normalizeProxyPoolEntries(value ? [value] : [], DEFAULT_IP_PROXY_SERVICE)[0] || null;
+      return normalizeProxyPoolEntriesForSettings(value ? [value] : [], DEFAULT_IP_PROXY_SERVICE)[0] || null;
     case 'ipProxyAccountPool':
-      return normalizeProxyPoolEntries(
+      return normalizeProxyPoolEntriesForSettings(
         value,
-        normalizeIpProxyProviderValue(value?.provider || DEFAULT_IP_PROXY_SERVICE)
+        normalizeIpProxyProviderForSettings(value?.provider || DEFAULT_IP_PROXY_SERVICE)
       );
     case 'ipProxyAccountCurrentIndex':
-      return normalizeIpProxyCurrentIndex(value, 0);
+      return normalizeIpProxyCurrentIndexForSettings(value, 0);
     case 'ipProxyAccountCurrent':
-      return normalizeProxyPoolEntries(value ? [value] : [], DEFAULT_IP_PROXY_SERVICE)[0] || null;
+      return normalizeProxyPoolEntriesForSettings(value ? [value] : [], DEFAULT_IP_PROXY_SERVICE)[0] || null;
     case 'ipProxyPool':
-      return normalizeProxyPoolEntries(
+      return normalizeProxyPoolEntriesForSettings(
         value,
-        normalizeIpProxyProviderValue(value?.provider || DEFAULT_IP_PROXY_SERVICE)
+        normalizeIpProxyProviderForSettings(value?.provider || DEFAULT_IP_PROXY_SERVICE)
       );
     case 'ipProxyCurrentIndex':
-      return normalizeIpProxyCurrentIndex(value, 0);
+      return normalizeIpProxyCurrentIndexForSettings(value, 0);
     case 'ipProxyCurrent':
-      return normalizeProxyPoolEntries(value ? [value] : [], DEFAULT_IP_PROXY_SERVICE)[0] || null;
+      return normalizeProxyPoolEntriesForSettings(value ? [value] : [], DEFAULT_IP_PROXY_SERVICE)[0] || null;
     case 'codex2apiUrl':
       return normalizeCodex2ApiUrl(value);
     case 'codex2apiAdminKey':
@@ -4357,9 +4489,11 @@ function normalizePersistentSettingValue(key, value) {
     case 'upiRedeemApiBaseUrl':
       return String(value || '')
         .trim()
+        .replace(/#.*$/g, '')
         .replace(/\/+$/g, '')
         .replace(/\/api\/external\/cdkey-redeems\/status$/i, '')
         .replace(/\/api\/external\/cdkey-redeems$/i, '')
+        .replace(/\/api\/?$/i, '')
         .replace(/\/+$/g, '');
     case 'upiSubscriptionApiBaseUrl':
       return String(value || PERSISTED_SETTING_DEFAULTS.upiSubscriptionApiBaseUrl)
@@ -5135,29 +5269,29 @@ function buildPersistentSettingsPayload(input = {}, options = {}) {
     payload.signupMethod = resolveSignupMethod(nextSignupConstraintState);
   }
   if (payload.ipProxyServiceProfiles) {
-    const selectedService = normalizeIpProxyProviderValue(
+    const selectedService = normalizeIpProxyProviderForSettings(
       payload.ipProxyService || PERSISTED_SETTING_DEFAULTS.ipProxyService
     );
-    const normalizedProfiles = normalizeIpProxyServiceProfiles(payload.ipProxyServiceProfiles, {
+    const normalizedProfiles = normalizeIpProxyServiceProfilesForSettings(payload.ipProxyServiceProfiles, {
       ...PERSISTED_SETTING_DEFAULTS,
       ...payload,
     });
     payload.ipProxyServiceProfiles = normalizedProfiles;
     const activeProfile = normalizedProfiles[selectedService]
-      || buildIpProxyServiceProfileFromState({
+      || buildIpProxyServiceProfileForSettings({
         ...PERSISTED_SETTING_DEFAULTS,
         ...payload,
       });
     payload.ipProxyService = selectedService;
-    payload.ipProxyMode = normalizeIpProxyMode(activeProfile?.mode || payload.ipProxyMode);
+    payload.ipProxyMode = normalizeIpProxyModeForSettings(activeProfile?.mode || payload.ipProxyMode);
     payload.ipProxyApiUrl = String(activeProfile?.apiUrl || payload.ipProxyApiUrl || '').trim();
-    payload.ipProxyAccountList = normalizeIpProxyAccountList(activeProfile?.accountList || payload.ipProxyAccountList || '');
-    payload.ipProxyAccountSessionPrefix = normalizeIpProxyAccountSessionPrefix(activeProfile?.accountSessionPrefix || payload.ipProxyAccountSessionPrefix || '');
-    payload.ipProxyAccountLifeMinutes = normalizeIpProxyAccountLifeMinutes(activeProfile?.accountLifeMinutes || payload.ipProxyAccountLifeMinutes || '');
-    payload.ipProxyPoolTargetCount = normalizeIpProxyPoolTargetCount(activeProfile?.poolTargetCount || payload.ipProxyPoolTargetCount || '', 20);
+    payload.ipProxyAccountList = normalizeIpProxyAccountListForSettings(activeProfile?.accountList || payload.ipProxyAccountList || '');
+    payload.ipProxyAccountSessionPrefix = normalizeIpProxyAccountSessionPrefixForSettings(activeProfile?.accountSessionPrefix || payload.ipProxyAccountSessionPrefix || '');
+    payload.ipProxyAccountLifeMinutes = normalizeIpProxyAccountLifeMinutesForSettings(activeProfile?.accountLifeMinutes || payload.ipProxyAccountLifeMinutes || '');
+    payload.ipProxyPoolTargetCount = normalizeIpProxyPoolTargetCountForSettings(activeProfile?.poolTargetCount || payload.ipProxyPoolTargetCount || '', 20);
     payload.ipProxyHost = String(activeProfile?.host || payload.ipProxyHost || '').trim();
-    payload.ipProxyPort = String(normalizeIpProxyPort(activeProfile?.port || payload.ipProxyPort || '') || '');
-    payload.ipProxyProtocol = normalizeIpProxyProtocol(activeProfile?.protocol || payload.ipProxyProtocol);
+    payload.ipProxyPort = String(normalizeIpProxyPortForSettings(activeProfile?.port || payload.ipProxyPort || '') || '');
+    payload.ipProxyProtocol = normalizeIpProxyProtocolForSettings(activeProfile?.protocol || payload.ipProxyProtocol);
     payload.ipProxyUsername = String(activeProfile?.username || payload.ipProxyUsername || '').trim();
     payload.ipProxyPassword = String(activeProfile?.password || payload.ipProxyPassword || '');
     payload.ipProxyRegion = String(activeProfile?.region || payload.ipProxyRegion || '').trim();
@@ -5282,13 +5416,14 @@ async function getState() {
     accountRunHistoryHelpers?.getPersistedAccountRunHistory?.() || [],
     chrome.storage.local.get([UPI_CREDENTIAL_MEMBERSHIP_CHECK_RESULTS_STORAGE_KEY]).catch(() => ({})),
   ]);
+  const persistedCredentialMembershipCheckResults = credentialMembershipCheckState?.[UPI_CREDENTIAL_MEMBERSHIP_CHECK_RESULTS_STORAGE_KEY]
+    || DEFAULT_STATE.upiCredentialMembershipCheckResults;
   return buildStateViewWithRuntimeState({
     ...DEFAULT_STATE,
     ...persistedSettings,
     ...persistedAliasState,
-    upiCredentialMembershipCheckResults: credentialMembershipCheckState?.[UPI_CREDENTIAL_MEMBERSHIP_CHECK_RESULTS_STORAGE_KEY]
-      || DEFAULT_STATE.upiCredentialMembershipCheckResults,
     ...state,
+    upiCredentialMembershipCheckResults: persistedCredentialMembershipCheckResults,
     accountRunHistory,
   });
 }
@@ -5860,6 +5995,9 @@ function buildContributionModeState(enabled, persistedSettings = {}, currentStat
       ? currentState[key]
       : CONTRIBUTION_RUNTIME_DEFAULTS[key];
   }
+  const preservedCustomPassword = String(
+    currentState?.customPassword || persistedSettings?.customPassword || ''
+  );
 
   if (enabled) {
     const routing = resolveContributionModeRoutingState({
@@ -5874,7 +6012,7 @@ function buildContributionModeState(enabled, persistedSettings = {}, currentStat
       contributionSource: routing.source,
       contributionTargetGroupName: routing.targetGroupName,
       panelMode: routing.source,
-      customPassword: '',
+      customPassword: preservedCustomPassword,
       accountRunHistoryTextEnabled: false,
     };
   }
@@ -6125,7 +6263,7 @@ async function setIcloudAliasPreservedState(payload = {}) {
 async function resetState() {
   console.log(LOG_PREFIX, 'Resetting all state');
   // Preserve settings and persistent data across resets
-  const [prev, persistedSettings, persistedAliasState] = await Promise.all([
+  const [prev, persistedSettings, persistedAliasState, credentialMembershipCheckState] = await Promise.all([
     chrome.storage.session.get([
       'seenCodes',
       'seenInbucketMailIds',
@@ -6149,7 +6287,10 @@ async function resetState() {
     ]),
     getPersistedSettings(),
     getPersistedAliasState(),
+    chrome.storage.local.get([UPI_CREDENTIAL_MEMBERSHIP_CHECK_RESULTS_STORAGE_KEY]).catch(() => ({})),
   ]);
+  const persistedCredentialMembershipCheckResults = credentialMembershipCheckState?.[UPI_CREDENTIAL_MEMBERSHIP_CHECK_RESULTS_STORAGE_KEY]
+    || DEFAULT_STATE.upiCredentialMembershipCheckResults;
   const contributionModeState = buildContributionModeState(Boolean(prev.contributionMode), persistedSettings, prev);
   const reusablePhoneActivation = (
     prev.reusablePhoneActivation
@@ -6226,6 +6367,7 @@ async function resetState() {
     freeReusablePhoneActivation,
     phoneReusableActivationPool,
     preferredIcloudHost: prev.preferredIcloudHost || '',
+    upiCredentialMembershipCheckResults: persistedCredentialMembershipCheckResults,
     automationWindowId: Number.isInteger(Number(prev.automationWindowId))
       && Number(prev.automationWindowId) >= 0
       ? Number(prev.automationWindowId)
@@ -11628,8 +11770,6 @@ function getSourceLabel(source) {
     'cloudmail': 'Cloud Mail',
     'freemail': 'freemail',
     'plus-checkout': 'Plus Checkout',
-    'paypal-flow': 'PayPal 授权页',
-    'gopay-flow': 'GoPay 授权页',
     'unknown-source': '未知来源',
   };
   return labels[source] || source || '未知来源';
@@ -15480,7 +15620,7 @@ async function ensureAutoEmailReady(targetRun, totalRuns, attemptRuns) {
         throw new Error(`自定义邮箱号池第 ${targetRun} 个邮箱不存在，请检查号池数量是否与自动轮数一致。`);
       }
       await setEmailState(queuedEmail);
-      await addLog(`=== 目标 ${targetRun}/${totalRuns} 轮：自定义邮箱号池已就绪：${queuedEmail}（第 ${attemptRuns} 次尝试；第 4/8 步仍需手动输入验证码）===`, 'ok');
+      await addLog(`=== 目标 ${targetRun}/${totalRuns} 轮：自定义邮箱号池已就绪：${queuedEmail}（第 ${attemptRuns} 次尝试；第 4 步仍需手动输入验证码）===`, 'ok');
       return queuedEmail;
     }
   }
@@ -15632,7 +15772,7 @@ async function ensureAutoEmailReady(targetRun, totalRuns, attemptRuns) {
         throw new Error(`自定义邮箱号池第 ${targetRun} 个邮箱不存在，请检查号池数量是否与自动轮数一致。`);
       }
       await setEmailState(queuedEmail);
-      await addLog(`=== 目标 ${targetRun}/${totalRuns} 轮：自定义邮箱号池已就绪：${queuedEmail}（第 ${attemptRuns} 次尝试；第 4/8 步仍需手动输入验证码）===`, 'ok');
+      await addLog(`=== 目标 ${targetRun}/${totalRuns} 轮：自定义邮箱号池已就绪：${queuedEmail}（第 ${attemptRuns} 次尝试；第 4 步仍需手动输入验证码）===`, 'ok');
       return queuedEmail;
     }
   }
@@ -16076,12 +16216,8 @@ async function runAutoSequenceFromNodeGraph(startNodeId, context = {}) {
           const trackedCheckoutTabId = typeof getTabId === 'function'
             ? Number(await getTabId('plus-checkout').catch(() => 0)) || 0
             : 0;
-          const trackedPayPalTabId = typeof getTabId === 'function'
-            ? Number(await getTabId('paypal-flow').catch(() => 0)) || 0
-            : 0;
           if (storedCheckoutTabId > 0) checkoutTabIds.add(storedCheckoutTabId);
           if (trackedCheckoutTabId > 0) checkoutTabIds.add(trackedCheckoutTabId);
-          if (trackedPayPalTabId > 0) checkoutTabIds.add(trackedPayPalTabId);
           if (chrome?.tabs?.query) {
             const tabs = await chrome.tabs.query({}).catch(() => []);
             for (const tab of tabs || []) {
@@ -16436,7 +16572,7 @@ async function resumeAutoRun() {
 // ============================================================
 
 const SIGNUP_ENTRY_URL = 'https://chatgpt.com/';
-const SIGNUP_PAGE_INJECT_FILES = ['content/utils.js', 'content/operation-delay.js', 'content/auth-page-recovery.js', 'content/phone-country-utils.js', 'content/phone-auth.js', 'content/signup-page.js'];
+const SIGNUP_PAGE_INJECT_FILES = ['content/utils.js', 'content/operation-delay.js', 'content/auth-page-recovery.js', 'content/signup-page.js'];
 const panelBridge = self.MultiPageBackgroundPanelBridge?.createPanelBridge({
   chrome,
   addLog,
@@ -17075,6 +17211,10 @@ async function executeReloginBoundEmail(state = {}) {
   });
 }
 
+function throwLegacyFeatureRemoved(featureName = '非 UPI 功能') {
+  throw new Error(`${featureName}已从 UPI 专用版移除。`);
+}
+
 const stepExecutorsByKey = {
   'open-chatgpt': () => step1Executor.executeStep1(),
   'submit-signup-email': (state) => step2Executor.executeStep2(state),
@@ -17083,13 +17223,11 @@ const stepExecutorsByKey = {
   'fill-profile': (state) => step5Executor.executeStep5(state),
   'wait-registration-success': (state) => step6Executor.executeStep6(state),
   'local-cpa-json-export': (state) => step6Executor.executeLocalCpaJsonNoRtExport(state),
-  'plus-checkout-create': (state) => plusCheckoutCreateExecutor.executePlusCheckoutCreate(state),
-  'plus-checkout-billing': (state) => plusCheckoutBillingExecutor.executePlusCheckoutBilling(state),
-  'gopay-subscription-confirm': (state) => goPayManualConfirmExecutor.executeGoPayManualConfirm(state),
-  'paypal-approve': (state) => normalizePlusPaymentMethod(state?.plusPaymentMethod) === PLUS_PAYMENT_METHOD_GOPAY
-    ? goPayApproveExecutor.executeGoPayApprove(state)
-    : payPalApproveExecutor.executePayPalApprove(state),
-  'plus-checkout-return': (state) => plusReturnConfirmExecutor.executePlusReturnConfirm(state),
+  'plus-checkout-create': () => throwLegacyFeatureRemoved('旧 Plus Checkout'),
+  'plus-checkout-billing': () => throwLegacyFeatureRemoved('旧 Plus Checkout 账单'),
+  'gopay-subscription-confirm': () => throwLegacyFeatureRemoved('GoPay 支付'),
+  'paypal-approve': () => throwLegacyFeatureRemoved('PayPal / GoPay 授权'),
+  'plus-checkout-return': () => throwLegacyFeatureRemoved('PayPal / GoPay 回跳确认'),
   'set-gpt-password': (state) => setGptPasswordExecutor.executeSetGptPassword(state),
   'enable-totp-mfa': (state) => totpMfaExecutor.executeEnableTotpMfa(state),
   'upi-redeem': (state) => upiRedeemExecutor.executeUpiRedeem(state),
@@ -17097,12 +17235,12 @@ const stepExecutorsByKey = {
   'cpa-session-import': (state) => cpaSessionImportExecutor.executeCpaSessionImport(state),
   'oauth-login': (state) => step7Executor.executeStep7(state),
   'fetch-login-code': (state) => step8Executor.executeStep8(state),
-  'post-login-phone-verification': (state) => step8Executor.executePostLoginPhoneVerification(state),
+  'post-login-phone-verification': () => throwLegacyFeatureRemoved('手机号接码验证'),
   'bind-email': (state) => step8Executor.executeBindEmail(state),
   'fetch-bind-email-code': (state) => step8Executor.executeFetchBindEmailCode(state),
   'relogin-bound-email': (state) => executeReloginBoundEmail(state),
   'fetch-bound-email-login-code': (state) => step8Executor.executeBoundEmailLoginCode(state),
-  'post-bound-email-phone-verification': (state) => step8Executor.executeBoundEmailPostLoginPhoneVerification(state),
+  'post-bound-email-phone-verification': () => throwLegacyFeatureRemoved('手机号接码验证'),
   'confirm-oauth': (state) => step9Executor.executeStep9(state),
   'platform-verify': (state) => executeStep10(state),
 };
@@ -17144,24 +17282,26 @@ const messageRouter = self.MultiPageBackgroundMessageRouter?.createMessageRouter
   deleteUpiCredentialMembershipCredentials: (...args) => upiCredentialMembershipChecker.deleteUpiCredentialMembershipCredentials(...args),
   deleteUpiCredentialMembershipCheckResults: (...args) => upiCredentialMembershipChecker.deleteUpiCredentialMembershipCheckResults(...args),
   exportUpiCredentialMembershipCheckResults: (...args) => upiCredentialMembershipChecker.exportUpiCredentialMembershipCheckResults(...args),
+  fillUpiCredentialMembershipFreeAccessTokens: (...args) => upiCredentialMembershipChecker.fillUpiCredentialMembershipFreeAccessTokens(...args),
   getUpiCredentialMembershipCredentialPool: (...args) => upiCredentialMembershipChecker.getUpiCredentialMembershipCredentialPool(...args),
   getUpiCredentialMembershipCheckResults: (...args) => upiCredentialMembershipChecker.getUpiCredentialMembershipCheckResults(...args),
+  identifyUpiCredentialMembershipFreePlus: (...args) => upiCredentialMembershipChecker.identifyUpiCredentialMembershipFreePlus(...args),
   importUpiCredentialMembershipFreeResults: (...args) => upiCredentialMembershipChecker.importUpiCredentialMembershipFreeResults(...args),
+  loginUpiCredentialMembershipAccount: (...args) => upiCredentialMembershipChecker.loginUpiCredentialMembershipAccount(...args),
+  moveUpiCredentialMembershipAccountGroup: (...args) => upiCredentialMembershipChecker.moveUpiCredentialMembershipAccountGroup(...args),
   pruneIneligibleFreeUpiCredentialMembership: (...args) => upiCredentialMembershipChecker.pruneIneligibleFreeUpiCredentialMembership(...args),
   redeemUpiCredentialMembershipFree: (...args) => upiCredentialMembershipChecker.redeemUpiCredentialMembershipFree(...args),
   retryFailedUpiRedeemCdkey: (...args) => upiCredentialMembershipChecker.retryFailedUpiRedeemCdkey(...args),
   stopUpiCredentialMembershipCheck: (...args) => upiCredentialMembershipChecker.stopUpiCredentialMembershipCheck(...args),
   stopUpiCredentialMembershipRedeem: (...args) => upiCredentialMembershipChecker.stopUpiCredentialMembershipRedeem(...args),
-  executePostRegistrationCheckoutBilling: async (state = {}) => plusCheckoutBillingExecutor.executePlusCheckoutBilling({
-    ...state,
-    plusPaymentMethod: normalizePlusPaymentMethod(state?.plusPaymentMethod),
-  }),
+  verifyUpiCredentialMembershipPlus: (...args) => upiCredentialMembershipChecker.verifyUpiCredentialMembershipPlus(...args),
+  executePostRegistrationCheckoutBilling: async () => throwLegacyFeatureRemoved('旧 Plus Checkout 账单'),
   exportSettingsBundle,
   ensureContentScriptReadyOnTabUntilStopped,
-  fetchHostedCheckoutVerificationCodeManually: (...args) => plusCheckoutCreateExecutor.fetchHostedCheckoutVerificationCodeManually(...args),
-  testCheckoutConversionProxy: (...args) => plusCheckoutCreateExecutor.testCheckoutConversionProxy(...args),
+  fetchHostedCheckoutVerificationCodeManually: () => throwLegacyFeatureRemoved('PayPal 托管接码'),
+  testCheckoutConversionProxy: () => throwLegacyFeatureRemoved('Checkout 代理测试'),
   fetchGeneratedEmail,
-  refreshGpcCardBalance,
+  refreshGpcCardBalance: () => throwLegacyFeatureRemoved('GPC / GoPay 余额查询'),
   refreshUpiRedeemCdkeyStatuses: (...args) => upiRedeemExecutor.refreshUpiRedeemCdkeyStatuses(...args),
   checkUpiRedeemSubscriptionStatuses: (...args) => upiRedeemExecutor.checkUpiRedeemSubscriptionStatuses(...args),
   refreshOAuthTimeoutWindowAfterCheckoutSuccess,
@@ -17221,14 +17361,14 @@ const messageRouter = self.MultiPageBackgroundMessageRouter?.createMessageRouter
   AUTO_RUN_TIMER_KIND_SCHEDULED_START,
   notifyNodeComplete,
   notifyNodeError,
-  pausePpBoomJob: (...args) => plusCheckoutCreateExecutor.pausePpBoomJob(...args),
+  pausePpBoomJob: () => throwLegacyFeatureRemoved('旧 GPC / GoPay 任务'),
   patchHotmailAccount,
   patchMail2925Account,
   registerTab,
   requestStop,
   probeIpProxyExit: null,
   resetState,
-  resumePpBoomJob: (...args) => plusCheckoutCreateExecutor.resumePpBoomJob(...args),
+  resumePpBoomJob: () => throwLegacyFeatureRemoved('旧 GPC / GoPay 任务'),
   resumeAutoRun,
   scheduleAutoRun,
   sendTabMessageUntilStopped,

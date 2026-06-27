@@ -132,24 +132,6 @@
       driverId: 'content/plus-checkout',
       cleanupScopes: [],
     },
-    'paypal-flow': {
-      flowId: 'openai',
-      kind: 'flow-page',
-      label: 'PayPal 授权页',
-      readyPolicy: 'allow-child-frame',
-      family: 'paypal-flow-family',
-      driverId: 'content/paypal-flow',
-      cleanupScopes: [],
-    },
-    'gopay-flow': {
-      flowId: 'openai',
-      kind: 'flow-page',
-      label: 'GoPay 授权页',
-      readyPolicy: 'allow-child-frame',
-      family: 'gopay-flow-family',
-      driverId: 'content/gopay-flow',
-      cleanupScopes: [],
-    },
     'unknown-source': {
       flowId: null,
       kind: 'unknown',
@@ -216,14 +198,6 @@
     'content/plus-checkout': {
       sourceId: 'plus-checkout',
       commands: ['plus-checkout-create', 'plus-checkout-billing', 'plus-checkout-return'],
-    },
-    'content/paypal-flow': {
-      sourceId: 'paypal-flow',
-      commands: ['paypal-approve'],
-    },
-    'content/gopay-flow': {
-      sourceId: 'gopay-flow',
-      commands: ['gopay-subscription-confirm'],
     },
   });
 
@@ -390,11 +364,6 @@
         case 'plus-checkout':
           return candidate.hostname === 'chatgpt.com'
             && candidate.pathname.startsWith('/checkout/');
-        case 'paypal-flow':
-          return candidate.hostname.endsWith('paypal.com')
-            || /pm-redirects\.stripe\.com/i.test(candidate.hostname);
-        case 'gopay-flow':
-          return /gopay|gojek/i.test(candidate.hostname);
         default:
           return false;
       }
@@ -418,9 +387,6 @@
       if (normalizedUrl.includes('duckduckgo.com/email/settings/autofill')) return 'duck-mail';
       if (normalizedUrl.includes('2925.com')) return 'mail-2925';
       if (normalizedHostname === 'pay.openai.com' || normalizedHostname === 'checkout.stripe.com') return 'plus-checkout';
-      if (/pm-redirects\.stripe\.com/i.test(normalizedHostname)
-        || /pm-redirects\.stripe\.com/i.test(normalizedUrl)) return 'paypal-flow';
-      if (normalizedHostname === 'www.paypal.com' || normalizedHostname === 'paypal.com') return 'paypal-flow';
       if (isSignupEntryHost(normalizedHostname)) return 'chatgpt';
       return 'unknown-source';
     }

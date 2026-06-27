@@ -55,19 +55,17 @@
       "requestHeaders": [
         {
           "header": "Origin",
-          "operation": "set",
-          "value": "https://chong.nerver.cc"
+          "operation": "remove"
         },
         {
           "header": "Referer",
-          "operation": "set",
-          "value": "https://chong.nerver.cc/"
+          "operation": "remove"
         }
       ]
     },
     "condition": {
       "urlFilter": "|https://chong.nerver.cc/api/external/",
-      "resourceTypes": ["xmlhttprequest"]
+      "resourceTypes": ["xmlhttprequest", "other"]
     }
   }
 ]

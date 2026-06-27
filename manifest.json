@@ -9,9 +9,6 @@
     "alarms",
     "tabs",
     "webNavigation",
-    "webRequest",
-    "webRequestAuthProvider",
-    "proxy",
     "declarativeNetRequest",
     "debugger",
     "browsingData",
@@ -22,6 +19,7 @@
   ],
   "host_permissions": [
     "https://chong.nerver.cc/*",
+    "https://cha.nerver.cc/*",
     "https://*.icloud.com/*",
     "https://*.icloud.com.cn/*",
     "<all_urls>"
@@ -54,8 +52,6 @@
         "content/utils.js",
         "content/operation-delay.js",
         "content/auth-page-recovery.js",
-        "content/phone-country-utils.js",
-        "content/phone-auth.js",
         "content/signup-page.js"
       ],
       "run_at": "document_idle"
@@ -130,6 +126,5 @@
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
-  },
-  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAgfY12Y7ZCIo4w39yVrnSqHSnD0kcslFtY0DP6mmBLWNNUZ2ZfRGeO4uRf0iaI0KIFaVG9CbmaHa+K/BnsQZXTs9U6AWMq5Gw2w/K7RbbDczZ8FkappkQus5fHYY9mDD5aeHfXzO6tVG9P72iww5viw7w99QiOslbTHysK4Qa2RQFHp1VTGW1jC/Y6BkA5i4Vgs7F3ht3/QfHkj5jzSShj5XprxO3fDjVoMxxZPquE1z8R6KAOwkQlUY7mT2q6s4+DJdaJs0gwzEReJiYk7VIo+T385jlnS8lBx4Sw5rg6pAa2y19RV7miIQCFDit/YS7EfynpQoiD7YGwKrraZ0+wQIDAQAB"
+  }
 }

@@ -35,7 +35,6 @@ body.upi-only #row-codex2api-url,
 body.upi-only #row-codex2api-admin-key,
 body.upi-only #row-export-current-session-json,
 body.upi-only #row-plus-mode,
-body.upi-only #row-plus-payment-method,
 body.upi-only #plus-checkout-mode-switch-group,
 body.upi-only #row-paypal-account,
 body.upi-only #row-plus-hosted-checkout-oauth-delay,
@@ -67,6 +66,17 @@ body.upi-only #oauth-status-section {
 }
 
 body.upi-only #row-custom-email-pool {
+  display: flex !important;
+}
+
+body.upi-only #row-upi-subscription-api-base-url,
+body.upi-only #row-upi-redeem-external-api-key,
+body.upi-only #row-upi-redeem-client-id,
+body.upi-only #row-totp-mfa-after-profile-enabled,
+body.upi-only #row-set-gpt-password-verification-wait-seconds,
+body.upi-only #row-upi-credential-membership-totp-api-base-url,
+body.upi-only #row-upi-credential-membership-totp-lookup-key,
+body.upi-only #row-upi-redeem-cdkey-pool {
   display: flex !important;
 }
 
@@ -3698,11 +3708,11 @@ header {
 }
 
 .upi-credential-membership-check-results {
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 8px;
-  background: var(--bg-soft);
-  margin-top: 8px;
+  border: 1px solid color-mix(in srgb, var(--border) 76%, var(--blue));
+  border-radius: 8px;
+  padding: 14px;
+  background: color-mix(in srgb, var(--bg-soft) 84%, var(--blue-soft));
+  margin-top: 12px;
 }
 
 .upi-membership-check-head,
@@ -3719,11 +3729,78 @@ header {
   margin-bottom: 8px;
 }
 
+.upi-credential-membership-check-results > .upi-membership-check-head {
+  padding: 0 2px 10px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 700;
+}
+
 .upi-membership-check-actions {
   flex-wrap: wrap;
   gap: 4px;
   justify-content: flex-start;
   margin-bottom: 8px;
+}
+
+.upi-membership-check-section {
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-left: 5px solid var(--green);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--bg-surface) 88%, var(--green-soft));
+  box-shadow: var(--shadow-sm);
+}
+
+.upi-membership-check-section[data-upi-membership-section="paid"] {
+  border-left-color: var(--blue);
+  background: color-mix(in srgb, var(--bg-surface) 88%, var(--blue-soft));
+}
+
+.upi-membership-section-head {
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.upi-membership-section-title {
+  color: var(--green);
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.upi-membership-check-section[data-upi-membership-section="paid"] .upi-membership-section-title {
+  color: var(--blue);
+}
+
+.upi-membership-section-meta {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 4px 9px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  background: var(--bg-base);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.upi-membership-check-section .upi-membership-check-actions {
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.upi-membership-check-section .btn-xs {
+  min-height: 34px;
+  padding: 0 12px;
+  font-size: 13px;
+  font-weight: 800;
 }
 
 .upi-membership-check-groups {
@@ -3944,12 +4021,19 @@ header {
 
 .upi-membership-check-status-header {
   display: grid;
-  grid-template-columns: 46px minmax(0, 1fr) 86px 48px;
+  grid-template-columns: 46px minmax(0, 1fr) 86px 48px 72px 48px;
   gap: 8px;
   align-items: center;
   color: var(--text-muted);
   font-size: 11px;
   margin-bottom: 6px;
+}
+
+.upi-membership-check-section .upi-membership-check-status-header {
+  padding: 0 8px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .upi-membership-check-list {
@@ -3961,9 +4045,14 @@ header {
   padding-right: 4px;
 }
 
+.upi-membership-check-section .upi-membership-check-list {
+  gap: 8px;
+  max-height: 260px;
+}
+
 .upi-membership-check-item {
   display: grid;
-  grid-template-columns: 46px minmax(0, 1fr) auto auto;
+  grid-template-columns: 46px minmax(0, 1fr) auto auto auto auto;
   gap: 8px;
   align-items: center;
   border: 1px solid var(--border);
@@ -4017,6 +4106,16 @@ header {
   white-space: nowrap;
 }
 
+.upi-membership-check-login-action,
+.upi-membership-check-move-action {
+  border: 0;
+  cursor: pointer;
+  font-family: inherit;
+  justify-self: start;
+  justify-content: center;
+  white-space: nowrap;
+}
+
 .upi-membership-check-status-action:hover:not(:disabled) {
   filter: brightness(1.12);
 }
@@ -4031,6 +4130,19 @@ header {
   color: var(--text-muted);
   font-size: 12px;
   line-height: 1.4;
+}
+
+.upi-membership-check-section .upi-membership-check-empty {
+  min-height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed color-mix(in srgb, var(--border) 70%, var(--text-muted));
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--bg-base) 84%, var(--bg-surface));
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 800;
 }
 
 .upi-membership-check-detail {

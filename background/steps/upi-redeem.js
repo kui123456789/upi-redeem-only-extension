@@ -140,6 +140,26 @@
       return legacyKey === normalizedKey ? undefined : state?.[legacyKey];
     }
 
+    function hasOwnStateKey(state = {}, key = '') {
+      return Boolean(state && typeof state === 'object' && !Array.isArray(state)
+        && Object.prototype.hasOwnProperty.call(state, key));
+    }
+
+    function preferLatestUpiRedeemDynamicState(merged = {}, latestState = {}) {
+      const dynamicKeys = [
+        'upiRedeemCdkeyPoolText',
+        'pixRedeemCdkeyPoolText',
+        'upiRedeemCdkeyUsage',
+        'pixRedeemCdkeyUsage',
+      ];
+      dynamicKeys.forEach((key) => {
+        if (hasOwnStateKey(latestState, key)) {
+          merged[key] = latestState[key];
+        }
+      });
+      return merged;
+    }
+
     function getErrorMessage(error) {
       return normalizeString(error?.message || error)
         .replace(new RegExp(`^(?:${UPI_ACCOUNT_INELIGIBLE_ERROR_PREFIX}|${UPI_REDEEM_BACKEND_FAILED_ERROR_PREFIX}|${UPI_REDEEM_AUTH_ERROR_PREFIX}|${UPI_REDEEM_DUPLICATE_CDK_ERROR_PREFIX}|${UPI_REDEEM_NOT_ACCEPTED_ERROR_PREFIX}|${UPI_ACCESS_TOKEN_EXPIRED_ERROR_PREFIX}|PIX_ACCOUNT_INELIGIBLE::)`, 'i'), '');
@@ -165,26 +185,41 @@
       const latestState = typeof getState === 'function'
         ? await getState().catch(() => ({}))
         : {};
-      return {
+      return preferLatestUpiRedeemDynamicState({
         ...(latestState || {}),
         ...(state || {}),
-      };
+      }, latestState);
     }
 
-    function getFixedUpiRedeemApiBaseUrl() {
-      return DEFAULT_UPI_REDEEM_API_BASE_URL;
+    function normalizeUpiRedeemApiBaseUrl(value = '') {
+      let normalized = normalizeString(value || DEFAULT_UPI_REDEEM_API_BASE_URL)
+        .replace(/#.*$/g, '')
+        .replace(/\/+$/g, '');
+      normalized = normalized
+        .replace(/\/api\/external\/cdkey-redeems\/status$/i, '')
+        .replace(/\/api\/external\/cdkey-redeems$/i, '')
+        .replace(/\/api\/v1\/subscription$/i, '')
+        .replace(/\/api\/v1\/check$/i, '')
+        .replace(/\/api\/v1\/totp\/(?:enable|lookup)$/i, '')
+        .replace(/\/api\/?$/i, '')
+        .replace(/\/+$/g, '');
+      return normalized || DEFAULT_UPI_REDEEM_API_BASE_URL;
     }
 
-    function buildUpiRedeemApiUrl() {
-      return `${getFixedUpiRedeemApiBaseUrl()}/api/external/cdkey-redeems`;
+    function getUpiRedeemApiBaseUrl(state = {}) {
+      return normalizeUpiRedeemApiBaseUrl(DEFAULT_UPI_REDEEM_API_BASE_URL);
+    }
+
+    function buildUpiRedeemApiUrl(state = {}) {
+      return `${getUpiRedeemApiBaseUrl(state)}/api/external/cdkey-redeems`;
     }
 
     function buildUPIAccessTokenCheckApiUrl(state = {}) {
       return `${getUpiSubscriptionApiBaseUrl(state)}/api/v1/check`;
     }
 
-    function buildUpiRedeemStatusApiUrl() {
-      return `${getFixedUpiRedeemApiBaseUrl()}/api/external/cdkey-redeems/status`;
+    function buildUpiRedeemStatusApiUrl(state = {}) {
+      return `${getUpiRedeemApiBaseUrl(state)}/api/external/cdkey-redeems/status`;
     }
 
     function normalizeUpiSubscriptionApiBaseUrl(value = '') {
@@ -280,6 +315,37 @@
         }
       }
       return '';
+    }
+
+    function resolveSessionAccountEmail(sessionState = {}) {
+      return parsePoolEntryEmail(
+        sessionState.email
+        || sessionState.session?.user?.email
+        || sessionState.session?.email
+        || sessionState.session?.user_email
+        || sessionState.user?.email
+        || sessionState.user_email
+      );
+    }
+
+    function resolveTargetRedeemEmail(state = {}) {
+      return parsePoolEntryEmail(
+        state.email
+        || state.currentEmail
+        || state.accountEmail
+        || (normalizeString(state.accountIdentifierType).toLowerCase() === 'email' ? state.accountIdentifier : '')
+        || state.accountIdentifier
+        || state.selectedCustomEmailPoolEmail
+      );
+    }
+
+    function assertSessionMatchesTargetEmail({ targetEmail = '', sessionEmail = '', visibleStep = 7 } = {}) {
+      const normalizedTargetEmail = parsePoolEntryEmail(targetEmail);
+      const normalizedSessionEmail = parsePoolEntryEmail(sessionEmail);
+      if (normalizedTargetEmail && normalizedSessionEmail && normalizedTargetEmail !== normalizedSessionEmail) {
+        throw new Error(`步骤 ${visibleStep}：当前 ChatGPT 登录态邮箱 ${normalizedSessionEmail} 与本轮目标邮箱 ${normalizedTargetEmail} 不一致，已停止，避免把 AT/Free 分组写到错误账号。`);
+      }
+      return normalizedSessionEmail || normalizedTargetEmail;
     }
 
     function normalizeChatGptSessionPayload(value = {}) {
@@ -470,6 +536,12 @@
           lastError: normalizeString(entry.lastError),
           enabled: entry.enabled !== false,
           email: normalizeString(entry.email || entry.accountEmail || entry.credentialEmail).toLowerCase(),
+          accessToken: normalizeString(entry.accessToken || entry.access_token || entry.upiRedeemAccessToken),
+          accessTokenMasked: normalizeString(entry.accessTokenMasked),
+          accessTokenUpdatedAt: Math.max(0, Math.floor(Number(entry.accessTokenUpdatedAt) || Number(entry.tokenUpdatedAt) || 0)),
+          lastFailedEmail: normalizeString(entry.lastFailedEmail).toLowerCase(),
+          lastFailedAt: Math.max(0, Math.floor(Number(entry.lastFailedAt) || 0)),
+          lastFailedReason: normalizeString(entry.lastFailedReason),
           releasedEmail: normalizeString(entry.releasedEmail || entry.approveBlockedEmail).toLowerCase(),
           releaseReason: normalizeString(entry.releaseReason),
           releasedAt: Math.max(0, Math.floor(Number(entry.releasedAt) || 0)),
@@ -503,10 +575,10 @@
 
     function isActiveRemoteStatus(status = '') {
       return [
-        'pending',
-        'pending_token',
-        'pending_dispatch',
-        'dispatched',
+	        'pending',
+	        'pending_token',
+	        'pending_dispatch',
+	        'dispatched',
         'dispatching',
         'running',
         'redeeming',
@@ -519,7 +591,10 @@
     }
 
     function isCdkeyRedeemInFlight(entry = {}) {
+      const pendingDispatch = normalizeUpiRedeemRemoteStatus(entry?.remoteStatus) === 'pending_dispatch'
+        || normalizeUpiRedeemRemoteStatus(entry?.remoteMessage) === 'pending_dispatch';
       return entry?.retrying === true
+        || (pendingDispatch && Boolean(normalizeString(entry?.email || entry?.accessToken)))
         || isActiveRemoteStatus(entry?.remoteStatus)
         || isActiveRemoteStatus(entry?.remoteMessage);
     }
@@ -528,10 +603,14 @@
       if (entry?.enabled === false) {
         return false;
       }
-      if (entry?.subscriptionActive === true || entry?.subscriptionActive === false) {
+      const remoteStatus = normalizeUpiRedeemRemoteStatus(entry?.remoteStatus);
+      const remoteMessageStatus = normalizeUpiRedeemRemoteStatus(entry?.remoteMessage);
+      const canceledRemote = remoteStatus === 'canceled' || remoteMessageStatus === 'canceled';
+      if (entry?.subscriptionActive === true || (entry?.subscriptionActive === false && !canceledRemote)) {
         return false;
       }
-      if (isSuccessfulRemoteStatus(entry?.remoteStatus) || isCdkeyRedeemInFlight(entry)) {
+      if (isSuccessfulRemoteStatus(entry?.remoteStatus)
+        || isCdkeyRedeemInFlight(entry)) {
         return false;
       }
       if (
@@ -560,6 +639,7 @@
         ...(updater(currentEntry) || {}),
       };
       const storedEmail = normalizeString(nextEntry.email || nextEntry.accountEmail || nextEntry.credentialEmail).toLowerCase();
+      const storedAccessToken = normalizeString(nextEntry.accessToken || nextEntry.access_token || nextEntry.upiRedeemAccessToken);
       const storedEntry = {
         usedAt: Math.max(0, Math.floor(Number(nextEntry.usedAt) || 0)),
         lastAttemptAt: Math.max(0, Math.floor(Number(nextEntry.lastAttemptAt) || 0)),
@@ -569,6 +649,9 @@
         releasedEmail: storedEmail ? '' : normalizeString(nextEntry.releasedEmail || nextEntry.approveBlockedEmail).toLowerCase(),
         releaseReason: storedEmail ? '' : normalizeString(nextEntry.releaseReason),
         releasedAt: storedEmail ? 0 : Math.max(0, Math.floor(Number(nextEntry.releasedAt) || 0)),
+        lastFailedEmail: normalizeString(nextEntry.lastFailedEmail).toLowerCase(),
+        lastFailedAt: Math.max(0, Math.floor(Number(nextEntry.lastFailedAt) || 0)),
+        lastFailedReason: normalizeString(nextEntry.lastFailedReason),
         remoteStatus: normalizeString(nextEntry.remoteStatus),
         remoteMessage: normalizeString(nextEntry.remoteMessage),
         remoteCheckedAt: Math.max(0, Math.floor(Number(nextEntry.remoteCheckedAt) || 0)),
@@ -577,6 +660,20 @@
         retrying: nextEntry.retrying === true,
         retryError: normalizeString(nextEntry.retryError),
       };
+      if (storedAccessToken) {
+        storedEntry.accessToken = storedAccessToken;
+        storedEntry.accessTokenMasked = normalizeString(nextEntry.accessTokenMasked) || maskAccessToken(storedAccessToken);
+        storedEntry.accessTokenUpdatedAt = Math.max(
+          0,
+          Math.floor(
+            Number(nextEntry.accessTokenUpdatedAt)
+            || Number(nextEntry.tokenUpdatedAt)
+            || Number(nextEntry.lastAttemptAt)
+            || Number(now())
+            || Date.now()
+          )
+        );
+      }
       if (nextEntry.subscriptionActive === true || nextEntry.subscriptionActive === false) {
         storedEntry.subscriptionActive = Boolean(nextEntry.subscriptionActive);
       }
@@ -603,6 +700,7 @@
     async function reserveCdkeyForRedeemSubmission({
       cdkey = '',
       email = '',
+      accessToken = '',
       attemptAt = 0,
       message = '',
     } = {}) {
@@ -614,6 +712,9 @@
       await updateCdkeyUsage(normalizedCdkey, (entry) => ({
         ...entry,
         email: normalizeString(email || entry.email || entry.accountEmail || entry.credentialEmail).toLowerCase(),
+        accessToken: normalizeString(accessToken || entry.accessToken || entry.access_token || entry.upiRedeemAccessToken),
+        accessTokenMasked: normalizeString(accessToken) ? maskAccessToken(accessToken) : normalizeString(entry.accessTokenMasked),
+        accessTokenUpdatedAt: timestamp,
         usedAt: 0,
         lastAttemptAt: timestamp,
         lastError: '',
@@ -643,6 +744,9 @@
         lastError: '',
         enabled: entry.enabled !== false,
         email: '',
+        accessToken: '',
+        accessTokenMasked: '',
+        accessTokenUpdatedAt: 0,
         releasedEmail: '',
         releaseReason: '',
         releasedAt: 0,
@@ -1158,6 +1262,9 @@
       await updateCdkeyUsage(normalizedCdkey, (entry) => ({
         ...entry,
         email: normalizeString(email || entry.email || entry.accountEmail || entry.credentialEmail).toLowerCase(),
+        accessToken: '',
+        accessTokenMasked: '',
+        accessTokenUpdatedAt: 0,
         lastAttemptAt: Math.max(0, Math.floor(Number(attemptAt) || 0)),
         lastError: normalizeString(message) || 'ChatGPT session 已过期或当前会话失效。',
         remoteStatus: 'unused',
@@ -1263,6 +1370,9 @@
 
     function normalizeUpiRedeemRemoteStatus(status = '') {
       const normalized = normalizeString(status).toLowerCase().replace(/[\s-]+/g, '_');
+      if (normalized === 'approve_blocked') {
+        return 'approve_blocked';
+      }
       if (/兑换成功|成功|已兑换|已使用|已用/.test(normalized)) {
         return 'success';
       }
@@ -1278,12 +1388,15 @@
       if (/无效|不可用/.test(normalized)) {
         return 'invalid';
       }
-      if (/未使用|未兑换|可用/.test(normalized)) {
-        return 'unused';
-      }
-      if (/等待处理|待处理|待兑换|待派发/.test(normalized)) {
-        return 'pending_dispatch';
-      }
+	      if (/未使用|未兑换|可用/.test(normalized)) {
+	        return 'unused';
+	      }
+	      if (/waiting|queue|br_recharge|进入兑换队列|兑换队列|等待系统处理|等待.*接单|任务.*等待/.test(normalized)) {
+	        return 'queued';
+	      }
+	      if (/等待处理|待处理|待兑换|待派发/.test(normalized)) {
+	        return 'pending_dispatch';
+	      }
       if (/派发中|正在派发/.test(normalized)) {
         return 'dispatching';
       }
@@ -1362,20 +1475,22 @@
         'failed',
         'timeout',
         'rejected',
-        'canceled',
+        'approve_blocked',
         'not_found',
         'invalid',
       ].includes(normalizeUpiRedeemRemoteStatus(status));
     }
 
     function isRetryableRemoteStatus(status = '') {
-      return ['failed', 'timeout', 'rejected', 'canceled'].includes(normalizeUpiRedeemRemoteStatus(status));
+      return ['failed', 'timeout', 'rejected', 'approve_blocked'].includes(normalizeUpiRedeemRemoteStatus(status));
     }
 
     function isRecoverableCdkeyUsageEntry(entry = {}) {
       if (!entry || entry.enabled === false) {
         return false;
       }
+      const remoteStatus = normalizeUpiRedeemRemoteStatus(entry.remoteStatus);
+      const remoteMessageStatus = normalizeUpiRedeemRemoteStatus(entry.remoteMessage);
       if (entry.subscriptionActive === true || isSuccessfulRemoteStatus(entry.remoteStatus)) {
         return false;
       }
@@ -1383,6 +1498,8 @@
         return false;
       }
       return isRetryableRemoteStatus(entry.remoteStatus)
+        || remoteStatus === 'canceled'
+        || remoteMessageStatus === 'canceled'
         || entry.subscriptionActive === false
         || Boolean(normalizeString(entry.lastError || entry.subscriptionReason));
     }
@@ -1398,14 +1515,6 @@
         seen.add(normalizedCdkey);
         merged.push(normalizedCdkey);
       }
-      Object.entries(usage || {}).forEach(([rawCdkey, entry]) => {
-        const cdkey = normalizeString(rawCdkey);
-        if (!cdkey || seen.has(cdkey) || !isRecoverableCdkeyUsageEntry(entry)) {
-          return;
-        }
-        seen.add(cdkey);
-        merged.push(cdkey);
-      });
       return merged;
     }
 
@@ -1582,13 +1691,13 @@
       return candidates.reduce((maxCount, value) => Math.max(maxCount, Math.floor(Number(value) || 0)), 0);
     }
 
-    async function confirmUpiRedeemSubmissionAccepted({ payload = null, externalApiKey = '', clientId = '', cdkey = '' } = {}) {
+    async function confirmUpiRedeemSubmissionAccepted({ payload = null, externalApiKey = '', clientId = '', cdkey = '', state = {} } = {}) {
       const responseItem = getPayloadCdkeyItem(payload, cdkey);
       if (responseItem && isRedeemPayloadItemAccepted(responseItem)) {
         return { confirmed: true, source: 'redeem-response', item: responseItem };
       }
       const positiveAcceptedCount = getPositiveRedeemAcceptedCount(payload);
-      const statusUrl = buildUpiRedeemStatusApiUrl();
+      const statusUrl = buildUpiRedeemStatusApiUrl(state);
       let lastReason = responseItem
         ? '兑换接口响应包含当前卡密，但状态不是已接收。'
         : '兑换接口响应没有返回当前卡密。';
@@ -1659,7 +1768,9 @@
           headers: {
             'X-External-Api-Key': externalApiKey,
             'X-Client-Id': clientId,
+            'Accept': 'application/json',
             'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
           },
           body: JSON.stringify(body),
           ...(controller ? { signal: controller.signal } : {}),
@@ -1672,7 +1783,7 @@
             throw new Error(`${UPI_ACCESS_TOKEN_EXPIRED_ERROR_PREFIX}ChatGPT session 已过期或当前会话失效：${payloadError || '请刷新当前 ChatGPT 页面后重新读取完整 session。'}`);
           }
           if (statusCode === 401 || statusCode === 403) {
-            throw new Error(`${UPI_REDEEM_AUTH_ERROR_PREFIX}UPI 远端接口拒绝请求（HTTP ${statusCode}）：当前发送 Key：${maskExternalApiKey(externalApiKey)}。${payloadError ? `后端：${payloadError}` : '没有返回明确原因。'}`);
+            throw new Error(`${UPI_REDEEM_AUTH_ERROR_PREFIX}UPI 远端接口拒绝请求（HTTP ${statusCode}）：请求：${apiUrl}。当前发送 Key：${maskExternalApiKey(externalApiKey)}。${payloadError ? `后端：${payloadError}` : '没有返回明确原因。'}`);
           }
           throw new Error(`UPI 兑换接口请求失败（HTTP ${response?.status || 0}）${payloadError ? `：${payloadError}` : ''}`);
         }
@@ -1681,7 +1792,7 @@
           throw new Error(`UPI 兑换接口返回错误：${payloadError}`);
         }
         if (isHtmlResponsePayload(response, payload)) {
-          throw new Error('UPI 兑换接口返回了 HTML 页面，请检查远端兑换服务 https://chong.nerver.cc 是否可用。');
+          throw new Error(`UPI 兑换接口返回了 HTML 页面，请检查远端兑换服务地址是否正确：${apiUrl}`);
         }
         return payload;
       } catch (error) {
@@ -1812,7 +1923,7 @@
       return item;
     }
 
-    async function postUpiRedeem({ apiUrl, externalApiKey, clientId, cdkey, session, accessToken }) {
+    async function postUpiRedeem({ apiUrl, externalApiKey, clientId, cdkey, session, accessToken, state = {} }) {
       let payload = null;
       try {
         payload = await postUPIJson({
@@ -1847,6 +1958,7 @@
         externalApiKey,
         clientId,
         cdkey,
+        state,
       });
       if (!acceptance.confirmed) {
         throw new Error(`${UPI_REDEEM_NOT_ACCEPTED_ERROR_PREFIX}UPI 兑换接口未确认接收当前卡密，后端没有兑换记录：${acceptance.reason || '状态接口未找到记录'}`);
@@ -1868,11 +1980,14 @@
         lastAttemptAt: releasedAt,
         lastError: '',
         email: '',
+        accessToken: '',
+        accessTokenMasked: '',
+        accessTokenUpdatedAt: 0,
         releasedEmail: normalizedEmail || normalizeString(entry.email).toLowerCase(),
         releaseReason,
         releasedAt,
-        remoteStatus: 'unused',
-        remoteMessage: `${releaseReason}；邮箱不可用，已释放卡密`,
+        remoteStatus: 'approve_blocked',
+        remoteMessage: `${releaseReason}；提交被阻塞，已释放卡密`,
         remoteCheckedAt: releasedAt,
         retryCount: 0,
         lastRetryAt: 0,
@@ -1883,29 +1998,19 @@
         subscriptionCheckedAt: 0,
         subscriptionReason: '',
       }));
-      if (normalizedEmail) {
-        await applyIneligibleAccountCleanup({
-          state: {
-            ...state,
-            email: normalizedEmail,
-          },
-          email: normalizedEmail,
-          visibleStep,
-          reason: `${releaseReason}；后端返回 approve-blocked，邮箱不可用，卡密已释放`,
-        });
-      } else {
-        await addStepLog(visibleStep, `后端返回 approve-blocked，已释放卡密 ${normalizedCdkey}，但未能解析邮箱，无法自动删除账号记录。`, 'warn');
+      if (!normalizedEmail) {
+        await addStepLog(visibleStep, `后端返回 approve-blocked，已释放卡密 ${normalizedCdkey}，但未能解析邮箱。`, 'warn');
       }
       await addStepLog(
         visibleStep,
-        `后端返回 approve-blocked：${normalizedEmail || 'unknown'} 邮箱不可用，已释放卡密 ${normalizedCdkey}。`,
+        `后端返回 approve-blocked：${normalizedEmail || 'unknown'} 提交被阻塞，已释放卡密 ${normalizedCdkey}，账号保留在 Free 等待重新匹配。`,
         'warn'
       );
     }
 
     async function refreshUpiRedeemCdkeyStatuses(inputState = {}) {
       const runtimeState = await getMergedState(inputState);
-      const statusUrl = buildUpiRedeemStatusApiUrl();
+      const statusUrl = buildUpiRedeemStatusApiUrl(runtimeState);
       const externalApiKey = normalizeString(getUpiRedeemStateValue(runtimeState, 'upiRedeemExternalApiKey'));
       if (!externalApiKey) {
         throw new Error('UPI External API Key 未配置，请先在侧边栏填写 UPI 外部 API Key。');
@@ -1987,6 +2092,64 @@
         }
         const success = isSuccessfulRemoteStatus(remoteStatus);
         const unused = isUnusedRemoteStatus(remoteStatus);
+        const failed = isFailureStatus(remoteStatus);
+        if (remoteStatus === 'canceled') {
+          nextUsage[cdkey] = {
+            ...currentEntry,
+            usedAt: 0,
+            lastError: remoteMessage || '后端已手动取消兑换',
+            enabled: currentEntry.enabled !== false,
+            email: '',
+            accessToken: '',
+            accessTokenMasked: '',
+            accessTokenUpdatedAt: 0,
+            releasedEmail: '',
+            releaseReason: '',
+            releasedAt: 0,
+            lastFailedEmail: '',
+            lastFailedAt: 0,
+            lastFailedReason: '',
+            remoteStatus: 'unused',
+            remoteMessage: `${remoteMessage || '后端已手动取消兑换'}；后端已取消，卡密已回到可用池`,
+            remoteCheckedAt: checkedAt,
+            retrying: false,
+            retryError: '',
+          };
+          delete nextUsage[cdkey].subscriptionActive;
+          delete nextUsage[cdkey].subscriptionPlanType;
+          delete nextUsage[cdkey].subscriptionCheckedAt;
+          delete nextUsage[cdkey].subscriptionReason;
+          return;
+        }
+        if (failed) {
+          const failedEmail = normalizeString(currentEntry.email || getRemoteResultEmail(item, '')).toLowerCase();
+          nextUsage[cdkey] = {
+            ...currentEntry,
+            usedAt: 0,
+            lastError: remoteMessage,
+            enabled: currentEntry.enabled !== false,
+            email: '',
+            accessToken: '',
+            accessTokenMasked: '',
+            accessTokenUpdatedAt: 0,
+            releasedEmail: '',
+            releaseReason: '',
+            releasedAt: 0,
+            lastFailedEmail: failedEmail,
+            lastFailedAt: checkedAt,
+            lastFailedReason: remoteMessage || '远端确认兑换失败',
+            remoteStatus,
+            remoteMessage: `${remoteMessage || '远端确认兑换失败'}；卡密已回到可用池，等待其他账号匹配`,
+            remoteCheckedAt: checkedAt,
+            retrying: false,
+            retryError: '',
+          };
+          delete nextUsage[cdkey].subscriptionActive;
+          delete nextUsage[cdkey].subscriptionPlanType;
+          delete nextUsage[cdkey].subscriptionCheckedAt;
+          delete nextUsage[cdkey].subscriptionReason;
+          return;
+        }
         const preserveReleaseInfo = !currentEntry.email && ['unused', 'available', 'new', 'ready'].includes(remoteStatus);
         nextUsage[cdkey] = {
           ...currentEntry,
@@ -2309,11 +2472,13 @@
       const chatGptSession = normalizeChatGptSessionPayload(input.session || input.chatGptSession || input.chatgptSession || {});
       const accessToken = getChatGptSessionAccessToken(chatGptSession)
         || normalizeString(input.accessToken || input.token || input.access_token);
-      const email = parsePoolEntryEmail(input.email)
-        || resolveCurrentRedeemEmail({
+      const targetEmail = parsePoolEntryEmail(input.email)
+        || resolveTargetRedeemEmail({
           ...runtimeState,
           ...patch,
-        }, chatGptSession);
+        });
+      const sessionEmail = resolveSessionAccountEmail(chatGptSession);
+      const email = assertSessionMatchesTargetEmail({ targetEmail, sessionEmail, visibleStep });
       const checkedAt = toIsoTimestamp();
 
       await addStepLog(
@@ -2329,7 +2494,7 @@
           accessToken,
         });
         const reason = normalizeString(eligibility?.item?.message || eligibility?.item?.reason)
-          || '账号有试用资格，可进行 UPI 卡密兑换';
+          || '账号有试用资格，已进入 Free 分组';
         if (typeof upsertTrialEligibleFreeCredential === 'function') {
           await upsertTrialEligibleFreeCredential({
             source: 'registration-upi-eligibility',
@@ -2339,6 +2504,7 @@
               ...patch,
               email,
             }, email),
+            accessToken,
             accessTokenMasked: maskAccessToken(accessToken),
             reason,
             checkedAt,
@@ -2391,14 +2557,14 @@
       const chatGptSession = normalizeChatGptSessionPayload(input.session || input.chatGptSession || input.chatgptSession || {});
       const accessToken = getChatGptSessionAccessToken(chatGptSession)
         || normalizeString(input.accessToken || input.token || input.access_token);
-      if (!hasChatGptSessionPayload(chatGptSession)) {
-        throw new Error('缺少 ChatGPT session，无法兑换 UPI 卡密。');
+      if (!hasChatGptSessionPayload(chatGptSession) && !accessToken) {
+        throw new Error('缺少 ChatGPT accessToken，无法兑换 UPI 卡密。');
       }
       const credential = input.credential && typeof input.credential === 'object' && !Array.isArray(input.credential)
         ? input.credential
         : {};
       const email = parsePoolEntryEmail(credential.email || input.email || runtimeState.email);
-      const apiUrl = buildUpiRedeemApiUrl();
+      const apiUrl = buildUpiRedeemApiUrl(runtimeState);
       const checkUrl = buildUPIAccessTokenCheckApiUrl(runtimeState);
       const externalApiKey = normalizeString(getUpiRedeemStateValue(runtimeState, 'upiRedeemExternalApiKey'));
       if (!externalApiKey) {
@@ -2420,7 +2586,7 @@
       if (forceCdkey) {
         const forcedUsage = usage?.[forceCdkey] || {};
         if (!cdkeys.includes(forceCdkey)) {
-          throw new Error(`指定 UPI 卡密不在当前卡密池或可恢复记录中，已停止重试：${forceCdkey}`);
+          throw new Error(`指定 UPI 卡密不在当前卡密池中，已停止重试：${forceCdkey}`);
         }
         if (forcedUsage.enabled === false) {
           throw new Error(`指定 UPI 卡密已停用，已停止重试：${forceCdkey}`);
@@ -2436,24 +2602,24 @@
       const attemptAt = Math.max(1, Math.floor(Number(now()) || Date.now()));
       await addStepLog(
         visibleStep,
-        `UPI 备份账号补兑：准备提交 ChatGPT session + 卡密：${email || 'unknown'} -> session字段 ${getChatGptSessionFieldCount(chatGptSession)} -> ${cdkey}`,
+        `UPI Free 分组卡密兑换：准备提交 ChatGPT AT + 卡密：${email || 'unknown'} -> session字段 ${getChatGptSessionFieldCount(chatGptSession)} -> ${cdkey}`,
         'info'
       );
       if (isRetryableRemoteStatus(selectedUsage.remoteStatus)) {
         await addStepLog(
           visibleStep,
-          `UPI 备份账号补兑：卡密 ${cdkey} 上次状态为 ${normalizeUpiRedeemRemoteStatus(selectedUsage.remoteStatus)}，但未标记已用，将继续重试。`,
+          `UPI Free 分组卡密兑换：卡密 ${cdkey} 上次状态为 ${normalizeUpiRedeemRemoteStatus(selectedUsage.remoteStatus)}，但未标记已用，将继续重试。`,
           'warn'
         );
       }
       if (skipEligibilityCheck) {
         await addStepLog(
           visibleStep,
-          `UPI 备份账号补兑：已跳过本地资格预检，直接提交兑换后端：${email || 'unknown'} -> ${cdkey} -> ${apiUrl}`,
+          `UPI Free 分组卡密兑换：已跳过本地资格预检，直接提交兑换后端：${email || 'unknown'} -> ${cdkey} -> ${apiUrl}`,
           'warn'
         );
       } else {
-        await addStepLog(visibleStep, `UPI 备份账号补兑：正在检查 ChatGPT session 资格：${email || 'unknown'} -> ${cdkey} -> ${checkUrl}`, 'info');
+        await addStepLog(visibleStep, `UPI Free 分组卡密兑换：正在检查 ChatGPT session 资格：${email || 'unknown'} -> ${cdkey} -> ${checkUrl}`, 'info');
         try {
           await checkUPIAccessTokenEligibility({
             checkUrl,
@@ -2468,12 +2634,15 @@
           if (isUpiAccessTokenExpiredError(error)) {
             await addStepLog(
               visibleStep,
-              `UPI 备份账号补兑：资格预检接口提示 ChatGPT session 失效，将按 lala 逻辑继续提交兑换后端 ${apiUrl}：${message}`,
+              `UPI Free 分组卡密兑换：资格预检接口提示 ChatGPT session 失效，将按 lala 逻辑继续提交兑换后端 ${apiUrl}：${message}`,
               'warn'
             );
             await updateCdkeyUsage(cdkey, (entry) => ({
               ...entry,
               email,
+              accessToken,
+              accessTokenMasked: maskAccessToken(accessToken),
+              accessTokenUpdatedAt: attemptAt,
               lastAttemptAt: attemptAt,
               lastError: message,
             }));
@@ -2492,30 +2661,34 @@
             await updateCdkeyUsage(cdkey, (entry) => ({
               ...entry,
               email,
+              accessToken,
+              accessTokenMasked: maskAccessToken(accessToken),
+              accessTokenUpdatedAt: attemptAt,
               lastAttemptAt: attemptAt,
               lastError: message,
             }));
             if (isUpiAccountIneligibleError(error)) {
               await addStepLog(
                 visibleStep,
-                `UPI 备份账号补兑：资格检查确认账号无资格，未提交到兑换后端 ${apiUrl}：${message}`,
+                `UPI Free 分组卡密兑换：资格检查确认账号无资格，未提交到兑换后端 ${apiUrl}：${message}`,
                 'error'
               );
               throw error;
             }
             await addStepLog(
               visibleStep,
-              `UPI 备份账号补兑：资格检查接口失败，将继续提交兑换后端 ${apiUrl} 留痕：${message}`,
+              `UPI Free 分组卡密兑换：资格检查接口失败，将继续提交兑换后端 ${apiUrl} 留痕：${message}`,
               'warn'
             );
           }
         }
       }
 
-      await addStepLog(visibleStep, `UPI 备份账号补兑：正在提交 ChatGPT session+卡密到兑换接口：${email || 'unknown'} -> session字段 ${getChatGptSessionFieldCount(chatGptSession)} -> ${cdkey} -> ${apiUrl}`, 'info');
+      await addStepLog(visibleStep, `UPI Free 分组卡密兑换：正在提交 ChatGPT AT+卡密到兑换接口：${email || 'unknown'} -> session字段 ${getChatGptSessionFieldCount(chatGptSession)} -> ${cdkey} -> ${apiUrl}`, 'info');
       await reserveCdkeyForRedeemSubmission({
         cdkey,
         email,
+        accessToken,
         attemptAt,
         message: `正在提交兑换：${email || 'unknown'}`,
       });
@@ -2527,11 +2700,15 @@
           cdkey,
           session: chatGptSession,
           accessToken,
+          state: runtimeState,
         });
-        await addStepLog(visibleStep, `UPI 备份账号补兑：兑换接口已接收 ChatGPT session+卡密：${email || 'unknown'} -> ${cdkey}`, 'ok');
+        await addStepLog(visibleStep, `UPI Free 分组卡密兑换：兑换接口已接收 ChatGPT AT+卡密：${email || 'unknown'} -> ${cdkey}`, 'ok');
         await updateCdkeyUsage(cdkey, (entry) => ({
           ...entry,
           email,
+          accessToken,
+          accessTokenMasked: maskAccessToken(accessToken),
+          accessTokenUpdatedAt: attemptAt,
           usedAt: 0,
           lastAttemptAt: attemptAt,
           lastError: '',
@@ -2547,7 +2724,7 @@
         if (isUpiAccessTokenExpiredError(error)) {
           await addStepLog(
             visibleStep,
-            `UPI 备份账号补兑：兑换后端提示 ChatGPT session 失效，已停止当前账号，卡密不记失败：${email || 'unknown'} -> ${cdkey}：${message}`,
+            `UPI Free 分组卡密兑换：兑换后端提示 ChatGPT session 失效，已停止当前账号，卡密不记失败：${email || 'unknown'} -> ${cdkey}：${message}`,
             'warn'
           );
           await recordAccessTokenExpiredCdkeyAttempt({
@@ -2561,7 +2738,7 @@
         if (isApproveBlockedError(error)) {
           await addStepLog(
             visibleStep,
-            `UPI 备份账号补兑：后端返回 approve-blocked，邮箱不可用，立即释放卡密：${email || 'unknown'} -> ${cdkey}：${message}`,
+            `UPI Free 分组卡密兑换：后端返回 approve-blocked，立即释放卡密并保留账号：${email || 'unknown'} -> ${cdkey}：${message}`,
             'warn'
           );
           await releaseCdkeyForApproveBlocked({
@@ -2577,7 +2754,7 @@
         if (isUpiRedeemNotAcceptedError(error)) {
           await addStepLog(
             visibleStep,
-            `UPI 备份账号补兑：兑换接口未确认接收，后端没有兑换记录，已释放卡密：${email || 'unknown'} -> ${cdkey}：${message}`,
+            `UPI Free 分组卡密兑换：兑换接口未确认接收，后端没有兑换记录，已释放卡密：${email || 'unknown'} -> ${cdkey}：${message}`,
             'warn'
           );
           await releaseCdkeyForUnacceptedSubmission({
@@ -2591,12 +2768,15 @@
           const pendingReason = `${message || '后端提示卡密已提交过'}；这张卡密已被占用，当前账号未提交成功，请换下一张卡密。`;
           await addStepLog(
             visibleStep,
-            `UPI 备份账号补兑：后端提示卡密重复提交，当前账号未提交成功，将回到 Free 可换卡：${email || 'unknown'} -> ${cdkey}：${message}`,
+            `UPI Free 分组卡密兑换：后端提示卡密重复提交，当前账号未提交成功，将回到 Free 可换卡：${email || 'unknown'} -> ${cdkey}：${message}`,
             'warn'
           );
           await updateCdkeyUsage(cdkey, (entry) => ({
             ...entry,
             email: '',
+            accessToken: '',
+            accessTokenMasked: '',
+            accessTokenUpdatedAt: 0,
             usedAt: 0,
             lastAttemptAt: attemptAt,
             lastError: '',
@@ -2625,16 +2805,23 @@
         }
         await addStepLog(
           visibleStep,
-          `UPI 备份账号补兑：session+卡密提交失败：${email || 'unknown'} -> ${cdkey}：${message}`,
+          `UPI Free 分组卡密兑换：AT+卡密提交失败：${email || 'unknown'} -> ${cdkey}：${message}`,
           'error'
         );
         await updateCdkeyUsage(cdkey, (entry) => ({
           ...entry,
-          email,
+          email: '',
+          accessToken: '',
+          accessTokenMasked: '',
+          accessTokenUpdatedAt: 0,
+          usedAt: 0,
           lastAttemptAt: attemptAt,
           lastError: message,
+          lastFailedEmail: email,
+          lastFailedAt: attemptAt,
+          lastFailedReason: message,
           remoteStatus: 'failed',
-          remoteMessage: message,
+          remoteMessage: `${message}；卡密已回到可用池，等待其他账号匹配`,
           remoteCheckedAt: attemptAt,
           retrying: false,
           retryError: message,
@@ -2645,7 +2832,7 @@
       if (input.deferSubscriptionConfirmation === true) {
         await addStepLog(
           visibleStep,
-          `UPI 备份账号补兑：已提交 ChatGPT session+卡密，等待远端系统返回最终结果后再判定账号成功或失败：${email || 'unknown'} -> ${cdkey}`,
+          `UPI Free 分组卡密兑换：已提交 ChatGPT AT+卡密，等待远端系统返回最终结果后再判定账号成功或失败：${email || 'unknown'} -> ${cdkey}`,
           'info'
         );
         return {
@@ -2721,7 +2908,7 @@
         upiRedeemSubscriptionReason: '',
       });
       const visibleStep = resolveVisibleStep(runtimeState);
-      const apiUrl = buildUpiRedeemApiUrl();
+      const apiUrl = buildUpiRedeemApiUrl(runtimeState);
       const checkUrl = buildUPIAccessTokenCheckApiUrl(runtimeState);
       const externalApiKey = normalizeString(getUpiRedeemStateValue(runtimeState, 'upiRedeemExternalApiKey'));
       if (!externalApiKey) {
@@ -2786,6 +2973,7 @@
                 ...latestForSubscription,
               }, currentEmail),
               cdkey,
+              accessToken: sessionState.accessToken,
               accessTokenMasked: maskAccessToken(sessionState.accessToken),
               reason: normalizeString(eligibility?.item?.message || eligibility?.item?.reason) || '账号有试用资格，可进行 UPI 卡密兑换',
               checkedAt: toIsoTimestamp(attemptAt),
@@ -2846,6 +3034,10 @@
             }
             await updateCdkeyUsage(cdkey, (entry) => ({
               ...entry,
+              email: currentEmail,
+              accessToken: sessionState.accessToken,
+              accessTokenMasked: maskAccessToken(sessionState.accessToken),
+              accessTokenUpdatedAt: attemptAt,
               lastAttemptAt: attemptAt,
               lastError: retryMessage,
             }));
@@ -2894,6 +3086,10 @@
           await addStepLog(visibleStep, `UPI 资格检查失败，将继续提交兑换后端 ${apiUrl} 留痕：${message}`, 'warn');
           await updateCdkeyUsage(cdkey, (entry) => ({
             ...entry,
+            email: currentEmail,
+            accessToken: sessionState.accessToken,
+            accessTokenMasked: maskAccessToken(sessionState.accessToken),
+            accessTokenUpdatedAt: attemptAt,
             lastAttemptAt: attemptAt,
             lastError: message,
           }));
@@ -2919,6 +3115,7 @@
       await reserveCdkeyForRedeemSubmission({
         cdkey,
         email: currentEmail,
+        accessToken: sessionState.accessToken,
         attemptAt,
         message: `正在提交兑换：${currentEmail || 'unknown'}`,
       });
@@ -2930,12 +3127,16 @@
           cdkey,
           session: sessionState,
           accessToken: sessionState.accessToken,
+          state: runtimeState,
         });
         redeemBackendAccepted = true;
         await addStepLog(visibleStep, `UPI 兑换接口已接收 ChatGPT session+卡密：${currentEmail || 'unknown'} -> ${cdkey}`, 'ok');
         await updateCdkeyUsage(cdkey, (entry) => ({
           ...entry,
           email: currentEmail,
+          accessToken: sessionState.accessToken,
+          accessTokenMasked: maskAccessToken(sessionState.accessToken),
+          accessTokenUpdatedAt: attemptAt,
           usedAt: 0,
           lastAttemptAt: attemptAt,
           lastError: '',
@@ -3063,7 +3264,7 @@
         if (isApproveBlockedError(error)) {
           await addStepLog(
             visibleStep,
-            `UPI 后端返回 approve-blocked，邮箱不可用，立即释放卡密：${currentEmail || 'unknown'} -> ${cdkey}：${message}`,
+            `UPI 后端返回 approve-blocked，立即释放卡密并保留账号：${currentEmail || 'unknown'} -> ${cdkey}：${message}`,
             'warn'
           );
           await releaseCdkeyForApproveBlocked({
@@ -3112,6 +3313,9 @@
           await updateCdkeyUsage(cdkey, (entry) => ({
             ...entry,
             email: '',
+            accessToken: '',
+            accessTokenMasked: '',
+            accessTokenUpdatedAt: 0,
             usedAt: 0,
             lastAttemptAt: attemptAt,
             lastError: '',
@@ -3154,6 +3358,9 @@
           await updateCdkeyUsage(cdkey, (entry) => ({
             ...entry,
             email: currentEmail,
+            accessToken: sessionState.accessToken,
+            accessTokenMasked: maskAccessToken(sessionState.accessToken),
+            accessTokenUpdatedAt: attemptAt,
             usedAt: 0,
             lastAttemptAt: attemptAt,
             lastError: '',
@@ -3181,11 +3388,18 @@
           await addStepLog(visibleStep, `UPI 卡密兑换失败：${message}`, 'error');
           await updateCdkeyUsage(cdkey, (entry) => ({
             ...entry,
-            email: currentEmail,
+            email: '',
+            accessToken: '',
+            accessTokenMasked: '',
+            accessTokenUpdatedAt: 0,
+            usedAt: 0,
             lastAttemptAt: attemptAt,
             lastError: message,
+            lastFailedEmail: currentEmail,
+            lastFailedAt: attemptAt,
+            lastFailedReason: message,
             remoteStatus: 'failed',
-            remoteMessage: message,
+            remoteMessage: `${message}；卡密已回到可用池，等待其他账号匹配`,
             remoteCheckedAt: attemptAt,
             retrying: false,
             retryError: message,

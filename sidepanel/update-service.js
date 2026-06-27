@@ -397,13 +397,18 @@
   }
 
   function getLocalVersionLabel(manifest = chrome.runtime.getManifest()) {
-    const versionName = formatDisplayVersion(manifest?.version_name, VERSION_FAMILY_GUJUMPGATE);
+    const rawVersionName = String(manifest?.version_name || '').trim();
+    if (/^UPI\s+Redeem\s+Only\b/i.test(rawVersionName)) {
+      return rawVersionName;
+    }
+
+    const versionName = formatDisplayVersion(rawVersionName, VERSION_FAMILY_GUJUMPGATE);
     if (versionName) {
       return versionName;
     }
 
     const versionCore = extractVersionCore(manifest?.version || '');
-    return versionCore ? formatDisplayVersion(`GuJumpgate ${versionCore}`, VERSION_FAMILY_GUJUMPGATE) : '';
+    return versionCore ? `UPI Redeem Only V${versionCore}` : '';
   }
 
   async function getReleaseSnapshot(options = {}) {

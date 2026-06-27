@@ -130,9 +130,6 @@
         <div class="data-inline">
           <select id="select-account-access-strategy" class="data-select">
             <option value="oauth" selected>Oauth</option>
-            <option value="sms_oauth">先手机号注册 Oauth</option>
-            <option value="phone_bind_oauth">后手机号绑定 Oauth</option>
-            <option value="session_json">SESSION JSON导入</option>
           </select>
           <span class="setting-caption" id="account-access-strategy-caption"></span>
         </div>
@@ -319,13 +316,10 @@
         <span class="data-label">Plus 支付</span>
         <div class="data-inline">
           <select id="select-plus-payment-method" class="data-select plus-payment-method-select">
-            <option value="paypal">PayPal</option>
-            <option value="gopay">GoPay</option>
-            <option value="gpc-helper">GPC Helper</option>
             <option value="upi" selected>UPI</option>
           </select>
           <button id="btn-gpc-card-key-purchase" class="btn btn-outline btn-sm data-inline-btn" type="button" style="display:none;">服务说明</button>
-          <span class="setting-caption" id="plus-payment-method-caption">PayPal 订阅链路</span>
+          <span class="setting-caption" id="plus-payment-method-caption">UPI 资格检测与手动卡密兑换链路</span>
         </div>
       </div>
       <div class="data-row" id="row-paypal-account" style="display:none;">
@@ -591,15 +585,22 @@
           placeholder="可留空自动生成；保存在扩展本地" autocomplete="off"
           title="UPI 后台按 X-Client-Id 分组记录；留空时扩展会自动生成并保存在扩展本地设置中" />
       </div>
+      <div class="data-row" id="row-upi-redeem-failed-account-retry-limit" style="display:none;">
+        <span class="data-label">失败账号重试</span>
+        <input type="number" id="input-upi-redeem-failed-account-retry-limit" class="data-input"
+          min="0" max="20" step="1" value="3"
+          title="Free 账号远端兑换失败后，自动随机换剩余卡密重试的账号失败次数上限；0 表示不自动重试" />
+        <span class="setting-caption">0=关闭；每次随机挑剩余可用卡密</span>
+      </div>
       <div class="data-row" id="row-totp-mfa-after-profile-enabled" style="display:none;">
-        <span class="data-label">第5步后 2FA</span>
+        <span class="data-label">第7步 2FA + 资格检测</span>
         <label class="toggle-switch">
           <input type="checkbox" id="input-totp-mfa-after-profile-enabled" checked />
           <span class="toggle-switch-track" aria-hidden="true">
             <span class="toggle-switch-thumb"></span>
           </span>
         </label>
-        <span class="setting-caption">开启后先开通 2FA，再检测试用资格并进入 Free 分组</span>
+        <span class="setting-caption">第 7 步开通 2FA 后检测是否有试用资格，不兑换卡密</span>
       </div>
       <div class="data-row" id="row-set-gpt-password-verification-wait-seconds" style="display:none;">
         <span class="data-label">取码等待</span>
@@ -636,14 +637,6 @@
             placeholder="CDK-001&#10;CDK-002&#10;CDK-003"></textarea>
           <div class="upi-redeem-cdkey-pool-toolbar">
             <div id="upi-redeem-cdkey-pool-summary" class="icloud-summary">总数 0 / 已用 0 / 可用 0</div>
-            <button id="btn-show-upi-credential-backups" class="btn btn-ghost btn-xs" type="button">查看全部已存密码2FA</button>
-            <button id="btn-export-upi-credential-backups" class="btn btn-ghost btn-xs" type="button">导出当前卡密成功密码2FA</button>
-            <button id="btn-check-upi-credential-membership-local" class="btn btn-ghost btn-xs" type="button">核验启用已存备份</button>
-            <button id="btn-import-upi-credential-membership-txt" class="btn btn-ghost btn-xs" type="button">导入备份TXT并核验</button>
-            <button id="btn-import-upi-credential-membership-free-txt" class="btn btn-ghost btn-xs" type="button">导入无会员TXT</button>
-            <button id="btn-stop-upi-credential-membership-check" class="btn btn-ghost btn-xs" type="button" hidden>停止核验</button>
-            <button id="btn-export-upi-redeem-success-records" class="btn btn-ghost btn-xs" type="button" disabled>导出已开通会员密码2FA</button>
-            <button id="btn-upi-redeem-cdkey-status-refresh" class="btn btn-ghost btn-xs" type="button">刷新状态</button>
             <input type="file" id="input-upi-credential-membership-txt" accept=".txt,text/plain" hidden />
           </div>
           <div id="upi-credential-backup-preview-wrap" hidden>
@@ -2595,18 +2588,6 @@
   <input id="input-import-settings-file" type="file" accept=".json,application/json" hidden />
   <script src="../managed-alias-utils.js"></script>
   <script src="../mail2925-utils.js"></script>
-  <script src="../paypal-utils.js"></script>
-  <script src="../gopay-utils.js"></script>
-  <script src="../phone-sms/providers/hero-sms.js"></script>
-  <script src="../phone-sms/providers/five-sim.js"></script>
-  <script src="../phone-sms/providers/nexsms.js"></script>
-  <script src="../phone-sms/providers/hosted-sms.js"></script>
-  <script src="../phone-sms/providers/smsbower.js"></script>
-  <script src="../phone-sms/providers/sms-verification-number.js"></script>
-  <script src="../phone-sms/providers/grizzlysms.js"></script>
-  <script src="../phone-sms/providers/smspool.js"></script>
-  <script src="../phone-sms/providers/chatgpt-api.js"></script>
-  <script src="../phone-sms/providers/registry.js"></script>
   <script src="../icloud-utils.js"></script>
   <script src="../mail-provider-utils.js"></script>
   <script src="../hotmail-utils.js"></script>
@@ -2619,15 +2600,11 @@
   <script src="form-dialog.js"></script>
   <script src="editable-list-picker.js"></script>
   <script src="hotmail-manager.js"></script>
-  <script src="paypal-manager.js"></script>
   <script src="mail-2925-manager.js"></script>
   <script src="icloud-manager.js"></script>
   <script src="luckmail-manager.js"></script>
   <script src="custom-email-pool-manager.js"></script>
-  <script src="hosted-sms-pool-manager.js"></script>
   <script src="contribution-mode.js"></script>
-  <script src="ip-proxy-provider-711proxy.js"></script>
-  <script src="ip-proxy-panel.js"></script>
   <script src="account-records-manager.js"></script>
   <script src="sidepanel.js"></script>
 </body>
