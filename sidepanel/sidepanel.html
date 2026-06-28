@@ -318,11 +318,11 @@
           title="UPI 后台按 X-Client-Id 分组记录；留空时扩展会自动生成并保存在扩展本地设置中" />
       </div>
       <div class="data-row" id="row-upi-redeem-failed-account-retry-limit" style="display:none;">
-        <span class="data-label">失败账号重试</span>
+        <span class="data-label">兑换轮数</span>
         <input type="number" id="input-upi-redeem-failed-account-retry-limit" class="data-input"
           min="0" max="20" step="1" value="3"
-          title="Free 账号远端兑换失败后，自动随机换剩余卡密重试的账号失败次数上限；0 表示不自动重试" />
-        <span class="setting-caption">0=关闭；每次随机挑剩余可用卡密</span>
+          title="首轮结束后，失败账号最多继续进行多少轮；0 表示只跑首轮" />
+        <span class="setting-caption">0=只跑首轮；失败账号按轮继续</span>
       </div>
       <div class="data-row" id="row-totp-mfa-after-profile-enabled" style="display:none;">
         <span class="data-label">第7步 2FA + 资格检测</span>
@@ -334,12 +334,12 @@
         </label>
         <span class="setting-caption">第 7 步开通 2FA 后检测是否有试用资格，不兑换卡密</span>
       </div>
-      <div class="data-row" id="row-set-gpt-password-verification-wait-seconds" style="display:none;">
-        <span class="data-label">取码等待</span>
+      <div class="data-row" id="row-set-gpt-password-verification-wait-seconds">
+        <span class="data-label">第4/6步取码等待</span>
         <input type="number" id="input-set-gpt-password-verification-wait-seconds" class="data-input"
           min="0" max="300" step="1" value="10"
-          title="设置 GPT 密码验证码发出后，等待多少秒再读取邮箱；0 表示不等待" />
-        <span class="setting-caption">设置 GPT 密码验证码发出后再读取邮箱，避免读到旧验证码</span>
+          title="第 4 步注册验证码和第 6 步设置 GPT 密码验证码每次读取前等待多少秒；接口刷新慢可以改大，0 表示不等待" />
+        <span class="setting-caption">注册/设置密码取码前等待秒数，默认 10；接口刷新慢可改大</span>
       </div>
       <div class="data-row" id="row-upi-credential-membership-totp-api-base-url" style="display:none;">
         <span class="data-label">TOTP 兜底 API</span>
@@ -449,8 +449,8 @@
             placeholder="每行一个邮箱，或 邮箱----取码URL/查询码，例如&#10;alias001@gmail.com&#10;alias002@gmail.com----https://example.com/code&#10;alias003@icloud.com----mail-query-code"></textarea>
           <div class="data-inline">
             <button id="btn-custom-email-pool-import" class="btn btn-primary btn-sm" type="button">导入邮箱</button>
-            <label class="inline-setting-field" title="注册第 4 步获取验证码前等待多少秒；0 表示不等待">
-              <span class="setting-caption">注册取码等待</span>
+            <label class="inline-setting-field" title="第 4 步注册验证码和第 6 步设置 GPT 密码验证码获取前等待多少秒；0 表示不等待">
+              <span class="setting-caption">第4/6步取码等待</span>
               <input type="number" id="input-signup-verification-code-wait-seconds"
                 class="data-input auto-delay-input" value="10" min="0" max="300" step="1" />
             </label>

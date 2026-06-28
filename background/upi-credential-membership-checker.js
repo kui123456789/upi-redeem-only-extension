@@ -297,6 +297,21 @@
     return Math.max(0, Math.min(UPI_REDEEM_FAILED_ACCOUNT_RETRY_LIMIT_MAX, numeric));
   }
 
+  function normalizeRedeemAdditionalRoundCount(value, fallback = DEFAULT_UPI_REDEEM_FAILED_ACCOUNT_RETRY_LIMIT) {
+    return normalizeFailedAccountRetryLimit(value, fallback);
+  }
+
+  function getRedeemTotalRoundLimit(additionalRoundCount = 0) {
+    return 1 + Math.max(0, Math.min(
+      UPI_REDEEM_FAILED_ACCOUNT_RETRY_LIMIT_MAX,
+      Math.floor(Number(additionalRoundCount) || 0)
+    ));
+  }
+
+  function getRedeemRoundLabel(roundNumber = 1, totalRoundLimit = 1) {
+    return `兑换轮 ${Math.max(1, Math.floor(Number(roundNumber) || 1))}/${Math.max(1, Math.floor(Number(totalRoundLimit) || 1))}`;
+  }
+
   function getAvailableUpiRedeemCdkeys(state = {}) {
     const usage = normalizeUpiRedeemCdkeyUsage(getUpiRedeemStateValue(state, 'upiRedeemCdkeyUsage') || {});
     return mergeUpiRedeemCdkeysWithRecoverableUsage(
@@ -900,6 +915,16 @@
       const cdkey = normalizeString(item?.upiRedeemCdkey || item?.cdkey);
       const reason = normalizeString(item?.redeemReason || item?.reason);
       return redeemStatus === 'failed' && !cdkey && isPreSubmitUpiRedeemBlockedReason(reason);
+    }
+
+    function isRetryableUpiRedeemRoundResultItem(item = {}, totalRoundLimit = 1) {
+      const status = normalizeString(item?.status).toLowerCase();
+      const redeemStatus = normalizeString(item?.redeemStatus).toLowerCase();
+      if (status !== 'free' || redeemStatus !== 'failed') return false;
+      if (!normalizeString(item?.accessToken)) return false;
+      if (isPreSubmitUpiRedeemBlockedResultItem(item)) return false;
+      if (isNonRetryableUpiRedeemRetryError(item?.redeemReason || item?.reason)) return false;
+      return normalizeRetryCount(item?.redeemFailureCount) < Math.max(1, Math.floor(Number(totalRoundLimit) || 1));
     }
 
     function isUpiTrialIneligibleError(error) {
@@ -2795,36 +2820,36 @@
               await addLog(`UPI 无会员补兑：${credential.email} 已读取完整 ChatGPT session，但没有 token 摘要，跳过本地会员预核验，直接提交远端兑换。`, 'warn');
             }
 
-            await updateRedeemStage('upi-redeem-plus', '正在使用 UPI 卡密兑换 Plus');
-            throwIfStopRequested();
-            let redeemResult = null;
-            const maxDuplicateCdkeyAttempts = 20;
-            for (let duplicateAttempt = 0; duplicateAttempt < maxDuplicateCdkeyAttempts; duplicateAttempt += 1) {
-              redeemResult = await redeemUpiCredentialWithAccessToken({
-                state: {
-                  ...currentResults,
-                  ...runtimeSettings,
-                  visibleStep: 7,
-                },
-                credential,
-                session: session.session || session,
-                accessToken: session.accessToken,
-                skipEligibilityCheck: true,
-                deferSubscriptionConfirmation: true,
-              });
-              attemptedUpiRedeemCdkey = normalizeString(redeemResult.cdkey || redeemResult.upiRedeemCdkey);
-              if (redeemResult.duplicateCdkeyRejected !== true) {
-                break;
-              }
-              await addLog(
-                `UPI 无会员补兑：${credential.email} -> 卡密 ${attemptedUpiRedeemCdkey || 'unknown'} 已重复提交，当前账号未提交成功，正在换下一张卡密重试。`,
-                'warn'
-              );
+            const runtimeStateForCdkey = await getFreshUpiRedeemRuntimeState({
+              ...input,
+              settings: runtimeSettings,
+            });
+            attemptedUpiRedeemCdkey = pickRandomUpiRedeemCdkey(getAvailableUpiRedeemCdkeys(runtimeStateForCdkey));
+            if (!attemptedUpiRedeemCdkey) {
+              throw new Error('UPI 卡密不足');
             }
+            await updateRedeemStage('upi-redeem-plus', `正在使用 UPI 卡密兑换 Plus：${attemptedUpiRedeemCdkey}`);
+            throwIfStopRequested();
+            const redeemResult = await redeemUpiCredentialWithAccessToken({
+              state: {
+                ...currentResults,
+                ...runtimeSettings,
+                visibleStep: 7,
+              },
+              credential,
+              session: session.session || session,
+              accessToken: session.accessToken,
+              forceCdkey: attemptedUpiRedeemCdkey,
+              skipEligibilityCheck: true,
+              deferSubscriptionConfirmation: true,
+            });
+            attemptedUpiRedeemCdkey = normalizeString(redeemResult.cdkey || redeemResult.upiRedeemCdkey || attemptedUpiRedeemCdkey);
             throwIfStopRequested();
             if (redeemResult?.duplicateCdkeyRejected === true) {
               redeemCompleted += 1;
-              const duplicateReason = redeemResult.reason || '卡密已重复提交，当前账号未提交成功；请补充可用卡密后重新兑换。';
+              const duplicateReason = redeemResult.reason || '卡密已重复提交，当前账号未提交成功；本账号本轮结束，切换下一个账号。';
+              const duplicateFailedAt = new Date().toISOString();
+              const duplicateFailureCount = normalizeRetryCount(baseItem.redeemFailureCount) + 1;
               items = upsertResultItem(items, {
                 ...baseItem,
                 status: 'free',
@@ -2832,10 +2857,12 @@
                 reason: duplicateReason,
                 accessToken: session.accessToken,
                 accessTokenMasked: maskAccessToken(session.accessToken),
-                redeemStatus: '',
+                redeemStatus: 'failed',
                 redeemReason: duplicateReason,
-                redeemFailureCount: normalizeRetryCount(baseItem.redeemFailureCount),
-                redeemLastFailedAt: baseItem.redeemLastFailedAt,
+                redeemFailureCount: duplicateFailureCount,
+                redeemFailureLimit,
+                redeemLastFailedAt: duplicateFailedAt,
+                lastFailedUpiRedeemCdkey: attemptedUpiRedeemCdkey,
                 upiRedeemCdkey: '',
                 upiRedeemSubscriptionCheckedAt: '',
               });
@@ -2848,7 +2875,7 @@
                 redeemCompleted,
                 source,
               });
-              await addLog(`UPI 无会员补兑：${credential.email} -> 重复卡密未提交当前账号，账号已回到 Free，可重新兑换。`, 'warn');
+              await addLog(`UPI 无会员补兑：${credential.email} -> 重复卡密未提交当前账号，本账号本轮结束，切换下一个账号。`, 'warn');
               continue;
             }
             await updateRedeemStage('confirm-plus', '正在确认 Plus/Pro/Team 会员');
@@ -2879,7 +2906,7 @@
                 redeemCompleted,
                 source,
               });
-              await addLog(`UPI 无会员补兑：${credential.email} 已提交卡密，等待远端系统返回最终结果，不计入账号失败次数。`, 'info');
+              await addLog(`UPI 无会员补兑：${credential.email} 已提交卡密，等待远端系统返回最终结果，不计入账号失败轮次。`, 'info');
               continue;
             }
             if (!redeemedSubscription.active || !isPaidPlanType(redeemedSubscription.planType)) {
@@ -3066,9 +3093,9 @@
                 ...baseItem,
                 status: 'free',
                 planType: 'free',
-                reason: `${blockedReason}；未提交卡密，不计入兑换失败次数。`,
+                reason: `${blockedReason}；未提交卡密，不计入兑换失败轮次。`,
                 redeemStatus: 'blocked',
-                redeemReason: `${blockedReason}；未提交卡密，不计入兑换失败次数。`,
+                redeemReason: `${blockedReason}；未提交卡密，不计入兑换失败轮次。`,
                 redeemFailureCount: previousRedeemFailureCount,
                 redeemLastFailedAt: baseItem.redeemLastFailedAt,
                 upiRedeemCdkey: '',
@@ -3087,7 +3114,7 @@
                 redeemAutoDeletedCount: redeemAutoDeletedEmails.length,
               });
               await addLog(
-                `UPI 无会员补兑：${credential.email} -> 登录/AT 阻塞，尚未提交卡密，不计入兑换失败次数：${blockedReason}`,
+                `UPI 无会员补兑：${credential.email} -> 登录/AT 阻塞，尚未提交卡密，不计入兑换失败轮次：${blockedReason}`,
                 'warn'
               );
               continue;
@@ -3097,9 +3124,7 @@
             const existingRedeemFailureCount = normalizeRetryCount(baseItem.redeemFailureCount)
               || (normalizeString(baseItem.redeemStatus).toLowerCase() === 'failed' ? 1 : 0);
             const redeemFailureCount = existingRedeemFailureCount + 1;
-            const failureLabel = redeemFailureLimit > 0
-              ? `兑换失败 ${redeemFailureCount}/${redeemFailureLimit}`
-              : `兑换失败 ${redeemFailureCount}，自动重试关闭`;
+            const failureLabel = getRedeemRoundLabel(redeemFailureCount, redeemFailureLimit || getRedeemTotalRoundLimit(0));
             items = upsertResultItem(items, {
               ...baseItem,
               status: 'free',
@@ -3333,10 +3358,11 @@
       let items = mergeCredentialsIntoResultItems(currentResults.items, requestedCredentials);
       const source = normalizeString(input.source || currentResults.source || 'free-selected');
       const runtimeSettings = sanitizeUpiRedeemRuntimeSettings(input.settings);
-      const redeemFailureLimit = normalizeFailedAccountRetryLimit(
+      const additionalRoundCount = normalizeRedeemAdditionalRoundCount(
         getUpiRedeemStateValue(runtimeSettings, 'upiRedeemFailedAccountRetryLimit'),
         DEFAULT_UPI_REDEEM_FAILED_ACCOUNT_RETRY_LIMIT
       );
+      const totalRoundLimit = getRedeemTotalRoundLimit(additionalRoundCount);
       const lookup = {};
       items.forEach((item) => {
         const email = normalizeEmail(item?.email);
@@ -3348,29 +3374,58 @@
       const freeCandidates = rawCandidates
         .map((credential) => normalizeResultItem({ ...credential, status: credential.status || 'free' }))
         .filter((credential) => credential.email && credential.status === 'free');
-      let credentials = filterRedeemableCredentialsForCurrentResults(freeCandidates, {
+      const credentials = filterRedeemableCredentialsForCurrentResults(freeCandidates, {
         ...currentResults,
         items,
       }).map((credential) => normalizeResultItem({ ...credential, status: credential.status || 'free' }));
+      const stats = {
+        attempted: 0,
+        submitted: 0,
+        succeeded: 0,
+        failed: 0,
+        skipped: 0,
+      };
+
+      const getLatestItem = (email = '') => (
+        items.find((item) => normalizeEmail(item?.email) === normalizeEmail(email)) || {}
+      );
+
+      const saveRedeemProgress = async (patch = {}) => {
+        currentResults = await saveResults({
+          ...currentResults,
+          items,
+          redeeming: patch.redeeming !== false,
+          redeemUpdatedAt: new Date().toISOString(),
+          redeemTotal: Math.max(0, Math.floor(Number(patch.redeemTotal ?? currentResults.redeemTotal ?? credentials.length) || 0)),
+          redeemCompleted,
+          source,
+          flowStage: normalizeFlowStage(patch.flowStage ?? currentResults.flowStage),
+          flowStageEmail: normalizeEmail(patch.email ?? currentResults.flowStageEmail),
+        });
+      };
 
       try {
         if (credentials.length) {
           if (typeof setState === 'function' && Object.keys(runtimeSettings).length) {
             await setState(runtimeSettings).catch(() => {});
           }
-          const latestRuntimeState = {
-            ...(typeof getState === 'function' ? await getState().catch(() => ({})) : {}),
-            ...runtimeSettings,
-          };
+          const latestRuntimeState = await getFreshUpiRedeemRuntimeState({
+            ...input,
+            settings: runtimeSettings,
+          });
+          if (!normalizeString(getUpiRedeemStateValue(latestRuntimeState, 'upiRedeemExternalApiKey'))) {
+            throw new Error('第 7 步 UPI 卡密兑换 Plus 未配置：缺少 UPI 外部 API Key。');
+          }
           const availableCdkeys = getAvailableUpiRedeemCdkeys(latestRuntimeState);
           if (availableCdkeys.length > 0 && credentials.length > availableCdkeys.length) {
             await addLog(
-              `UPI Free 分组卡密兑换：当前可用卡密 ${availableCdkeys.length} 个，本轮只提交前 ${availableCdkeys.length} 个账号，剩余账号保留 Free。`,
+              `UPI Free 分组卡密兑换：当前可用卡密 ${availableCdkeys.length} 个，待兑换账号 ${credentials.length} 个；本轮按 ${availableCdkeys.length} 个卡密槽位处理，失败释放槽位并补后续账号。`,
               'warn'
             );
-            credentials = credentials.slice(0, availableCdkeys.length);
           }
-          await assertUpiRedeemSettingsReadyForMembershipRedeem(credentials, runtimeSettings);
+          if (!availableCdkeys.length) {
+            await addLog('UPI Free 分组卡密兑换：没有可用 UPI 卡密，本批未开始；账号保持待兑换。', 'warn');
+          }
         }
 
         currentResults = await saveResults({
@@ -3402,182 +3457,254 @@
           });
         }
 
-        await addLog(`UPI Free 分组卡密兑换：开始处理 ${credentials.length} 个账号。`, 'info');
-        for (const credential of credentials) {
-          throwIfMembershipStopRequested('redeem');
-          const email = normalizeEmail(credential.email);
-          const existingItem = items.find((item) => normalizeEmail(item?.email) === email) || {};
-          const baseItem = normalizeResultItem({
-            ...existingItem,
-            ...credential,
-            email,
-            status: 'free',
-            planType: 'free',
-          });
-          const accessToken = normalizeString(baseItem.accessToken);
-          const updateRedeemStage = async (stage, reason = '') => {
-            throwIfMembershipStopRequested('redeem');
-            if (reason) {
-              items = upsertResultItem(items, {
-                ...baseItem,
-                redeemStatus: 'running',
-                redeemReason: reason,
-              });
-            }
-            currentResults = await saveResults({
-              ...currentResults,
-              items,
-              redeeming: true,
-              redeemUpdatedAt: new Date().toISOString(),
-              redeemTotal: credentials.length,
-              redeemCompleted,
-              source,
-              flowStage: stage,
-              flowStageEmail: email,
-            });
-            throwIfMembershipStopRequested('redeem');
-          };
+        let roundQueue = credentials;
+        await addLog(
+          `UPI Free 分组卡密兑换：开始处理 ${credentials.length} 个账号；失败账号后续轮数 ${additionalRoundCount}，总轮数 ${totalRoundLimit}。`,
+          'info'
+        );
 
-          let attemptedUpiRedeemCdkey = '';
-          const redeemAttemptedAt = new Date().toISOString();
-          try {
-            if (!accessToken) {
-              throw new Error('缺少 AT，请先点击“一键补充 AT”。');
-            }
-            await updateRedeemStage('upi-redeem-plus', '正在使用已保存 AT 提交 UPI 卡密兑换');
-            const redeemResult = await redeemUpiCredentialWithAccessToken({
-              state: {
-                ...currentResults,
-                ...runtimeSettings,
-                visibleStep: 7,
-              },
-              credential: baseItem,
-              session: { accessToken },
-              accessToken,
-              skipEligibilityCheck: true,
-              deferSubscriptionConfirmation: true,
+        for (let roundNumber = 1; roundNumber <= totalRoundLimit && roundQueue.length; roundNumber += 1) {
+          throwIfMembershipStopRequested('redeem');
+          const roundState = await getFreshUpiRedeemRuntimeState({
+            ...input,
+            settings: runtimeSettings,
+          });
+          const roundCdkeys = getAvailableUpiRedeemCdkeys(roundState);
+          if (!roundCdkeys.length) {
+            await addLog(
+              `UPI Free 分组卡密兑换：第 ${roundNumber}/${totalRoundLimit} 轮没有可用 UPI 卡密，剩余账号保持待兑换。`,
+              'warn'
+            );
+            break;
+          }
+
+          const roundCdkeySet = new Set(roundCdkeys.map(normalizeString).filter(Boolean));
+          const failedEmailsThisRound = [];
+          const roundTotal = roundQueue.length;
+          let roundAttempted = 0;
+          await addLog(
+            `UPI Free 分组卡密兑换：开始第 ${roundNumber}/${totalRoundLimit} 轮，账号 ${roundTotal} 个，卡密槽位 ${roundCdkeys.length} 个。`,
+            'info'
+          );
+          await saveRedeemProgress({ flowStage: 'upi-redeem-plus', email: '', redeemTotal: roundTotal });
+
+          for (const credential of roundQueue) {
+            throwIfMembershipStopRequested('redeem');
+            const email = normalizeEmail(credential.email);
+            const existingItem = getLatestItem(email);
+            const baseItem = normalizeResultItem({
+              ...existingItem,
+              ...credential,
+              email,
+              status: 'free',
+              planType: 'free',
             });
-            attemptedUpiRedeemCdkey = normalizeString(redeemResult.cdkey || redeemResult.upiRedeemCdkey);
-            if (redeemResult.pendingRemoteConfirmation === true) {
-              const pendingReason = normalizeString(redeemResult.reason)
-                || '卡密已提交，等待远端系统返回最终结果';
-              redeemCompleted += 1;
+            const accessToken = normalizeString(baseItem.accessToken);
+            if (!accessToken) {
+              const reason = '缺少 AT，请先点击“一键补充 AT”。';
+              stats.skipped += 1;
               items = upsertResultItem(items, {
                 ...baseItem,
                 status: 'free',
                 planType: 'free',
-                reason: pendingReason,
-                accessToken,
-                accessTokenMasked: maskAccessToken(accessToken),
-                redeemStatus: 'submitted',
-                redeemReason: pendingReason,
-                redeemAttemptedAt,
-                upiRedeemCdkey: attemptedUpiRedeemCdkey,
+                reason,
+                redeemStatus: 'blocked',
+                redeemReason: reason,
+                redeemFailureLimit: totalRoundLimit,
+                upiRedeemCdkey: '',
               });
-              currentResults = await saveResults({
-                ...currentResults,
-                items,
-                redeeming: true,
-                redeemUpdatedAt: new Date().toISOString(),
-                redeemTotal: credentials.length,
-                redeemCompleted,
-                source,
-              });
-              await addLog(`UPI Free 分组卡密兑换：${email} 已提交到远端，等待最终会员结果。`, 'ok');
+              await saveRedeemProgress({ flowStage: 'upi-redeem-plus', email, redeemTotal: roundTotal });
+              await addLog(`UPI Free 分组卡密兑换：${email} -> 跳过：${reason}`, 'warn');
               continue;
             }
-            await updateRedeemStage('confirm-plus', '正在确认 Plus/Pro/Team 会员');
-            const redeemedSubscription = classifyRedeemResult(redeemResult);
-            if (!redeemedSubscription.active || !isPaidPlanType(redeemedSubscription.planType)) {
-              throw new Error(redeemedSubscription.reason || 'UPI 卡密已提交，但未确认 Plus/Pro/Team 会员。');
-            }
-            const redeemSuccessAt = getRedeemResultSubscriptionCheckedAt(redeemResult) || new Date().toISOString();
-            redeemCompleted += 1;
-            items = upsertResultItem(items, {
-              ...baseItem,
-              status: 'paid',
-              planType: redeemedSubscription.planType,
-              reason: redeemedSubscription.reason || `已开通 ${redeemedSubscription.planType}`,
-              checkedAt: redeemSuccessAt,
-              accessToken,
-              accessTokenMasked: maskAccessToken(accessToken),
-              redeemStatus: 'success',
-              redeemReason: 'UPI 卡密兑换成功并已确认会员',
-              redeemFailureCount: 0,
-              redeemLastFailedAt: '',
-              redeemAttemptedAt,
-              redeemSuccessAt,
-              upiRedeemCdkey: attemptedUpiRedeemCdkey,
-              upiRedeemSubscriptionCheckedAt: redeemSuccessAt,
-              membershipOverrideStatus: '',
-              membershipOverrideCheckedAt: '',
+
+            const runtimeStateForCdkey = await getFreshUpiRedeemRuntimeState({
+              ...input,
+              settings: runtimeSettings,
             });
-            currentResults = await saveResults({
-              ...currentResults,
-              items,
-              redeeming: true,
-              redeemUpdatedAt: new Date().toISOString(),
-              redeemTotal: credentials.length,
-              redeemCompleted,
-              source,
-            });
-            await addLog(`UPI Free 分组卡密兑换：${email} 已兑换并确认 ${redeemedSubscription.planType}。`, 'ok');
-          } catch (error) {
-            if (isMembershipStopError(error)) {
-              redeemStopRequested = true;
-              items = upsertResultItem(items, {
-                ...baseItem,
-                status: 'free',
-                planType: 'free',
-                reason: '已停止，未继续兑换',
-                redeemStatus: 'stopped',
-                redeemReason: '已停止，未继续兑换',
-                redeemAttemptedAt,
-                upiRedeemCdkey: attemptedUpiRedeemCdkey,
-              });
+            const availableCdkeys = getAvailableUpiRedeemCdkeys(runtimeStateForCdkey)
+              .filter((cdkey) => roundCdkeySet.has(normalizeString(cdkey)));
+            const attemptedUpiRedeemCdkey = pickRandomUpiRedeemCdkey(availableCdkeys);
+            if (!attemptedUpiRedeemCdkey) {
+              await addLog(
+                `UPI Free 分组卡密兑换：第 ${roundNumber}/${totalRoundLimit} 轮卡密槽位已被成功/等待中的账号占满，剩余账号保持待兑换。`,
+                'warn'
+              );
               break;
             }
-            const shortage = isCdkeyExhaustedError(error);
-            const authError = isUpiRedeemApiAuthError(error);
-            const reason = shortage ? 'UPI 卡密不足' : getErrorMessage(error);
-            if (shortage || authError) {
-              redeemStopRequested = true;
-            }
-            redeemCompleted += 1;
-            const redeemFailedAt = new Date().toISOString();
+
+            const redeemAttemptedAt = new Date().toISOString();
+            const roundLabel = getRedeemRoundLabel(roundNumber, totalRoundLimit);
             items = upsertResultItem(items, {
               ...baseItem,
               status: 'free',
               planType: 'free',
-              reason: reason || '兑换失败',
-              redeemStatus: shortage ? 'stopped' : 'failed',
-              redeemReason: reason || '兑换失败',
-              redeemFailureCount: normalizeRetryCount(baseItem.redeemFailureCount) + (shortage ? 0 : 1),
-              redeemFailureLimit,
-              redeemLastFailedAt: shortage ? baseItem.redeemLastFailedAt : redeemFailedAt,
+              reason: `${roundLabel}：已绑定卡密，正在提交`,
+              accessToken,
+              accessTokenMasked: maskAccessToken(accessToken),
+              redeemStatus: 'running',
+              redeemReason: `${roundLabel}：${attemptedUpiRedeemCdkey}`,
               redeemAttemptedAt,
-              lastFailedUpiRedeemCdkey: shortage ? baseItem.lastFailedUpiRedeemCdkey : attemptedUpiRedeemCdkey,
-              upiRedeemCdkey: shortage ? attemptedUpiRedeemCdkey : '',
+              redeemFailureLimit: totalRoundLimit,
+              upiRedeemCdkey: attemptedUpiRedeemCdkey,
             });
-            currentResults = await saveResults({
-              ...currentResults,
-              items,
-              redeeming: !redeemStopRequested,
-              redeemUpdatedAt: new Date().toISOString(),
-              redeemTotal: credentials.length,
-              redeemCompleted,
-              source,
-              flowStage: currentResults.flowStage || 'upi-redeem-plus',
-              flowStageEmail: email,
-            });
-            await addLog(`UPI Free 分组卡密兑换：${email} -> 失败：${reason}`, shortage ? 'warn' : 'error');
-            if (authError) {
-              await addLog('UPI Free 分组卡密兑换：远端接口拒绝请求，已停止整批兑换；请检查 UPI Key 或后端外部兑换接口 CSRF/API Key 配置。', 'error');
-            }
-            if (redeemStopRequested) {
-              break;
+            await saveRedeemProgress({ flowStage: 'upi-redeem-plus', email, redeemTotal: roundTotal });
+            await addLog(`UPI Free 分组卡密兑换：${email} -> ${roundLabel} 随机选择卡密 ${attemptedUpiRedeemCdkey}。`, 'info');
+
+            let attemptCounted = false;
+            try {
+              const redeemResult = await redeemUpiCredentialWithAccessToken({
+                state: {
+                  ...currentResults,
+                  ...runtimeSettings,
+                  visibleStep: 7,
+                },
+                credential: baseItem,
+                session: { accessToken },
+                accessToken,
+                forceCdkey: attemptedUpiRedeemCdkey,
+                skipEligibilityCheck: true,
+                deferSubscriptionConfirmation: true,
+              });
+              const submittedCdkey = normalizeString(redeemResult.cdkey || redeemResult.upiRedeemCdkey || attemptedUpiRedeemCdkey);
+              if (redeemResult?.duplicateCdkeyRejected === true) {
+                throw new Error(redeemResult.reason || '卡密重复提交，当前账号本轮未提交成功。');
+              }
+              roundAttempted += 1;
+              redeemCompleted += 1;
+              stats.attempted += 1;
+              attemptCounted = true;
+              if (redeemResult.pendingRemoteConfirmation === true) {
+                const pendingReason = normalizeString(redeemResult.reason)
+                  || '卡密已提交，等待远端系统返回最终结果';
+                stats.submitted += 1;
+                items = upsertResultItem(items, {
+                  ...baseItem,
+                  status: 'free',
+                  planType: 'free',
+                  reason: pendingReason,
+                  accessToken,
+                  accessTokenMasked: maskAccessToken(accessToken),
+                  redeemStatus: 'submitted',
+                  redeemReason: pendingReason,
+                  redeemFailureLimit: totalRoundLimit,
+                  redeemAttemptedAt,
+                  upiRedeemCdkey: submittedCdkey,
+                });
+                await saveRedeemProgress({ flowStage: 'upi-redeem-plus', email, redeemTotal: roundTotal });
+                await addLog(`UPI Free 分组卡密兑换：${email} -> ${submittedCdkey} 已提交到远端，等待最终会员结果。`, 'ok');
+                continue;
+              }
+
+              await saveRedeemProgress({ flowStage: 'confirm-plus', email, redeemTotal: roundTotal });
+              const redeemedSubscription = classifyRedeemResult(redeemResult);
+              if (!redeemedSubscription.active || !isPaidPlanType(redeemedSubscription.planType)) {
+                throw new Error(redeemedSubscription.reason || 'UPI 卡密已提交，但未确认 Plus/Pro/Team 会员。');
+              }
+              const redeemSuccessAt = getRedeemResultSubscriptionCheckedAt(redeemResult) || new Date().toISOString();
+              stats.succeeded += 1;
+              items = upsertResultItem(items, {
+                ...baseItem,
+                status: 'paid',
+                planType: redeemedSubscription.planType,
+                reason: redeemedSubscription.reason || `已开通 ${redeemedSubscription.planType}`,
+                checkedAt: redeemSuccessAt,
+                accessToken,
+                accessTokenMasked: maskAccessToken(accessToken),
+                redeemStatus: 'success',
+                redeemReason: 'UPI 卡密兑换成功并已确认会员',
+                redeemFailureCount: 0,
+                redeemFailureLimit: totalRoundLimit,
+                redeemLastFailedAt: '',
+                redeemAttemptedAt,
+                redeemSuccessAt,
+                upiRedeemCdkey: submittedCdkey,
+                upiRedeemSubscriptionCheckedAt: redeemSuccessAt,
+                membershipOverrideStatus: '',
+                membershipOverrideCheckedAt: '',
+              });
+              await saveRedeemProgress({ flowStage: 'confirm-plus', email, redeemTotal: roundTotal });
+              await addLog(`UPI Free 分组卡密兑换：${email} -> ${submittedCdkey} 已兑换并确认 ${redeemedSubscription.planType}。`, 'ok');
+            } catch (error) {
+              if (isMembershipStopError(error)) {
+                redeemStopRequested = true;
+                items = upsertResultItem(items, {
+                  ...baseItem,
+                  status: 'free',
+                  planType: 'free',
+                  reason: '已停止，未继续兑换',
+                  redeemStatus: 'stopped',
+                  redeemReason: '已停止，未继续兑换',
+                  redeemAttemptedAt,
+                  upiRedeemCdkey: attemptedUpiRedeemCdkey,
+                });
+                break;
+              }
+              const authError = isUpiRedeemApiAuthError(error);
+              const reason = getErrorMessage(error) || '兑换失败';
+              const redeemFailedAt = new Date().toISOString();
+              if (!attemptCounted) {
+                roundAttempted += 1;
+                redeemCompleted += 1;
+                stats.attempted += 1;
+              }
+              if (authError) {
+                redeemStopRequested = true;
+              } else {
+                stats.failed += 1;
+                failedEmailsThisRound.push(email);
+              }
+              items = upsertResultItem(items, {
+                ...baseItem,
+                status: 'free',
+                planType: 'free',
+                reason: authError ? 'UPI 远端接口拒绝请求，已停止整批兑换' : `${reason}（${roundLabel}）`,
+                accessToken,
+                accessTokenMasked: maskAccessToken(accessToken),
+                redeemStatus: authError ? 'stopped' : 'failed',
+                redeemReason: reason,
+                redeemFailureCount: authError ? normalizeRetryCount(baseItem.redeemFailureCount) : roundNumber,
+                redeemFailureLimit: totalRoundLimit,
+                redeemLastFailedAt: authError ? baseItem.redeemLastFailedAt : redeemFailedAt,
+                redeemAttemptedAt,
+                lastFailedUpiRedeemCdkey: authError ? baseItem.lastFailedUpiRedeemCdkey : attemptedUpiRedeemCdkey,
+                upiRedeemCdkey: authError ? attemptedUpiRedeemCdkey : '',
+              });
+              await saveRedeemProgress({
+                flowStage: 'upi-redeem-plus',
+                email,
+                redeemTotal: roundTotal,
+                redeeming: !redeemStopRequested,
+              });
+              await addLog(
+                authError
+                  ? `UPI Free 分组卡密兑换：远端接口拒绝请求，已停止在 ${email}；请检查 UPI Key 或后端外部兑换接口 CSRF/API Key 配置：${reason}`
+                  : `UPI Free 分组卡密兑换：${email} -> ${attemptedUpiRedeemCdkey} 失败，释放卡密并切换下一个账号：${reason}`,
+                authError ? 'error' : 'warn'
+              );
+              if (redeemStopRequested) {
+                break;
+              }
             }
           }
+
+          await addLog(
+            `UPI Free 分组卡密兑换：第 ${roundNumber}/${totalRoundLimit} 轮结束，尝试 ${roundAttempted}/${roundTotal} 个账号。`,
+            'info'
+          );
+          if (redeemStopRequested || roundNumber >= totalRoundLimit) {
+            break;
+          }
+          roundQueue = failedEmailsThisRound
+            .map((email) => normalizeResultItem(getLatestItem(email)))
+            .filter((item) => isRetryableUpiRedeemRoundResultItem(item, totalRoundLimit));
+          if (!roundQueue.length) {
+            break;
+          }
+          await addLog(
+            `UPI Free 分组卡密兑换：准备第 ${roundNumber + 1}/${totalRoundLimit} 轮，仅处理上一轮失败账号 ${roundQueue.length} 个。`,
+            'info'
+          );
         }
 
         const finishedAt = new Date().toISOString();
@@ -3588,7 +3715,7 @@
           redeemUpdatedAt: finishedAt,
           redeemFinishedAt: redeemStopRequested ? '' : finishedAt,
           redeemStoppedAt: redeemStopRequested ? finishedAt : '',
-          redeemTotal: credentials.length,
+          redeemTotal: Math.max(redeemCompleted, credentials.length),
           redeemCompleted,
           flowStage: redeemStopRequested ? currentResults.flowStage : '',
           flowStageEmail: redeemStopRequested ? currentResults.flowStageEmail : '',
@@ -3596,8 +3723,8 @@
         });
         await addLog(
           redeemStopRequested
-            ? `UPI Free 分组卡密兑换：已停止，已处理 ${finalResults.redeemCompleted}/${finalResults.redeemTotal}。`
-            : `UPI Free 分组卡密兑换：完成 ${finalResults.redeemCompleted}/${finalResults.redeemTotal}，Plus ${finalResults.paidCount}，Free ${finalResults.freeCount}，失败 ${finalResults.failedCount}。`,
+            ? `UPI Free 分组卡密兑换：已停止，已尝试 ${stats.attempted} 次，等待 ${stats.submitted}，成功 ${stats.succeeded}，失败 ${stats.failed}。`
+            : `UPI Free 分组卡密兑换：完成，已尝试 ${stats.attempted} 次，等待 ${stats.submitted}，成功 ${stats.succeeded}，失败 ${stats.failed}，跳过 ${stats.skipped}。`,
           redeemStopRequested ? 'warn' : 'ok'
         );
         return finalResults;
@@ -4064,8 +4191,8 @@
       };
 
       if (batchRunning || redeemRunning || cdkeyRetryRunning) {
-        const reason = 'UPI 备份账号核验/兑换正在运行，暂不自动重试失败账号。';
-        await addLog(`UPI 失败账号自动换卡：跳过：${reason}`, 'warn');
+        const reason = 'UPI 备份账号核验/兑换正在运行，暂不继续失败账号兑换轮次。';
+        await addLog(`UPI 失败账号兑换轮次：跳过：${reason}`, 'warn');
         return {
           ...summary,
           ok: false,
@@ -4074,20 +4201,21 @@
         };
       }
       if (typeof redeemUpiCredentialWithAccessToken !== 'function') {
-        throw new Error('UPI 失败账号自动换卡能力尚未接入。');
+        throw new Error('UPI 失败账号兑换轮次能力尚未接入。');
       }
 
       const initialState = await getFreshUpiRedeemRuntimeState(input);
-      const retryLimit = normalizeFailedAccountRetryLimit(
+      const additionalRoundCount = normalizeRedeemAdditionalRoundCount(
         input.upiRedeemFailedAccountRetryLimit ?? getUpiRedeemStateValue(initialState, 'upiRedeemFailedAccountRetryLimit'),
         DEFAULT_UPI_REDEEM_FAILED_ACCOUNT_RETRY_LIMIT
       );
-      summary.limit = retryLimit;
-      if (retryLimit <= 0) {
+      const totalRoundLimit = getRedeemTotalRoundLimit(additionalRoundCount);
+      summary.limit = totalRoundLimit;
+      if (additionalRoundCount <= 0) {
         return {
           ...summary,
           skipped: true,
-          reason: '失败账号自动换卡重试已关闭。',
+          reason: '兑换轮数为 0，刷新后不继续失败账号。',
         };
       }
 
@@ -4114,8 +4242,7 @@
           if (isNonRetryableUpiRedeemRetryError(reason)) {
             return false;
           }
-          const failureCount = normalizeRetryCount(item?.redeemFailureCount) || 1;
-          return failureCount < retryLimit && Boolean(normalizeString(item?.accessToken));
+          return isRetryableUpiRedeemRoundResultItem(item, totalRoundLimit);
         })
         .map((item) => normalizeResultItem(item));
 
@@ -4123,7 +4250,7 @@
         return {
           ...summary,
           skipped: true,
-          reason: '没有可自动换卡重试的失败账号。',
+          reason: '没有可继续下一轮兑换的失败账号。',
         };
       }
 
@@ -4148,8 +4275,10 @@
 
       try {
         const firstRuntimeState = await getFreshUpiRedeemRuntimeState(input);
-        if (!getAvailableUpiRedeemCdkeys(firstRuntimeState).length) {
-          const reason = '没有剩余可用 UPI 卡密，失败账号自动换卡已停止。';
+        const roundCdkeys = getAvailableUpiRedeemCdkeys(firstRuntimeState);
+        const roundCdkeySet = new Set(roundCdkeys.map(normalizeString).filter(Boolean));
+        if (!roundCdkeys.length) {
+          const reason = '没有剩余可用 UPI 卡密，失败账号兑换轮次已停止。';
           const resumeReason = `${reason}导入新卡密后可手动一键兑换。`;
           const stoppedAt = new Date().toISOString();
           for (const candidate of candidates) {
@@ -4167,7 +4296,7 @@
               redeemStatus: '',
               redeemReason: resumeReason,
               redeemFailureCount: previousFailureCount,
-              redeemFailureLimit: retryLimit,
+              redeemFailureLimit: totalRoundLimit,
               redeemLastFailedAt: candidate.redeemLastFailedAt,
               lastFailedUpiRedeemCdkey: candidate.lastFailedUpiRedeemCdkey || candidate.upiRedeemCdkey,
               upiRedeemCdkey: '',
@@ -4177,34 +4306,28 @@
           }
           await saveRetryProgress({ flowStage: '', email: '' });
           await addLog(
-            `UPI 失败账号自动换卡：${reason}已暂停 ${candidates.length} 个失败账号；导入新卡密后可手动一键兑换。`,
+            `UPI 失败账号兑换轮次：${reason}已暂停 ${candidates.length} 个失败账号；导入新卡密后可手动一键兑换。`,
             'warn'
           );
         } else {
-          await addLog(`UPI 失败账号自动换卡：找到 ${candidates.length} 个失败账号，上限 ${retryLimit} 次，将随机挑选剩余可用卡密。`, 'info');
+          await addLog(
+            `UPI 失败账号兑换轮次：找到 ${candidates.length} 个失败账号，当前卡密槽位 ${roundCdkeys.length} 个，总轮数 ${totalRoundLimit}；本次每个账号最多进入下一轮一次。`,
+            'info'
+          );
           for (const candidate of candidates) {
           throwIfMembershipStopRequested('redeem');
           const email = normalizeEmail(candidate.email);
           const accessToken = normalizeString(candidate.accessToken);
           const previousFailureCount = normalizeRetryCount(candidate.redeemFailureCount) || 1;
           const attemptNumber = previousFailureCount + 1;
+          const roundLabel = getRedeemRoundLabel(attemptNumber, totalRoundLimit);
 
-          let runtimeState = await getFreshUpiRedeemRuntimeState(input);
-          const runtimeUsage = normalizeUpiRedeemCdkeyUsage(getUpiRedeemStateValue(runtimeState, 'upiRedeemCdkeyUsage') || {});
-          const accountBlockedCdkeys = new Set([
-            normalizeString(candidate.upiRedeemCdkey),
-            normalizeString(candidate.lastFailedUpiRedeemCdkey),
-          ].filter(Boolean));
-          let availableCdkeys = getAvailableUpiRedeemCdkeys(runtimeState)
-            .filter((cdkey) => {
-              const entry = runtimeUsage?.[cdkey] || {};
-              if (accountBlockedCdkeys.has(cdkey)) {
-                return false;
-              }
-              return normalizeEmail(entry.lastFailedEmail) !== email;
-            });
-          if (!availableCdkeys.length) {
-            const reason = '没有剩余可用 UPI 卡密，失败账号自动换卡已停止。';
+          const runtimeState = await getFreshUpiRedeemRuntimeState(input);
+          const globalAvailableCdkeys = getAvailableUpiRedeemCdkeys(runtimeState);
+          const availableCdkeys = globalAvailableCdkeys
+            .filter((cdkey) => roundCdkeySet.has(normalizeString(cdkey)));
+          if (!globalAvailableCdkeys.length) {
+            const reason = '没有剩余可用 UPI 卡密，失败账号兑换轮次已停止。';
             summary.skippedCount += 1;
             items = upsertResultItem(items, {
               ...candidate,
@@ -4216,168 +4339,25 @@
               redeemStatus: '',
               redeemReason: `${reason}导入新卡密后可手动一键兑换。`,
               redeemFailureCount: previousFailureCount,
-              redeemFailureLimit: retryLimit,
+              redeemFailureLimit: totalRoundLimit,
               redeemLastFailedAt: candidate.redeemLastFailedAt,
               lastFailedUpiRedeemCdkey: candidate.lastFailedUpiRedeemCdkey || candidate.upiRedeemCdkey,
               upiRedeemCdkey: '',
             });
             await saveRetryProgress({ flowStage: '', email: '' });
             summary.items.push({ email, skipped: true, reason });
-            await addLog(`UPI 失败账号自动换卡：${email} -> 跳过：${reason}`, 'warn');
+            await addLog(`UPI 失败账号兑换轮次：${email} -> 跳过：${reason}`, 'warn');
+            break;
+          }
+          if (!availableCdkeys.length) {
+            const reason = '本轮卡密槽位已被成功/等待中的账号占满，剩余失败账号保持 Free。';
+            await addLog(`UPI 失败账号兑换轮次：${email} -> ${reason}`, 'warn');
             break;
           }
 
-          items = upsertResultItem(items, {
-            ...candidate,
-            status: 'free',
-            planType: 'free',
-            checkedAt: new Date().toISOString(),
-            redeemStatus: 'running',
-            redeemReason: `失败账号自动换卡 ${attemptNumber}/${retryLimit}：正在随机选择剩余卡密`,
-          });
-          await saveRetryProgress({ flowStage: 'upi-redeem-plus', email });
-
-          let submitted = false;
-          let selectedCdkey = '';
-          let lastReason = '';
-          const duplicateAttemptLimit = Math.min(20, Math.max(1, availableCdkeys.length));
-          for (let duplicateAttempt = 0; duplicateAttempt < duplicateAttemptLimit && availableCdkeys.length; duplicateAttempt += 1) {
-            throwIfMembershipStopRequested('redeem');
-            selectedCdkey = pickRandomUpiRedeemCdkey(availableCdkeys);
-            if (!selectedCdkey) {
-              break;
-            }
-            const redeemAttemptedAt = new Date().toISOString();
-            items = upsertResultItem(items, {
-              ...candidate,
-              status: 'free',
-              planType: 'free',
-              checkedAt: redeemAttemptedAt,
-              reason: `失败账号自动换卡 ${attemptNumber}/${retryLimit}：已绑定新卡密，正在提交`,
-              accessToken,
-              accessTokenMasked: maskAccessToken(accessToken),
-              redeemStatus: 'running',
-              redeemReason: `失败账号自动换卡 ${attemptNumber}/${retryLimit}：${selectedCdkey}`,
-              redeemAttemptedAt,
-              redeemFailureLimit: retryLimit,
-              upiRedeemCdkey: selectedCdkey,
-            });
-            await saveRetryProgress({ flowStage: 'upi-redeem-plus', email });
-            await addLog(`UPI 失败账号自动换卡：${email} -> 随机选择卡密 ${selectedCdkey}，第 ${attemptNumber}/${retryLimit} 次账号尝试。`, 'info');
-            try {
-              const redeemResult = await redeemUpiCredentialWithAccessToken({
-                state: {
-                  ...runtimeState,
-                  ...currentResults,
-                  visibleStep: 7,
-                },
-                credential: candidate,
-                session: { accessToken },
-                accessToken,
-                forceCdkey: selectedCdkey,
-                skipEligibilityCheck: true,
-                deferSubscriptionConfirmation: true,
-              });
-              if (redeemResult?.duplicateCdkeyRejected === true) {
-                lastReason = redeemResult.reason || '卡密重复提交，自动换下一张卡密。';
-                availableCdkeys = availableCdkeys.filter((cdkey) => cdkey !== selectedCdkey);
-                await addLog(`UPI 失败账号自动换卡：${email} -> ${selectedCdkey} 重复提交，继续随机换下一张。`, 'warn');
-                continue;
-              }
-
-              if (redeemResult?.pendingRemoteConfirmation === true) {
-                summary.attempted += 1;
-                summary.submitted += 1;
-                submitted = true;
-                items = upsertResultItem(items, {
-                  ...candidate,
-                  status: 'free',
-                  planType: 'free',
-                  reason: redeemResult.reason || '卡密已提交，等待远端系统返回最终结果',
-                  accessToken,
-                  accessTokenMasked: maskAccessToken(accessToken),
-                  redeemStatus: 'submitted',
-                  redeemReason: redeemResult.reason || `失败账号已随机换卡提交，等待远端结果（${attemptNumber}/${retryLimit}）`,
-                  redeemAttemptedAt,
-                  redeemFailureCount: previousFailureCount,
-                  redeemFailureLimit: retryLimit,
-                  redeemLastFailedAt: candidate.redeemLastFailedAt,
-                  upiRedeemCdkey: normalizeString(redeemResult.cdkey || redeemResult.upiRedeemCdkey || selectedCdkey),
-                });
-                await saveRetryProgress({ flowStage: 'upi-redeem-plus', email });
-                await addLog(`UPI 失败账号自动换卡：${email} -> 已提交新卡密 ${selectedCdkey}，等待远端结果。`, 'ok');
-                summary.items.push({ email, cdkey: selectedCdkey, submitted: true });
-                break;
-              }
-
-              const redeemedSubscription = classifyRedeemResult(redeemResult);
-              if (redeemedSubscription.active && isPaidPlanType(redeemedSubscription.planType)) {
-                const redeemSuccessAt = getRedeemResultSubscriptionCheckedAt(redeemResult) || new Date().toISOString();
-                summary.attempted += 1;
-                summary.succeeded += 1;
-                submitted = true;
-                items = upsertResultItem(items, {
-                  ...candidate,
-                  status: 'paid',
-                  planType: redeemedSubscription.planType,
-                  checkedAt: redeemSuccessAt,
-                  reason: redeemedSubscription.reason || `已开通 ${redeemedSubscription.planType}`,
-                  accessToken,
-                  accessTokenMasked: maskAccessToken(accessToken),
-                  redeemStatus: 'success',
-                  redeemReason: 'UPI 失败账号随机换卡成功并已确认会员',
-                  redeemFailureCount: 0,
-                  redeemFailureLimit: retryLimit,
-                  redeemLastFailedAt: '',
-                  redeemAttemptedAt,
-                  redeemSuccessAt,
-                  upiRedeemCdkey: normalizeString(redeemResult.cdkey || redeemResult.upiRedeemCdkey || selectedCdkey),
-                  upiRedeemSubscriptionCheckedAt: redeemSuccessAt,
-                  membershipOverrideStatus: '',
-                  membershipOverrideCheckedAt: '',
-                });
-                await saveRetryProgress({ flowStage: 'confirm-plus', email });
-                await addLog(`UPI 失败账号自动换卡：${email} -> ${selectedCdkey} 已确认 ${redeemedSubscription.planType}。`, 'ok');
-                summary.items.push({ email, cdkey: selectedCdkey, succeeded: true });
-                break;
-              }
-
-              throw new Error(redeemedSubscription.reason || 'UPI 卡密已提交，但未确认 Plus/Pro/Team 会员。');
-            } catch (error) {
-              if (isMembershipStopError(error)) {
-                throw error;
-              }
-              const reason = getErrorMessage(error) || '失败账号自动换卡提交失败。';
-              const failureCount = Math.min(retryLimit, previousFailureCount + 1);
-              summary.attempted += 1;
-              summary.failed += 1;
-              lastReason = reason;
-              items = upsertResultItem(items, {
-                ...candidate,
-                status: 'free',
-                planType: 'free',
-                reason: `${reason}（兑换失败 ${failureCount}/${retryLimit}）`,
-                accessToken,
-                accessTokenMasked: maskAccessToken(accessToken),
-                redeemStatus: isMembershipStopError(error) ? 'stopped' : 'failed',
-                redeemReason: reason,
-                redeemFailureCount: failureCount,
-                redeemFailureLimit: retryLimit,
-                redeemLastFailedAt: new Date().toISOString(),
-                redeemAttemptedAt,
-                lastFailedUpiRedeemCdkey: selectedCdkey,
-                upiRedeemCdkey: '',
-              });
-              await saveRetryProgress({ flowStage: 'upi-redeem-plus', email });
-              await addLog(`UPI 失败账号自动换卡：${email} -> ${selectedCdkey || '未选卡'} 失败：${reason}`, 'warn');
-              summary.items.push({ email, cdkey: selectedCdkey, failed: true, reason });
-              submitted = true;
-              break;
-            }
-          }
-
-          if (!submitted) {
-            const reason = lastReason || '随机换卡未找到可提交卡密。';
+          const selectedCdkey = pickRandomUpiRedeemCdkey(availableCdkeys);
+          if (!selectedCdkey) {
+            const reason = '兑换轮次未找到可提交卡密。';
             summary.skippedCount += 1;
             items = upsertResultItem(items, {
               ...candidate,
@@ -4387,11 +4367,179 @@
               redeemStatus: 'failed',
               redeemReason: reason,
               redeemFailureCount: previousFailureCount,
-              redeemFailureLimit: retryLimit,
+              redeemFailureLimit: totalRoundLimit,
               upiRedeemCdkey: candidate.upiRedeemCdkey,
             });
             await saveRetryProgress({ flowStage: 'upi-redeem-plus', email });
             summary.items.push({ email, skipped: true, reason });
+            continue;
+          }
+
+          const redeemAttemptedAt = new Date().toISOString();
+          items = upsertResultItem(items, {
+            ...candidate,
+            status: 'free',
+            planType: 'free',
+            checkedAt: redeemAttemptedAt,
+            reason: `${roundLabel}：已绑定卡密，正在提交`,
+            accessToken,
+            accessTokenMasked: maskAccessToken(accessToken),
+            redeemStatus: 'running',
+            redeemReason: `${roundLabel}：${selectedCdkey}`,
+            redeemAttemptedAt,
+            redeemFailureLimit: totalRoundLimit,
+            upiRedeemCdkey: selectedCdkey,
+          });
+          await saveRetryProgress({ flowStage: 'upi-redeem-plus', email });
+          await addLog(`UPI 失败账号兑换轮次：${email} -> ${roundLabel} 随机选择卡密 ${selectedCdkey}。`, 'info');
+
+          try {
+            const redeemResult = await redeemUpiCredentialWithAccessToken({
+              state: {
+                ...runtimeState,
+                ...currentResults,
+                visibleStep: 7,
+              },
+              credential: candidate,
+              session: { accessToken },
+              accessToken,
+              forceCdkey: selectedCdkey,
+              skipEligibilityCheck: true,
+              deferSubscriptionConfirmation: true,
+            });
+
+            if (redeemResult?.duplicateCdkeyRejected === true) {
+              const reason = redeemResult.reason || '卡密重复提交，当前账号本轮结束，切换下一个账号。';
+              const failureCount = Math.min(totalRoundLimit, previousFailureCount + 1);
+              summary.attempted += 1;
+              summary.failed += 1;
+              items = upsertResultItem(items, {
+                ...candidate,
+                status: 'free',
+                planType: 'free',
+                reason: `${reason}（${getRedeemRoundLabel(failureCount, totalRoundLimit)}）`,
+                accessToken,
+                accessTokenMasked: maskAccessToken(accessToken),
+                redeemStatus: 'failed',
+                redeemReason: reason,
+                redeemFailureCount: failureCount,
+                redeemFailureLimit: totalRoundLimit,
+                redeemLastFailedAt: new Date().toISOString(),
+                redeemAttemptedAt,
+                lastFailedUpiRedeemCdkey: selectedCdkey,
+                upiRedeemCdkey: '',
+              });
+              await saveRetryProgress({ flowStage: 'upi-redeem-plus', email });
+              await addLog(`UPI 失败账号兑换轮次：${email} -> ${selectedCdkey} 重复提交，本账号本轮结束，切换下一个账号。`, 'warn');
+              summary.items.push({ email, cdkey: selectedCdkey, failed: true, reason });
+              continue;
+            }
+
+            if (redeemResult?.pendingRemoteConfirmation === true) {
+              summary.attempted += 1;
+              summary.submitted += 1;
+              items = upsertResultItem(items, {
+                ...candidate,
+                status: 'free',
+                planType: 'free',
+                reason: redeemResult.reason || '卡密已提交，等待远端系统返回最终结果',
+                accessToken,
+                accessTokenMasked: maskAccessToken(accessToken),
+                redeemStatus: 'submitted',
+                redeemReason: redeemResult.reason || `${roundLabel} 已提交，等待远端结果`,
+                redeemAttemptedAt,
+                redeemFailureCount: previousFailureCount,
+                redeemFailureLimit: totalRoundLimit,
+                redeemLastFailedAt: candidate.redeemLastFailedAt,
+                upiRedeemCdkey: normalizeString(redeemResult.cdkey || redeemResult.upiRedeemCdkey || selectedCdkey),
+              });
+              await saveRetryProgress({ flowStage: 'upi-redeem-plus', email });
+              await addLog(`UPI 失败账号兑换轮次：${email} -> ${selectedCdkey} 已提交，等待远端结果。`, 'ok');
+              summary.items.push({ email, cdkey: selectedCdkey, submitted: true });
+              continue;
+            }
+
+            const redeemedSubscription = classifyRedeemResult(redeemResult);
+            if (redeemedSubscription.active && isPaidPlanType(redeemedSubscription.planType)) {
+              const redeemSuccessAt = getRedeemResultSubscriptionCheckedAt(redeemResult) || new Date().toISOString();
+              summary.attempted += 1;
+              summary.succeeded += 1;
+              items = upsertResultItem(items, {
+                ...candidate,
+                status: 'paid',
+                planType: redeemedSubscription.planType,
+                checkedAt: redeemSuccessAt,
+                reason: redeemedSubscription.reason || `已开通 ${redeemedSubscription.planType}`,
+                accessToken,
+                accessTokenMasked: maskAccessToken(accessToken),
+                redeemStatus: 'success',
+                redeemReason: 'UPI 失败账号兑换轮次成功并已确认会员',
+                redeemFailureCount: 0,
+                redeemFailureLimit: totalRoundLimit,
+                redeemLastFailedAt: '',
+                redeemAttemptedAt,
+                redeemSuccessAt,
+                upiRedeemCdkey: normalizeString(redeemResult.cdkey || redeemResult.upiRedeemCdkey || selectedCdkey),
+                upiRedeemSubscriptionCheckedAt: redeemSuccessAt,
+                membershipOverrideStatus: '',
+                membershipOverrideCheckedAt: '',
+              });
+              await saveRetryProgress({ flowStage: 'confirm-plus', email });
+              await addLog(`UPI 失败账号兑换轮次：${email} -> ${selectedCdkey} 已确认 ${redeemedSubscription.planType}。`, 'ok');
+              summary.items.push({ email, cdkey: selectedCdkey, succeeded: true });
+              continue;
+            }
+
+            throw new Error(redeemedSubscription.reason || 'UPI 卡密已提交，但未确认 Plus/Pro/Team 会员。');
+          } catch (error) {
+            if (isMembershipStopError(error)) {
+              throw error;
+            }
+            const reason = getErrorMessage(error) || '失败账号兑换轮次提交失败。';
+            const failureCount = Math.min(totalRoundLimit, previousFailureCount + 1);
+            summary.attempted += 1;
+            summary.failed += 1;
+            if (isUpiRedeemApiAuthError(error)) {
+              redeemStopRequested = true;
+              items = upsertResultItem(items, {
+                ...candidate,
+                status: 'free',
+                planType: 'free',
+                reason: 'UPI 远端接口拒绝请求，失败账号兑换轮次已停止',
+                accessToken,
+                accessTokenMasked: maskAccessToken(accessToken),
+                redeemStatus: 'stopped',
+                redeemReason: reason,
+                redeemFailureCount: previousFailureCount,
+                redeemFailureLimit: totalRoundLimit,
+                redeemLastFailedAt: candidate.redeemLastFailedAt,
+                redeemAttemptedAt,
+                upiRedeemCdkey: selectedCdkey,
+              });
+              await saveRetryProgress({ flowStage: 'upi-redeem-plus', email });
+              await addLog(`UPI 失败账号兑换轮次：远端接口拒绝请求，已停止在 ${email}，请检查 UPI Key 或后端权限：${reason}`, 'error');
+              summary.items.push({ email, cdkey: selectedCdkey, failed: true, stopped: true, reason });
+              break;
+            }
+            items = upsertResultItem(items, {
+              ...candidate,
+              status: 'free',
+              planType: 'free',
+              reason: `${reason}（${getRedeemRoundLabel(failureCount, totalRoundLimit)}）`,
+              accessToken,
+              accessTokenMasked: maskAccessToken(accessToken),
+              redeemStatus: 'failed',
+              redeemReason: reason,
+              redeemFailureCount: failureCount,
+              redeemFailureLimit: totalRoundLimit,
+              redeemLastFailedAt: new Date().toISOString(),
+              redeemAttemptedAt,
+              lastFailedUpiRedeemCdkey: selectedCdkey,
+              upiRedeemCdkey: '',
+            });
+            await saveRetryProgress({ flowStage: 'upi-redeem-plus', email });
+            await addLog(`UPI 失败账号兑换轮次：${email} -> ${selectedCdkey} 失败，本账号本轮结束，切换下一个账号：${reason}`, 'warn');
+            summary.items.push({ email, cdkey: selectedCdkey, failed: true, reason });
           }
         }
         }

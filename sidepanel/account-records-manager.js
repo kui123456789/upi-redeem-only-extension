@@ -84,23 +84,23 @@
       return count > 0 ? count : 0;
     }
 
-    function normalizeUpiRedeemFailureLimit(value, fallback = 3) {
+    function normalizeUpiRedeemAdditionalRoundCount(value, fallback = 3) {
       const fallbackCount = Math.floor(Number(fallback) || 3);
       const count = Math.floor(Number(value) || fallbackCount);
-      return Math.max(1, Math.min(20, count));
+      return Math.max(0, Math.min(20, count));
+    }
+
+    function normalizeUpiRedeemTotalRoundLimit(value, fallback = 3) {
+      return 1 + normalizeUpiRedeemAdditionalRoundCount(value, fallback);
     }
 
     function getUpiCredentialMembershipFailureLimit(row = {}) {
       const latest = state.getLatestState();
       const rowLimit = Math.floor(Number(row.redeemFailureLimit) || 0);
-      const rawLimit = rowLimit > 0 ? rowLimit : latest?.upiRedeemFailedAccountRetryLimit;
-      if (rawLimit !== undefined && Math.floor(Number(rawLimit) || 0) <= 0) {
-        return 0;
+      if (rowLimit > 0) {
+        return rowLimit;
       }
-      return normalizeUpiRedeemFailureLimit(
-        rawLimit,
-        3
-      );
+      return normalizeUpiRedeemTotalRoundLimit(latest?.upiRedeemFailedAccountRetryLimit, 3);
     }
 
     function isPreSubmitUpiCredentialMembershipBlockedReason(message = '') {
@@ -1163,12 +1163,10 @@
         }
         if (redeemStatus === 'failed' && trialStatus === 'eligible') {
           const redeemFailureLimit = getUpiCredentialMembershipFailureLimit(row);
-          const failureLabel = redeemFailureLimit > 0
-            ? `${Math.max(1, redeemFailureCount)}/${redeemFailureLimit}`
-            : `${Math.max(1, redeemFailureCount)}/关闭`;
+          const failureLabel = `${Math.max(1, redeemFailureCount)}/${redeemFailureLimit}`;
           return {
-            className: redeemFailureLimit > 0 && redeemFailureCount >= redeemFailureLimit ? 'failed' : 'pending',
-            label: `兑换失败 ${failureLabel}`,
+            className: redeemFailureCount >= redeemFailureLimit ? 'failed' : 'pending',
+            label: `兑换轮 ${failureLabel}`,
             detail: `${row.redeemReason || row.reason || '历史卡密兑换失败'}；账号有试用资格。`,
           };
         }
@@ -1344,7 +1342,7 @@
       }
       const failureLimit = getUpiCredentialMembershipFailureLimit(row);
       if (failureLimit > 0 && normalizeRetryCount(row.redeemFailureCount) >= failureLimit) {
-        return `账号兑换失败已达 ${failureLimit} 次`;
+        return `账号兑换轮数已达 ${failureLimit} 轮`;
       }
       return '当前不可兑换';
     }

@@ -22,6 +22,11 @@
     return /back\/forward cache|message channel is closed|Receiving end does not exist|port closed before a response was received|A listener indicated an asynchronous response|内容脚本\s+\d+(?:\.\d+)?\s*秒内未响应|did not respond in \d+s/i.test(message);
   }
 
+  function isRetryablePasswordSetupCodeFetchError(error) {
+    const message = normalizeString(typeof error === 'string' ? error : error?.message || '');
+    return /HTTP\s*(?:408|429|5\d\d)\b|Gateway Time-out|gateway timeout|暂未返回有效验证码|自定义邮箱暂未返回有效验证码|取码接口.*(?:超时|timeout)/i.test(message);
+  }
+
   function isSetGptPasswordNewPasswordUrl(url = '') {
     try {
       const parsed = new URL(String(url || ''));
@@ -629,18 +634,31 @@
           throwIfStopped();
           await waitBeforeFetchingPasswordSetupCode(runtimeState, visibleStep, attempt, maxAttempts);
           await addStepLog(visibleStep, `设置 GPT 密码：正在获取验证码（${attempt}/${maxAttempts}，邮箱：${email}）...`, 'info');
-          const codeResult = await fetchPasswordSetupCode(runtimeState, mail, {
-            completionStep: visibleStep,
-            targetEmail: email,
-            filterAfterTimestamp: mail?.provider === '2925'
-              ? Math.max(0, startedAt - MAIL_2925_FILTER_LOOKBACK_MS)
-              : startedAt,
-            excludeCodes: [...rejectedCodes],
-            maxResendRequests: mail?.provider === '2925' ? 2 : undefined,
-            initialPollMaxAttempts: mail?.provider === '2925' ? 5 : undefined,
-            pollAttemptPlan: mail?.provider === '2925' ? [2, 3, 15] : undefined,
-            resendIntervalMs: getPasswordSetupResendIntervalMs(mail || {}),
-          });
+          let codeResult = null;
+          try {
+            codeResult = await fetchPasswordSetupCode(runtimeState, mail, {
+              completionStep: visibleStep,
+              targetEmail: email,
+              filterAfterTimestamp: mail?.provider === '2925'
+                ? Math.max(0, startedAt - MAIL_2925_FILTER_LOOKBACK_MS)
+                : startedAt,
+              excludeCodes: [...rejectedCodes],
+              maxResendRequests: mail?.provider === '2925' ? 2 : undefined,
+              initialPollMaxAttempts: mail?.provider === '2925' ? 5 : undefined,
+              pollAttemptPlan: mail?.provider === '2925' ? [2, 3, 15] : undefined,
+              resendIntervalMs: getPasswordSetupResendIntervalMs(mail || {}),
+            });
+          } catch (error) {
+            if (!isRetryablePasswordSetupCodeFetchError(error) || attempt >= maxAttempts) {
+              throw error;
+            }
+            await addStepLog(
+              visibleStep,
+              `设置 GPT 密码：本次取码临时失败，将继续等待下一次尝试（${attempt + 1}/${maxAttempts}）：${error?.message || error}`,
+              'warn'
+            );
+            continue;
+          }
 
           await addStepLog(visibleStep, `已获取设置 GPT 密码验证码：${codeResult.code}，正在提交（${attempt}/${maxAttempts}）...`, 'info');
           let submitResult = null;

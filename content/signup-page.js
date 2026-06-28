@@ -5851,9 +5851,9 @@ function getResetPasswordInputs() {
       input.getAttribute?.('placeholder'),
       input.getAttribute?.('aria-label'),
     ].join(' ');
-    return /new\s*password|password|密码/i.test(text);
+    return /new\s*password|password|密码|新しいパスワード|パスワードを設定|パスワード/i.test(text);
   }) || inputs[0];
-  const confirmInput = inputs.find((input) => input !== newPasswordInput && /re-?enter|confirm|again|确认|重复|再次/i.test([
+  const confirmInput = inputs.find((input) => input !== newPasswordInput && /re-?enter|confirm|again|确认|重复|再次|確認|再入力|もう一度/i.test([
     input.name,
     input.id,
     input.getAttribute?.('placeholder'),
@@ -5887,12 +5887,12 @@ function getResetPasswordSubmitButton({ allowDisabled = false } = {}) {
   return Array.from(candidates).find((element) => {
     if (!isUsableAction(element)) return false;
     const text = getActionText(element);
-    return /continue|submit|save|set\s*password|reset\s*password|继续|提交|保存|设置密码/i.test(text);
+    return /continue|submit|save|set\s*password|reset\s*password|继续|提交|保存|设置密码|続行|送信|保存|設定|更新|パスワードを設定/i.test(text);
   }) || null;
 }
 
 function getResetPasswordFieldErrorText() {
-  const pattern = /password.*(?:match|weak|short|required|invalid|same|reuse|reused)|(?:match|weak|short|required|invalid|same|reuse|reused).*password|密码.*(?:不一致|太短|太弱|无效|必填|重复|用过)|(?:不一致|太短|太弱|无效|必填|重复|用过).*密码/i;
+  const pattern = /password.*(?:match|weak|short|required|invalid|same|reuse|reused)|(?:match|weak|short|required|invalid|same|reuse|reused).*password|密码.*(?:不一致|太短|太弱|无效|必填|重复|用过)|(?:不一致|太短|太弱|无效|必填|重复|用过).*密码|パスワード.*(?:一致しません|短すぎ|弱い|無効|必須|再利用|使用済み|同じパスワード)|(?:一致しません|短すぎ|弱い|無効|必須|再利用|使用済み|同じパスワード).*パスワード/i;
   const candidates = Array.from(document.querySelectorAll(
     '[role="alert"], [aria-live], [data-error], .error, .text-error, .text-danger, p, div'
   ));
@@ -5908,7 +5908,7 @@ function getResetPasswordFieldErrorText() {
 }
 
 function isResetPasswordReuseErrorText(value = '') {
-  return /password.*(?:must\s+not\s+be\s+)?re(?:use|used)|re(?:use|used).*password|密码.*(?:重复|用过|不能.*相同)|(?:重复|用过|不能.*相同).*密码/i.test(String(value || ''));
+  return /password.*(?:must\s+not\s+be\s+)?re(?:use|used)|re(?:use|used).*password|密码.*(?:重复|用过|不能.*相同)|(?:重复|用过|不能.*相同).*密码|パスワード.*(?:再利用|使用済み|同じパスワード)|(?:再利用|使用済み|同じパスワード).*パスワード/i.test(String(value || ''));
 }
 
 function getSetGptPasswordPageState() {
@@ -6009,8 +6009,8 @@ function getChatGptSettingsPasswordAction() {
   const candidates = Array.from(document.querySelectorAll(
     'button, a, [role="button"], [role="link"], [tabindex], div, li'
   ));
-  const passwordPattern = /密码|(?:^|\s)password(?:\s|$)/i;
-  const rejectPattern = /安全密钥|通行密钥|passkey|security\s+key|authenticator|mfa|text\s+message|session|会话|高级|advanced|登录|login/i;
+  const passwordPattern = /密码|パスワード|(?:^|\s)password(?:\s|$)/i;
+  const rejectPattern = /安全密钥|通行密钥|セキュリティキー|パスキー|passkey|security\s+key|authenticator|mfa|text\s+message|session|会话|高级|advanced|登录|login|ログイン|サインイン/i;
   const scored = [];
 
   for (const element of candidates) {
@@ -6022,7 +6022,7 @@ function getChatGptSettingsPasswordAction() {
     if (!clickable || !isVisibleElement(clickable) || !isActionEnabled(clickable)) continue;
     const score = (
       (/[*•]{2,}|••|›|>|chevron|arrow/i.test(text) ? 4 : 0)
-      + (/^(?:密码|password)/i.test(text) ? 3 : 0)
+      + (/^(?:密码|password|パスワード)/i.test(text) ? 3 : 0)
       + (clickable.matches?.('button, a, [role="button"], [role="link"]') ? 2 : 0)
       - Math.floor(text.length / 40)
     );
@@ -6044,7 +6044,7 @@ function getChatGptSecuritySettingsNavAction() {
     if (!isVisibleElement(element) || !isActionEnabled(element)) return false;
     const text = normalizeInlineText(getActionText(element) || element.textContent || '');
     if (!text || text.length > 120) return false;
-    return /账户安全与登录|账号安全与登录|account\s+security|security\s+and\s+login/i.test(text);
+    return /账户安全与登录|账号安全与登录|account\s+security|security\s+and\s+login|セキュリティ|アカウントのセキュリティ|セキュリティとログイン|ログインとセキュリティ/i.test(text);
   }) || null;
 }
 

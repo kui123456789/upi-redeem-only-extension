@@ -2765,7 +2765,7 @@
           throw error;
         }
         if (isUpiRedeemDuplicateCdkeyError(error)) {
-          const pendingReason = `${message || '后端提示卡密已提交过'}；这张卡密已被占用，当前账号未提交成功，请换下一张卡密。`;
+          const pendingReason = `${message || '后端提示卡密已提交过'}；这张卡密已被占用，当前账号未提交成功，本账号本轮结束。`;
           await addStepLog(
             visibleStep,
             `UPI Free 分组卡密兑换：后端提示卡密重复提交，当前账号未提交成功，将回到 Free 可换卡：${email || 'unknown'} -> ${cdkey}：${message}`,
@@ -2915,8 +2915,6 @@
         throw new Error('UPI External API Key 未配置，请先在侧边栏填写 UPI 外部 API Key。');
       }
       const clientId = await resolveUpiRedeemClientId(runtimeState);
-      const duplicateCdkeyRetryDepth = Math.max(0, Math.floor(Number(state?.upiRedeemDuplicateCdkeyRetryDepth) || 0));
-      const maxDuplicateCdkeyRetryDepth = 20;
       const usage = normalizeUpiRedeemCdkeyUsage(getUpiRedeemStateValue(runtimeState, 'upiRedeemCdkeyUsage') || {});
       const cdkeys = mergeCdkeysWithRecoverableUsage(
         parseCdkeyPoolText(getUpiRedeemStateValue(runtimeState, 'upiRedeemCdkeyPoolText')),
@@ -2924,9 +2922,7 @@
       );
       const cdkey = pickFirstUnusedCdkey(cdkeys, usage);
       if (!cdkey) {
-        throw new Error(duplicateCdkeyRetryDepth > 0
-          ? `已跳过 ${duplicateCdkeyRetryDepth} 张重复提交的 UPI 卡密，但没有下一张可用卡密，请导入新卡密后重试。`
-          : '没有可用的 UPI 卡密，请在侧边栏导入可用卡密。');
+        throw new Error('没有可用的 UPI 卡密，请在侧边栏导入可用卡密。');
       }
       const selectedUsage = usage?.[cdkey] || {};
 
@@ -3304,10 +3300,10 @@
           throw error;
         }
         if (isUpiRedeemDuplicateCdkeyError(error)) {
-          const pendingReason = `${message || '后端提示卡密已提交过'}；这张卡密已被占用，当前账号未提交成功，正在换下一张卡密。`;
+          const pendingReason = `${message || '后端提示卡密已提交过'}；这张卡密已被占用，当前账号未提交成功，本账号本轮结束。`;
           await addStepLog(
             visibleStep,
-            `UPI 后端提示卡密重复提交，当前账号未提交成功，将换下一张卡密：${currentEmail || 'unknown'} -> ${cdkey}：${message}`,
+            `UPI 后端提示卡密重复提交，当前账号未提交成功，本账号本轮结束：${currentEmail || 'unknown'} -> ${cdkey}：${message}`,
             'warn'
           );
           await updateCdkeyUsage(cdkey, (entry) => ({
@@ -3334,19 +3330,7 @@
             upiRedeemSubscriptionCheckedAt: '',
             upiRedeemSubscriptionReason: pendingReason,
           }).catch(() => {});
-          if (duplicateCdkeyRetryDepth + 1 >= maxDuplicateCdkeyRetryDepth) {
-            throw new Error(`${UPI_REDEEM_DUPLICATE_CDK_ERROR_PREFIX}${pendingReason} 已达到自动换卡上限 ${maxDuplicateCdkeyRetryDepth} 次。`);
-          }
-          await addStepLog(
-            visibleStep,
-            `正在重新选择下一张 UPI 卡密：已跳过 ${duplicateCdkeyRetryDepth + 1} 张重复卡密。`,
-            'warn'
-          );
-          return executeUpiRedeem({
-            nodeId: state?.nodeId,
-            visibleStep,
-            upiRedeemDuplicateCdkeyRetryDepth: duplicateCdkeyRetryDepth + 1,
-          });
+          throw new Error(`${UPI_REDEEM_DUPLICATE_CDK_ERROR_PREFIX}${pendingReason}`);
         } else if (redeemBackendAccepted) {
           duplicateCdkeyPending = true;
           const pendingReason = `卡密已提交到兑换后端，但本地会员确认失败：${message}；已保持处理中，等待远端状态刷新`;

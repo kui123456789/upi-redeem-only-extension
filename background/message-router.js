@@ -413,6 +413,17 @@
       return Math.max(0, Math.min(UPI_REDEEM_FAILED_ACCOUNT_RETRY_LIMIT_MAX, numeric));
     }
 
+    function getUpiRedeemTotalRoundLimit(additionalRoundCount = 0) {
+      return 1 + Math.max(0, Math.min(
+        UPI_REDEEM_FAILED_ACCOUNT_RETRY_LIMIT_MAX,
+        Math.floor(Number(additionalRoundCount) || 0)
+      ));
+    }
+
+    function getUpiRedeemRoundLabel(roundNumber = 1, totalRoundLimit = 1) {
+      return `兑换轮 ${Math.max(1, Math.floor(Number(roundNumber) || 1))}/${Math.max(1, Math.floor(Number(totalRoundLimit) || 1))}`;
+    }
+
     function normalizeUpiRedeemRemoteStatusForRetry(status = '') {
       const normalized = normalizeString(status).toLowerCase().replace(/[\s-]+/g, '_');
       if (normalized === 'approve_blocked') {
@@ -681,7 +692,8 @@
       if (!items.length) {
         return { updated: false, updates: {}, deletedEmails: [], results };
       }
-      const retryLimit = normalizeUpiFailedAccountRetryLimit(state?.upiRedeemFailedAccountRetryLimit);
+      const additionalRoundCount = normalizeUpiFailedAccountRetryLimit(state?.upiRedeemFailedAccountRetryLimit);
+      const totalRoundLimit = getUpiRedeemTotalRoundLimit(additionalRoundCount);
 
       const lookup = buildUpiRedeemRemoteEntryLookup(usage);
       const nextUsage = usage && typeof usage === 'object' && !Array.isArray(usage) ? { ...usage } : {};
@@ -714,7 +726,7 @@
             redeemStatus: 'failed',
             redeemReason: reason,
             redeemFailureCount: normalizeRouterRetryCount(item?.redeemFailureCount),
-            redeemFailureLimit: retryLimit,
+            redeemFailureLimit: totalRoundLimit,
             redeemLastFailedAt: item?.redeemLastFailedAt || releasedAt,
             lastFailedUpiRedeemCdkey: rowCdkey,
             upiRedeemCdkey: '',
@@ -739,9 +751,7 @@
           const failedAtMs = Math.max(0, Date.parse(failedAt) || Number(entry.remoteCheckedAt) || Date.now());
           const failedCdkey = normalizeString(entry.cdkey || item.upiRedeemCdkey);
           const failureCount = normalizeRouterRetryCount(item.redeemFailureCount) + 1;
-          const failureLabel = retryLimit > 0
-            ? `兑换失败 ${failureCount}/${retryLimit}`
-            : `兑换失败 ${failureCount}，自动重试关闭`;
+          const failureLabel = getUpiRedeemRoundLabel(failureCount, totalRoundLimit);
           if (failedCdkey) {
             const currentUsageEntry = nextUsage[failedCdkey] && typeof nextUsage[failedCdkey] === 'object' && !Array.isArray(nextUsage[failedCdkey])
               ? nextUsage[failedCdkey]
@@ -784,7 +794,7 @@
             redeemStatus: 'failed',
             redeemReason: remoteMessage || '后端返回 approve-blocked',
             redeemFailureCount: failureCount,
-            redeemFailureLimit: retryLimit,
+            redeemFailureLimit: totalRoundLimit,
             redeemLastFailedAt: failedAt,
             lastFailedUpiRedeemCdkey: failedCdkey,
             upiRedeemCdkey: '',
@@ -901,7 +911,7 @@
             redeemStatus: '',
             redeemReason: `${cancelReason}；已回到待兑换`,
             redeemFailureCount: normalizeRouterRetryCount(item.redeemFailureCount),
-            redeemFailureLimit: retryLimit,
+            redeemFailureLimit: totalRoundLimit,
             redeemLastFailedAt: item.redeemLastFailedAt || '',
             lastCanceledUpiRedeemCdkey: canceledCdkey,
             upiRedeemCdkey: '',
@@ -946,9 +956,7 @@
           const failedAtMs = Math.max(0, Date.parse(failedAt) || Number(entry.remoteCheckedAt) || Date.now());
           const failedCdkey = normalizeString(entry.cdkey || item.upiRedeemCdkey);
           const failureCount = normalizeRouterRetryCount(item.redeemFailureCount) + 1;
-          const failureLabel = retryLimit > 0
-            ? `兑换失败 ${failureCount}/${retryLimit}`
-            : `兑换失败 ${failureCount}，自动重试关闭`;
+          const failureLabel = getUpiRedeemRoundLabel(failureCount, totalRoundLimit);
           if (failedCdkey) {
             const currentUsageEntry = nextUsage[failedCdkey] && typeof nextUsage[failedCdkey] === 'object' && !Array.isArray(nextUsage[failedCdkey])
               ? nextUsage[failedCdkey]
@@ -991,7 +999,7 @@
             redeemStatus: 'failed',
             redeemReason: remoteMessage || '远端确认兑换失败',
             redeemFailureCount: failureCount,
-            redeemFailureLimit: retryLimit,
+            redeemFailureLimit: totalRoundLimit,
             redeemLastFailedAt: failedAt,
             lastFailedUpiRedeemCdkey: failedCdkey,
             upiRedeemCdkey: '',
@@ -1046,31 +1054,38 @@
         return {
           ...summary,
           skipped: 1,
-          reason: 'UPI 失败账号自动换卡能力尚未接入。',
+          reason: 'UPI 失败账号兑换轮次能力尚未接入。',
         };
       }
-      const retryLimit = Math.max(0, Math.min(20, Math.floor(Number(
+      const additionalRoundCount = Math.max(0, Math.min(20, Math.floor(Number(
         payload.upiRedeemFailedAccountRetryLimit
         ?? state.upiRedeemFailedAccountRetryLimit
         ?? 3
       ) || 0)));
-      if (retryLimit <= 0) {
+      if (additionalRoundCount <= 0) {
         return {
           ...summary,
           skipped: 1,
-          reason: '失败账号自动换卡重试已关闭。',
+          reason: '兑换轮数为 0，刷新后不继续失败账号。',
         };
       }
       const syncedResults = membershipSync?.results
         || membershipSync?.updates?.[UPI_CREDENTIAL_MEMBERSHIP_RESULTS_KEY]
         || state?.[UPI_CREDENTIAL_MEMBERSHIP_RESULTS_KEY]
         || null;
+      if (membershipSync?.updated !== true) {
+        return {
+          ...summary,
+          skipped: 1,
+          reason: '卡密状态刷新未产生新的 Free/Plus 分组变化，跳过失败账号兑换轮次。',
+        };
+      }
       const runtimeSettings = {
         ...(state || {}),
         ...(refreshResult?.updates || {}),
         ...(membershipSync?.updates || {}),
         ...(payload || {}),
-        upiRedeemFailedAccountRetryLimit: retryLimit,
+        upiRedeemFailedAccountRetryLimit: additionalRoundCount,
       };
       delete runtimeSettings.upiRedeemCdkeyUsage;
       delete runtimeSettings.pixRedeemCdkeyUsage;
@@ -1078,7 +1093,7 @@
         source: 'upi-failed-account-auto-retry',
         results: syncedResults,
         settings: runtimeSettings,
-        upiRedeemFailedAccountRetryLimit: retryLimit,
+        upiRedeemFailedAccountRetryLimit: additionalRoundCount,
       });
       return {
         ...summary,

@@ -96,6 +96,11 @@
         String(typeof error === 'string' ? error : error?.message || '')
       ));
 
+    function isRetryableCustomEmailVerificationFetchError(error) {
+      const message = String(typeof error === 'string' ? error : error?.message || '').trim();
+      return /HTTP\s*(?:408|429|5\d\d)\b|Gateway Time-out|gateway timeout|暂未返回有效验证码|自定义邮箱暂未返回有效验证码|取码接口.*(?:超时|timeout)|查询暂时较慢/i.test(message);
+    }
+
     function getVerificationCodeStateKey(step) {
       return step === 4 ? 'lastSignupCode' : 'lastLoginCode';
     }
@@ -124,7 +129,9 @@
       if (Number(step) !== 4) {
         return;
       }
-      const waitSeconds = normalizeSignupVerificationCodeWaitSeconds(state?.signupVerificationCodeWaitSeconds);
+      const waitSeconds = normalizeSignupVerificationCodeWaitSeconds(
+        state?.setGptPasswordVerificationWaitSeconds ?? state?.signupVerificationCodeWaitSeconds
+      );
       if (waitSeconds <= 0) {
         return;
       }
@@ -189,8 +196,8 @@
         const parsed = new URL(value);
         const pathname = String(parsed.pathname || '').replace(/\/+$/g, '') || '/';
         const hostname = String(parsed.hostname || '').toLowerCase();
-        const looksLikeLinlinflow = hostname.includes('linlinflow') || pathname === '/latest';
-        if (!looksLikeLinlinflow || pathname === '/mail-api' || pathname.startsWith('/mail-api/')) {
+        const looksLikeLinlinflow = hostname.includes('linlinflow');
+        if (!looksLikeLinlinflow || pathname === '/latest' || pathname === '/mail-api' || pathname.startsWith('/mail-api/')) {
           return '';
         }
 
@@ -220,6 +227,49 @@
         );
         apiUrl.searchParams.set('folder', 'inbox');
         apiUrl.searchParams.set('refresh', '1');
+        return apiUrl.toString();
+      } catch {
+        return '';
+      }
+    }
+
+    function buildLinlinflowLatestApiUrl(rawUrl = '', options = {}) {
+      const value = String(rawUrl || '').trim();
+      if (!/^https?:\/\//i.test(value)) {
+        return '';
+      }
+
+      try {
+        const parsed = new URL(value);
+        const pathname = String(parsed.pathname || '').replace(/\/+$/g, '') || '/';
+        const looksLikeLinlinflowLatest = pathname === '/latest';
+        if (!looksLikeLinlinflowLatest) {
+          return '';
+        }
+        const email = String(parsed.searchParams.get('email') || parsed.searchParams.get('mail') || '').trim();
+        const authCode = String(
+          parsed.searchParams.get('auth_code')
+          || parsed.searchParams.get('code')
+          || parsed.searchParams.get('key')
+          || ''
+        ).trim();
+        if (!email || !authCode) {
+          return '';
+        }
+        const apiUrl = new URL(
+          `/mail-api/${encodeURIComponent(authCode)}/${encodeURIComponent(email)}`,
+          parsed.origin
+        );
+        apiUrl.searchParams.set('folder', 'inbox');
+        if (options.refresh) {
+          apiUrl.searchParams.set('refresh', '1');
+        }
+        if (options.background) {
+          apiUrl.searchParams.set('async', '1');
+        }
+        if (options.cacheFirst || (!options.refresh && !options.background)) {
+          apiUrl.searchParams.set('cache_first', '1');
+        }
         return apiUrl.toString();
       } catch {
         return '';
@@ -649,6 +699,57 @@
       return '';
     }
 
+    function isLinlinflowMailApiPayload(payload) {
+      return Boolean(
+        payload
+        && typeof payload === 'object'
+        && !Array.isArray(payload)
+        && (
+          Array.isArray(payload.messages)
+          || Object.prototype.hasOwnProperty.call(payload, 'message_count')
+          || Object.prototype.hasOwnProperty.call(payload, 'code')
+          || Object.prototype.hasOwnProperty.call(payload, 'verification_code')
+        )
+        && (
+          Object.prototype.hasOwnProperty.call(payload, 'email')
+          || Object.prototype.hasOwnProperty.call(payload, 'folder')
+          || Object.prototype.hasOwnProperty.call(payload, 'messages')
+        )
+      );
+    }
+
+    function extractLinlinflowMailApiCode(payload = {}, excluded = new Set(), options = {}) {
+      const timestampOptions = options.ignoreTimestampFilter
+        ? { ...options, filterAfterTimestamp: 0 }
+        : options;
+      const messageCode = extractFirstEmailCodeFromOrderedEntries(
+        Array.isArray(payload.messages) ? payload.messages : [],
+        excluded,
+        timestampOptions
+      );
+      if (messageCode) {
+        return messageCode;
+      }
+
+      const topLevelTimestamp = extractVerificationEntryTimestamp({
+        received_time: payload.received_at || payload.received_time || payload.date || payload.timestamp,
+      });
+      const minTimestamp = normalizeFilterAfterTimestamp(options.filterAfterTimestamp) - ASSURIVO_VERIFICATION_FILTER_SKEW_MS;
+      if (!options.ignoreTimestampFilter && minTimestamp > 0 && topLevelTimestamp > 0 && topLevelTimestamp < minTimestamp) {
+        return '';
+      }
+
+      const topLevelCodes = collectCustomEmailVerificationCodes({
+        code: payload.code,
+        verification_code: payload.verification_code,
+        body: payload.body || payload.body_preview || '',
+      }).filter((code, index, list) => !excluded.has(code) && list.indexOf(code) === index);
+      if (!topLevelCodes.length) {
+        return '';
+      }
+      return options.preferFirstCode ? topLevelCodes[0] : topLevelCodes[topLevelCodes.length - 1];
+    }
+
     function extractCustomEmailVerificationCode(payload, options = {}) {
       const excluded = new Set((options.excludeCodes || []).map((code) => String(code || '').trim()).filter(Boolean));
       if (isAssurivoVerificationPayload(payload)) {
@@ -667,6 +768,9 @@
         if (matchedPrompt) {
           return '';
         }
+      }
+      if (isLinlinflowMailApiPayload(payload)) {
+        return extractLinlinflowMailApiCode(payload, excluded, options);
       }
       const codes = collectCustomEmailVerificationCodes(payload).filter((code, index, list) => (
         !excluded.has(code) && list.indexOf(code) === index
@@ -1976,6 +2080,8 @@
     }
 
     async function fetchCustomEmailVerificationCode(step, state = {}, options = {}) {
+      const completionStep = getCompletionStep(step, options);
+      const verificationLabel = completionStep === 6 ? '设置 GPT 密码' : getVerificationCodeLabel(step);
       const targetEmail = normalizeEmailForComparison(
         options.targetEmail
         || state?.step8VerificationTargetEmail
@@ -2002,7 +2108,7 @@
         ? fetchImpl
         : (typeof fetch === 'function' ? fetch.bind(globalThis) : null);
       if (typeof fetcher !== 'function') {
-        throw new Error(`步骤 ${step}：当前运行环境不支持 fetch，无法通过自定义邮箱取码 URL 获取验证码。`);
+        throw new Error(`步骤 ${completionStep}：当前运行环境不支持 fetch，无法通过自定义邮箱取码 URL 获取验证码。`);
       }
 
       const filterAfterTimestamp = resolveInitialVerificationRequestedAt(step, state, options.filterAfterTimestamp);
@@ -2022,20 +2128,42 @@
           });
         }
       } else {
-        const linlinflowRequestUrl = buildLinlinflowMailApiUrl(verificationUrl);
-        const requestUrl = linlinflowRequestUrl || getCustomEmailVerificationRequestUrl(verificationUrl);
-        requests.push({
-          url: requestUrl,
-          label: getCustomEmailVerificationRequestLabel(verificationUrl),
-          preferFirstCode: Boolean(linlinflowRequestUrl) || isAssurivoOpenVerificationUrl(verificationUrl),
-          assurivoOpenPage: isAssurivoOpenVerificationUrl(verificationUrl),
-        });
+        const linlinflowLatestUrl = buildLinlinflowLatestApiUrl(verificationUrl, { cacheFirst: true });
+        if (linlinflowLatestUrl) {
+          requests.push({
+            url: linlinflowLatestUrl,
+            label: '自动识别最新验证码接口',
+            preferFirstCode: true,
+            assurivoOpenPage: false,
+          });
+          const linlinflowLatestRefreshUrl = buildLinlinflowLatestApiUrl(verificationUrl, {
+            refresh: true,
+          });
+          if (linlinflowLatestRefreshUrl && linlinflowLatestRefreshUrl !== linlinflowLatestUrl) {
+            requests.push({
+              url: linlinflowLatestRefreshUrl,
+              label: '自动识别最新验证码刷新接口',
+              preferFirstCode: true,
+              assurivoOpenPage: false,
+              ignoreTimestampFilter: true,
+            });
+          }
+        } else {
+          const linlinflowRequestUrl = buildLinlinflowMailApiUrl(verificationUrl);
+          const requestUrl = linlinflowRequestUrl || getCustomEmailVerificationRequestUrl(verificationUrl);
+          requests.push({
+            url: requestUrl,
+            label: getCustomEmailVerificationRequestLabel(verificationUrl),
+            preferFirstCode: Boolean(linlinflowRequestUrl) || isAssurivoOpenVerificationUrl(verificationUrl),
+            assurivoOpenPage: isAssurivoOpenVerificationUrl(verificationUrl),
+          });
+        }
       }
 
       let lastError = null;
       for (let requestIndex = 0; requestIndex < requests.length; requestIndex += 1) {
         const request = requests[requestIndex];
-        await addLog(`步骤 ${step}：正在通过${request.label}获取${getVerificationCodeLabel(step)}验证码。`, 'info');
+        await addLog(`步骤 ${completionStep}：正在通过${request.label}获取${verificationLabel}验证码。`, 'info');
         const response = await fetcher(request.url, {
           method: 'GET',
           cache: 'no-store',
@@ -2050,7 +2178,7 @@
         const payload = parseCustomEmailVerificationPayloadText(text);
         if (!response.ok) {
           const detail = describeCustomEmailVerificationPayload(payload);
-          lastError = new Error(`步骤 ${step}：${request.label}请求失败，HTTP ${response.status}${detail ? `：${detail}` : ''}`);
+          lastError = new Error(`步骤 ${completionStep}：${request.label}请求失败，HTTP ${response.status}${detail ? `：${detail}` : ''}`);
           if (requestIndex < requests.length - 1) {
             await addLog(`${request.label}请求失败，将回退到下一种取码方式：${lastError.message}`, 'warn');
             continue;
@@ -2063,9 +2191,10 @@
           filterAfterTimestamp,
           preferFirstCode: request.preferFirstCode,
           assurivoOpenPage: request.assurivoOpenPage,
+          ignoreTimestampFilter: request.ignoreTimestampFilter,
         });
         if (code) {
-          await addLog(`步骤 ${step}：已通过${request.label}获取${getVerificationCodeLabel(step)}验证码：${code}`, 'ok');
+          await addLog(`步骤 ${completionStep}：已通过${request.label}获取${verificationLabel}验证码：${code}`, 'ok');
           return {
             handled: true,
             code,
@@ -2080,16 +2209,16 @@
           && isAssurivoVerificationPayload(payload)
           && hasOnlyOlderTimestampedAssurivoEntries(payload.data, filterAfterTimestamp)
         ) {
-          await addLog(`步骤 ${step}：${request.label}只返回了早于本轮发码时间的验证码邮件，将继续等待新邮件。`, 'warn');
+          await addLog(`步骤 ${completionStep}：${request.label}只返回了早于本轮发码时间的验证码邮件，将继续等待新邮件。`, 'warn');
         }
         const detail = describeCustomEmailVerificationPayload(payload);
-        lastError = new Error(`步骤 ${step}：${request.label}暂未返回有效验证码${detail ? `：${detail}` : ''}`);
+        lastError = new Error(`步骤 ${completionStep}：${request.label}暂未返回有效验证码${detail ? `：${detail}` : ''}`);
         if (requestIndex < requests.length - 1) {
           await addLog(`${request.label}暂未返回有效验证码，将回退到下一种取码方式。`, 'warn');
         }
       }
 
-      throw lastError || new Error(`步骤 ${step}：自定义邮箱暂未返回有效验证码。`);
+      throw lastError || new Error(`步骤 ${completionStep}：自定义邮箱暂未返回有效验证码。`);
     }
 
     async function resolveCustomEmailVerificationStep(step, state = {}, options = {}) {
@@ -2120,11 +2249,23 @@
           maxAttempts,
           attempt > 1 ? '避免继续读取刚被拒绝的旧验证码' : '等待新邮件到达'
         );
-        const result = await fetchCustomEmailVerificationCode(step, attemptState, {
-          ...options,
-          excludeCodes: [...rejectedCodes],
-          filterAfterTimestamp: nextFilterAfterTimestamp || options.filterAfterTimestamp,
-        });
+        let result = null;
+        try {
+          result = await fetchCustomEmailVerificationCode(step, attemptState, {
+            ...options,
+            excludeCodes: [...rejectedCodes],
+            filterAfterTimestamp: nextFilterAfterTimestamp || options.filterAfterTimestamp,
+          });
+        } catch (err) {
+          if (!isRetryableCustomEmailVerificationFetchError(err) || attempt >= maxAttempts) {
+            throw err;
+          }
+          await addLog(
+            `步骤 ${completionStep}：自定义邮箱本次取码临时失败，将继续等待下一次尝试（${attempt + 1}/${maxAttempts}）：${err?.message || err}`,
+            'warn'
+          );
+          continue;
+        }
         if (!result?.handled) {
           return {
             handled: false,

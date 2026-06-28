@@ -3683,7 +3683,7 @@ async function refreshUpiRedeemCdkeyStatuses(options = {}) {
       const autoRetrySubmitted = Math.max(0, Math.floor(Number(response?.autoRetry?.submitted) || 0));
       const autoRetryAttempted = Math.max(0, Math.floor(Number(response?.autoRetry?.attempted) || 0));
       const autoRetryText = autoRetrySubmitted || autoRetryAttempted
-        ? `失败账号已随机换卡提交 ${autoRetrySubmitted || autoRetryAttempted} 个。`
+        ? `失败账号已按队列换卡处理 ${autoRetrySubmitted || autoRetryAttempted} 个。`
         : '';
       showToast(`UPI 卡密状态已刷新：${response?.checkedCount || cdkeys.length} 条。${autoRetryText}`, 'success');
     }
@@ -3945,6 +3945,39 @@ function normalizeSignupVerificationCodeWaitSeconds(value, fallback = DEFAULT_SI
     return fallbackValue;
   }
   return Math.max(0, Math.min(SIGNUP_VERIFICATION_CODE_WAIT_MAX_SECONDS, numeric));
+}
+
+function resolveSharedVerificationCodeWaitSeconds(state = latestState) {
+  const primaryValue = String(inputSetGptPasswordVerificationWaitSeconds?.value ?? '').trim();
+  const secondaryValue = String(inputSignupVerificationCodeWaitSeconds?.value ?? '').trim();
+  const fallbackValue = state?.setGptPasswordVerificationWaitSeconds
+    ?? state?.signupVerificationCodeWaitSeconds
+    ?? DEFAULT_SET_GPT_PASSWORD_VERIFICATION_WAIT_SECONDS;
+  return normalizeSetGptPasswordVerificationWaitSeconds(primaryValue || secondaryValue, fallbackValue);
+}
+
+function setSharedVerificationCodeWaitInputs(value, fallback = DEFAULT_SET_GPT_PASSWORD_VERIFICATION_WAIT_SECONDS) {
+  const normalizedValue = String(normalizeSetGptPasswordVerificationWaitSeconds(value, fallback));
+  if (typeof inputSetGptPasswordVerificationWaitSeconds !== 'undefined' && inputSetGptPasswordVerificationWaitSeconds) {
+    inputSetGptPasswordVerificationWaitSeconds.value = normalizedValue;
+  }
+  if (typeof inputSignupVerificationCodeWaitSeconds !== 'undefined' && inputSignupVerificationCodeWaitSeconds) {
+    inputSignupVerificationCodeWaitSeconds.value = normalizedValue;
+  }
+  return normalizedValue;
+}
+
+function mirrorSharedVerificationCodeWaitInput(sourceInput) {
+  if (!sourceInput) {
+    return;
+  }
+  const rawValue = String(sourceInput.value ?? '');
+  if (sourceInput !== inputSetGptPasswordVerificationWaitSeconds && inputSetGptPasswordVerificationWaitSeconds) {
+    inputSetGptPasswordVerificationWaitSeconds.value = rawValue;
+  }
+  if (sourceInput !== inputSignupVerificationCodeWaitSeconds && inputSignupVerificationCodeWaitSeconds) {
+    inputSignupVerificationCodeWaitSeconds.value = rawValue;
+  }
 }
 
 function syncUpiRedeemAfterModeStepDefinitions() {
@@ -6998,10 +7031,7 @@ function collectSettingsPayload() {
     totpMfaAfterProfileEnabled: getSelectedTotpMfaAfterProfileEnabled(latestState),
     upiCredentialMembershipCheckTotpApiBaseUrl: String(inputUpiCredentialMembershipTotpApiBaseUrl?.value || '').trim(),
     upiCredentialMembershipCheckTotpLookupKey: String(inputUpiCredentialMembershipTotpLookupKey?.value || '').trim(),
-    setGptPasswordVerificationWaitSeconds: normalizeSetGptPasswordVerificationWaitSeconds(
-      inputSetGptPasswordVerificationWaitSeconds?.value,
-      latestState?.setGptPasswordVerificationWaitSeconds
-    ),
+    setGptPasswordVerificationWaitSeconds: resolveSharedVerificationCodeWaitSeconds(latestState),
     upiRedeemCdkeyPoolText: normalizeUpiRedeemCdkeyPoolTextValue(inputUpiRedeemCdkeyPool?.value || ''),
     upiRedeemCdkeyUsage: normalizeUpiRedeemCdkeyUsageValue(latestState?.upiRedeemCdkeyUsage || latestState?.pixRedeemCdkeyUsage || {}),
     legacyWalletEmail: String(currentLegacyWalletAccount?.email || latestState?.legacyWalletEmail || '').trim(),
@@ -7070,10 +7100,7 @@ function collectSettingsPayload() {
     customEmailPool: normalizedCustomEmailPool,
     customEmailPoolEntries: normalizedCustomEmailPoolEntries,
     selectedCustomEmailPoolEmail: String(latestState?.selectedCustomEmailPoolEmail || '').trim().toLowerCase(),
-    signupVerificationCodeWaitSeconds: normalizeSignupVerificationCodeWaitSeconds(
-      inputSignupVerificationCodeWaitSeconds?.value,
-      latestState?.signupVerificationCodeWaitSeconds
-    ),
+    signupVerificationCodeWaitSeconds: resolveSharedVerificationCodeWaitSeconds(latestState),
     autoDeleteUsedIcloudAlias: checkboxAutoDeleteIcloud?.checked,
     icloudHostPreference: selectIcloudHostPreference?.value || 'auto',
     icloudTargetMailboxType: normalizedIcloudTargetMailboxType,
@@ -14758,12 +14785,10 @@ function applySettingsState(state) {
   if (typeof inputUpiCredentialMembershipTotpLookupKey !== 'undefined' && inputUpiCredentialMembershipTotpLookupKey) {
     inputUpiCredentialMembershipTotpLookupKey.value = String(state?.upiCredentialMembershipCheckTotpLookupKey || '').trim();
   }
-  if (typeof inputSetGptPasswordVerificationWaitSeconds !== 'undefined' && inputSetGptPasswordVerificationWaitSeconds) {
-    inputSetGptPasswordVerificationWaitSeconds.value = String(normalizeSetGptPasswordVerificationWaitSeconds(
-      state?.setGptPasswordVerificationWaitSeconds,
-      DEFAULT_SET_GPT_PASSWORD_VERIFICATION_WAIT_SECONDS
-    ));
-  }
+  setSharedVerificationCodeWaitInputs(
+    state?.setGptPasswordVerificationWaitSeconds ?? state?.signupVerificationCodeWaitSeconds,
+    DEFAULT_SET_GPT_PASSWORD_VERIFICATION_WAIT_SECONDS
+  );
   syncUpiRedeemAfterModeControls((state?.upiRedeemContinueAfterRedeem ?? state?.pixRedeemContinueAfterRedeem) === true ? false : true);
   if (
     typeof inputUpiRedeemCdkeyPool !== 'undefined'
@@ -15042,12 +15067,10 @@ function applySettingsState(state) {
   } else if (inputCustomEmailPool) {
     inputCustomEmailPool.value = restoredCustomEmailPoolEntries.join('\n');
   }
-  if (typeof inputSignupVerificationCodeWaitSeconds !== 'undefined' && inputSignupVerificationCodeWaitSeconds) {
-    inputSignupVerificationCodeWaitSeconds.value = String(normalizeSignupVerificationCodeWaitSeconds(
-      state?.signupVerificationCodeWaitSeconds,
-      DEFAULT_SIGNUP_VERIFICATION_CODE_WAIT_SECONDS
-    ));
-  }
+  setSharedVerificationCodeWaitInputs(
+    state?.setGptPasswordVerificationWaitSeconds ?? state?.signupVerificationCodeWaitSeconds,
+    DEFAULT_SET_GPT_PASSWORD_VERIFICATION_WAIT_SECONDS
+  );
   setHotmailServiceMode(state?.hotmailServiceMode);
   inputHotmailRemoteBaseUrl.value = state?.hotmailRemoteBaseUrl || '';
   inputHotmailLocalBaseUrl.value = state?.hotmailLocalBaseUrl || '';
@@ -19700,6 +19723,9 @@ selectPlusPaymentMethod?.addEventListener('change', () => {
     if (input === inputTotpMfaAfterProfileEnabled) {
       syncTotpMfaAfterProfileStepDefinitions();
     }
+    if (input === inputSetGptPasswordVerificationWaitSeconds) {
+      mirrorSharedVerificationCodeWaitInput(input);
+    }
     markSettingsDirty(true);
     scheduleSettingsAutoSave();
   });
@@ -20597,14 +20623,22 @@ inputCustomMailProviderPool?.addEventListener('blur', () => {
 });
 
 inputSignupVerificationCodeWaitSeconds?.addEventListener('input', () => {
+  mirrorSharedVerificationCodeWaitInput(inputSignupVerificationCodeWaitSeconds);
   markSettingsDirty(true);
   scheduleSettingsAutoSave();
 });
+inputSetGptPasswordVerificationWaitSeconds?.addEventListener('blur', () => {
+  setSharedVerificationCodeWaitInputs(
+    inputSetGptPasswordVerificationWaitSeconds.value,
+    latestState?.setGptPasswordVerificationWaitSeconds ?? latestState?.signupVerificationCodeWaitSeconds
+  );
+  saveSettings({ silent: true }).catch(() => { });
+});
 inputSignupVerificationCodeWaitSeconds?.addEventListener('blur', () => {
-  inputSignupVerificationCodeWaitSeconds.value = String(normalizeSignupVerificationCodeWaitSeconds(
+  setSharedVerificationCodeWaitInputs(
     inputSignupVerificationCodeWaitSeconds.value,
-    DEFAULT_SIGNUP_VERIFICATION_CODE_WAIT_SECONDS
-  ));
+    latestState?.setGptPasswordVerificationWaitSeconds ?? latestState?.signupVerificationCodeWaitSeconds
+  );
   saveSettings({ silent: true }).catch(() => { });
 });
 
@@ -22981,10 +23015,10 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         inputUpiCredentialMembershipTotpLookupKey.value = String(message.payload.upiCredentialMembershipCheckTotpLookupKey || '').trim();
       }
       if (message.payload.setGptPasswordVerificationWaitSeconds !== undefined && inputSetGptPasswordVerificationWaitSeconds) {
-        inputSetGptPasswordVerificationWaitSeconds.value = String(normalizeSetGptPasswordVerificationWaitSeconds(
+        setSharedVerificationCodeWaitInputs(
           message.payload.setGptPasswordVerificationWaitSeconds,
-          latestState?.setGptPasswordVerificationWaitSeconds
-        ));
+          latestState?.setGptPasswordVerificationWaitSeconds ?? latestState?.signupVerificationCodeWaitSeconds
+        );
       }
       if (
         (message.payload.upiRedeemCdkeyPoolText !== undefined || message.payload.pixRedeemCdkeyPoolText !== undefined)
@@ -23101,10 +23135,10 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         queueCustomEmailPoolRefresh();
       }
       if (message.payload.signupVerificationCodeWaitSeconds !== undefined && inputSignupVerificationCodeWaitSeconds) {
-        inputSignupVerificationCodeWaitSeconds.value = String(normalizeSignupVerificationCodeWaitSeconds(
-          message.payload.signupVerificationCodeWaitSeconds,
-          latestState?.signupVerificationCodeWaitSeconds
-        ));
+        setSharedVerificationCodeWaitInputs(
+          message.payload.setGptPasswordVerificationWaitSeconds ?? message.payload.signupVerificationCodeWaitSeconds,
+          latestState?.setGptPasswordVerificationWaitSeconds ?? latestState?.signupVerificationCodeWaitSeconds
+        );
       }
       if (message.payload.luckmailApiKey !== undefined) {
         inputLuckmailApiKey.value = message.payload.luckmailApiKey || '';
