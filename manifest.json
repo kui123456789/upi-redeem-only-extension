@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "UPI Redeem Only",
-  "version": "0.2.0",
-  "version_name": "UPI Redeem Only V0.2.0",
+  "version": "0.2.1",
+  "version_name": "UPI Redeem Only V0.2.1",
   "description": "UPI 卡密兑换专用版，保留注册、设置密码、2FA、会员核验与补兑能力",
   "permissions": [
     "sidePanel",

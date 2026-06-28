@@ -15,10 +15,10 @@
 
 ## 当前版本建议
 
-- 当前待发布版本：`v0.2.0`
-- 当前扩展版本号：`0.2.0`
-- Release 文案文件：`docs/releases/v0.2.0.md`
-- GitHub Release 正文可直接复制 `docs/releases/v0.2.0.md`
+- 当前待发布版本：`v0.2.1`
+- 当前扩展版本号：`0.2.1`
+- Release 文案文件：`docs/releases/v0.2.1.md`
+- GitHub Release 正文可直接复制 `docs/releases/v0.2.1.md`
 
 ## 首次发布
 

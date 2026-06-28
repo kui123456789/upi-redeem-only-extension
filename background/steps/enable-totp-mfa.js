@@ -2,6 +2,8 @@
   root.MultiPageBackgroundEnableTotpMfa = factory();
 })(typeof self !== 'undefined' ? self : globalThis, function createBackgroundEnableTotpMfaModule() {
   const CHATGPT_SOURCE = 'chatgpt-session-reader';
+  const AUTH_SOURCE = 'openai-auth';
+  const CHATGPT_LOGIN_URL = 'https://chatgpt.com/auth/login';
   const CHATGPT_SECURITY_URL = 'https://chatgpt.com/#settings/Security';
   const DEFAULT_TOTP_API_BASE_URL = 'https://cha.nerver.cc';
   const SESSION_TAB_COMPLETE_TIMEOUT_MS = 60000;
@@ -15,9 +17,42 @@
     '__Secure-authjs.session-token',
     'authjs.session-token',
   ]);
+  const COOKIE_CLEAR_DOMAINS = Object.freeze([
+    'chatgpt.com',
+    'chat.openai.com',
+    'openai.com',
+    'auth.openai.com',
+    'auth0.openai.com',
+    'accounts.openai.com',
+  ]);
+  const COOKIE_CLEAR_ORIGINS = Object.freeze([
+    'https://chatgpt.com',
+    'https://chat.openai.com',
+    'https://openai.com',
+    'https://auth.openai.com',
+    'https://auth0.openai.com',
+    'https://accounts.openai.com',
+  ]);
 
   function normalizeString(value = '') {
     return String(value || '').trim();
+  }
+
+  function normalizeErrorField(value) {
+    if (value === null || value === undefined) {
+      return '';
+    }
+    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+      return normalizeString(value);
+    }
+    if (typeof value === 'object') {
+      try {
+        return normalizeString(JSON.stringify(value));
+      } catch {
+        return normalizeString(value);
+      }
+    }
+    return normalizeString(value);
   }
 
   function normalizeEmail(value = '') {
@@ -115,16 +150,25 @@
     const nestedError = payload.error && typeof payload.error === 'object' && !Array.isArray(payload.error)
       ? payload.error
       : null;
-    return normalizeString(
-      payload.message
-      || payload.error_message
-      || payload.errorMessage
-      || nestedError?.message
-      || nestedError?.code
-      || (typeof payload.error === 'string' ? payload.error : '')
-      || payload.reason
-      || payload.code
-    );
+    const candidates = [
+      payload.message,
+      payload.error_message,
+      payload.errorMessage,
+      nestedError?.message,
+      nestedError?.detail,
+      nestedError?.code,
+      typeof payload.error === 'string' ? payload.error : '',
+      payload.detail,
+      payload.reason,
+      payload.code,
+    ];
+    for (const candidate of candidates) {
+      const value = normalizeErrorField(candidate);
+      if (value) {
+        return value;
+      }
+    }
+    return '';
   }
 
   function isChatGptUrl(url = '') {
@@ -376,6 +420,9 @@
       sleepWithStop = async (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
       throwIfStopped = () => {},
       checkRegistrationUpiTrialEligibility = null,
+      ensureContentScriptReadyOnTabUntilStopped = null,
+      sendTabMessageUntilStopped = null,
+      SIGNUP_PAGE_INJECT_FILES = [],
       upsertUpiAccountCredentialBackup = null,
       waitForTabCompleteUntilStopped = async () => {},
     } = deps;
@@ -447,6 +494,11 @@
     function isRecoverableTotpEnableError(error) {
       const message = getErrorMessage(error).toLowerCase();
       return /request timeout|timed out|\btimeout\b|mfa_info\s+http\s+5\d\d|http\s*(?:429|500|502|503|504)|fetch-error|server-error|network|abort/i.test(message);
+    }
+
+    function isRecentAuthRequiredTotpEnableError(error) {
+      const message = getErrorMessage(error);
+      return /recent[_-]?auth[_-]?required|must\s+re-?authenticate|re-?authenticate\s+to\s+enroll\/disable|user\s+must\s+re-?authenticate|需要(?:重新|再次)(?:登录|认证)|重新(?:登录|认证)/i.test(message);
     }
 
     function resolveTargetAccountEmail(state = {}) {
@@ -710,6 +762,170 @@
       return (await readSessionCookieDataFromCookies(tab)).sessionToken;
     }
 
+    function shouldClearCookie(cookie) {
+      const domain = normalizeString(cookie?.domain).replace(/^\.+/, '').toLowerCase();
+      return Boolean(domain) && COOKIE_CLEAR_DOMAINS.some((target) => domain === target || domain.endsWith(`.${target}`));
+    }
+
+    async function removeOpenAiCookie(cookie) {
+      if (!chrome?.cookies?.remove || !cookie?.name) {
+        return false;
+      }
+      const host = normalizeString(cookie.domain).replace(/^\.+/, '') || 'chatgpt.com';
+      const rawPath = normalizeString(cookie.path || '/');
+      const details = {
+        url: `https://${host}${rawPath.startsWith('/') ? rawPath : `/${rawPath}`}`,
+        name: cookie.name,
+      };
+      if (cookie.storeId) details.storeId = cookie.storeId;
+      if (cookie.partitionKey) details.partitionKey = cookie.partitionKey;
+      try {
+        return Boolean(await chrome.cookies.remove(details));
+      } catch {
+        return false;
+      }
+    }
+
+    async function clearOpenAiCookiesForRecentAuth() {
+      if (!chrome?.cookies?.getAll || !chrome?.cookies?.remove) {
+        return { removedCount: 0, candidateCount: 0 };
+      }
+      const stores = chrome.cookies.getAllCookieStores
+        ? await chrome.cookies.getAllCookieStores().catch(() => [{ id: undefined }])
+        : [{ id: undefined }];
+      const cookies = [];
+      const seen = new Set();
+      for (const store of stores || [{ id: undefined }]) {
+        const batch = await chrome.cookies.getAll(store?.id ? { storeId: store.id } : {}).catch(() => []);
+        for (const cookie of batch || []) {
+          if (!shouldClearCookie(cookie)) continue;
+          const key = [cookie.storeId || store?.id || '', cookie.domain || '', cookie.path || '', cookie.name || '', cookie.partitionKey ? JSON.stringify(cookie.partitionKey) : ''].join('|');
+          if (seen.has(key)) continue;
+          seen.add(key);
+          cookies.push(cookie);
+        }
+      }
+      let removedCount = 0;
+      for (const cookie of cookies) {
+        if (await removeOpenAiCookie(cookie)) removedCount += 1;
+      }
+      if (chrome.browsingData?.removeCookies) {
+        await chrome.browsingData.removeCookies({ since: 0, origins: COOKIE_CLEAR_ORIGINS }).catch(() => null);
+      }
+      return { removedCount, candidateCount: cookies.length };
+    }
+
+    async function ensureAuthContentScript(tabId, timeoutMs = 45000) {
+      if (typeof ensureContentScriptReadyOnTabUntilStopped !== 'function') {
+        throw new Error('认证页内容脚本注入能力尚未接入，无法重新登录。');
+      }
+      await ensureContentScriptReadyOnTabUntilStopped(AUTH_SOURCE, tabId, {
+        inject: SIGNUP_PAGE_INJECT_FILES,
+        injectSource: AUTH_SOURCE,
+        timeoutMs,
+      });
+    }
+
+    async function sendAuthMessage(tabId, message, options = {}) {
+      if (typeof sendTabMessageUntilStopped !== 'function') {
+        throw new Error('认证页内容脚本通信能力尚未接入，无法重新登录。');
+      }
+      throwIfStopped();
+      await ensureAuthContentScript(tabId, options.readyTimeoutMs || 45000);
+      throwIfStopped();
+      const result = await sendTabMessageUntilStopped(tabId, AUTH_SOURCE, message, {
+        timeoutMs: options.timeoutMs || 120000,
+        responseTimeoutMs: options.responseTimeoutMs || 120000,
+      });
+      throwIfStopped();
+      if (result?.error) {
+        throw new Error(result.error);
+      }
+      return result || {};
+    }
+
+    async function reauthenticateForTotpEnable({ tabId, runtimeState = {}, accountEmail = '', visibleStep = 7 } = {}) {
+      const email = normalizeEmail(accountEmail || resolveTargetAccountEmail(runtimeState));
+      const password = normalizeString(runtimeState.password || runtimeState.customPassword);
+      if (!email) {
+        throw new Error('缺少当前账号邮箱，无法执行最近重新认证。');
+      }
+      if (!password) {
+        throw new Error(`${email} 缺少 GPT 密码，无法执行最近重新认证。`);
+      }
+      if (!chrome?.tabs?.update && !chrome?.tabs?.create) {
+        throw new Error('当前浏览器不支持打开认证页，无法执行最近重新认证。');
+      }
+
+      await addStepLog(visibleStep, `2FA：OpenAI 要求最近重新认证，正在清理登录态并重新登录 ${email}...`, 'warn');
+      const clearResult = await clearOpenAiCookiesForRecentAuth();
+      await addStepLog(
+        visibleStep,
+        `2FA：已清理 OpenAI/ChatGPT 登录 Cookie ${clearResult.removedCount}/${clearResult.candidateCount} 个，准备重新登录。`,
+        'info'
+      );
+
+      let tab = tabId && chrome?.tabs?.get
+        ? await chrome.tabs.get(tabId).catch(() => null)
+        : null;
+      if (tab?.id && chrome?.tabs?.update) {
+        tab = await chrome.tabs.update(tab.id, { url: CHATGPT_LOGIN_URL, active: true }).catch(() => tab);
+      } else {
+        tab = await chrome.tabs.create({ url: CHATGPT_LOGIN_URL, active: true });
+      }
+      if (!tab?.id) {
+        throw new Error('认证页标签页打开失败，无法重新登录。');
+      }
+      if (typeof registerTab === 'function') {
+        await registerTab(AUTH_SOURCE, tab.id);
+      }
+      await waitForTabCompleteUntilStopped(tab.id, {
+        timeoutMs: SESSION_TAB_COMPLETE_TIMEOUT_MS,
+        retryDelayMs: 300,
+      });
+      await sleepWithStop(800);
+      await ensureAuthContentScript(tab.id, 60000);
+      await sendAuthMessage(tab.id, {
+        type: 'EXECUTE_NODE',
+        nodeId: 'oauth-login',
+        payload: {
+          visibleStep,
+          email,
+          password,
+          loginIdentifierType: 'email',
+        },
+      }, {
+        timeoutMs: 120000,
+        responseTimeoutMs: 120000,
+        readyTimeoutMs: 60000,
+      });
+      await addStepLog(visibleStep, `2FA：${email} 重新登录完成，正在刷新 accessToken/session/cookie...`, 'info');
+      if (chrome?.tabs?.update) {
+        tab = await chrome.tabs.update(tab.id, { url: CHATGPT_SECURITY_URL, active: true }).catch(() => tab);
+      }
+      tab = await ensureChatGptSecurityTab(tab.id, visibleStep);
+      const authSession = await readAuthSessionInTab(tab.id);
+      const refreshedEmail = resolveAccountEmail({ ...runtimeState, email }, authSession);
+      if (email && refreshedEmail && email !== refreshedEmail) {
+        throw new Error(`重新登录后读取到的 ChatGPT 账号 ${refreshedEmail} 与目标 ${email} 不一致，已停止。`);
+      }
+      const accessToken = normalizeString(authSession.accessToken);
+      if (!accessToken) {
+        throw new Error(`重新登录 ${email} 后仍未读取到 ChatGPT accessToken。`);
+      }
+      const cookieData = await readSessionCookieDataFromCookies(tab);
+      const sessionToken = normalizeString(authSession.sessionToken || cookieData.sessionToken);
+      const cookieHeader = normalizeString(cookieData.cookie);
+      await addStepLog(visibleStep, `2FA：重新认证后已刷新登录态：${formatLogPresence('accessToken', accessToken)}，${formatLogPresence('sessionToken', sessionToken)}，${formatLogPresence('cookie', cookieHeader)}。`, 'info');
+      return {
+        tab,
+        authSession,
+        accessToken,
+        sessionToken,
+        cookieHeader,
+      };
+    }
+
     async function postTotpEnable({ apiUrl, apiKey, token, sessionToken, cookie, deviceId }) {
       if (typeof fetchImpl !== 'function') {
         throw new Error('当前运行环境不支持 fetch，无法请求 TOTP 2FA 开通接口。');
@@ -836,15 +1052,15 @@
 
       await addStepLog(visibleStep, '正在通过 Nerver API 开通 ChatGPT TOTP 2FA，成功后检测 UPI 试用资格...', 'info');
       const tabId = await resolveSessionTabId(runtimeState);
-      const tab = await ensureChatGptSecurityTab(tabId, visibleStep);
-      const authSession = await readAuthSessionInTab(tab.id);
-      const accessToken = normalizeString(authSession.accessToken);
+      let tab = await ensureChatGptSecurityTab(tabId, visibleStep);
+      let authSession = await readAuthSessionInTab(tab.id);
+      let accessToken = normalizeString(authSession.accessToken);
       if (!accessToken) {
         throw new Error(`步骤 ${visibleStep}：未读取到 ChatGPT accessToken，请确认当前 ChatGPT 标签页仍处于已登录状态。`);
       }
-      const cookieData = await readSessionCookieDataFromCookies(tab);
-      const sessionToken = normalizeString(authSession.sessionToken || cookieData.sessionToken);
-      const cookieHeader = normalizeString(cookieData.cookie);
+      let cookieData = await readSessionCookieDataFromCookies(tab);
+      let sessionToken = normalizeString(authSession.sessionToken || cookieData.sessionToken);
+      let cookieHeader = normalizeString(cookieData.cookie);
       if (!sessionToken && !cookieHeader) {
         await addStepLog(visibleStep, '未读取到 ChatGPT sessionToken/cookie，将只使用 accessToken 调用 TOTP 2FA 开通接口。', 'warn');
       }
@@ -928,8 +1144,34 @@
         } catch (enableError) {
           lastEnableError = enableError;
           const message = getErrorMessage(enableError);
+          const recentAuthRequired = isRecentAuthRequiredTotpEnableError(enableError);
           const recoverable = isRecoverableTotpEnableError(enableError);
-          await addStepLog(visibleStep, `2FA enable 第 ${attempt}/${TOTP_ENABLE_MAX_ATTEMPTS} 次失败：${message}`, recoverable ? 'warn' : 'error');
+          await addStepLog(visibleStep, `2FA enable 第 ${attempt}/${TOTP_ENABLE_MAX_ATTEMPTS} 次失败：${message}`, (recoverable || recentAuthRequired) ? 'warn' : 'error');
+
+          if (recentAuthRequired && attempt < TOTP_ENABLE_MAX_ATTEMPTS) {
+            try {
+              const refreshed = await reauthenticateForTotpEnable({
+                tabId: tab.id,
+                runtimeState,
+                accountEmail,
+                visibleStep,
+              });
+              tab = refreshed.tab;
+              authSession = refreshed.authSession;
+              accessToken = refreshed.accessToken;
+              sessionToken = refreshed.sessionToken;
+              cookieHeader = refreshed.cookieHeader;
+              await addStepLog(visibleStep, buildTotpEnableRequestLog(apiUrl, {
+                accessToken,
+                sessionToken,
+                cookie: cookieHeader,
+                deviceId,
+              }), 'info');
+            } catch (reauthError) {
+              throw new Error(`OpenAI 要求最近重新认证，但自动重新登录失败：${getErrorMessage(reauthError)}`);
+            }
+            continue;
+          }
 
           if (recoverable) {
             const recoveredPayload = await recoverPersistedTotpSecret(`enable 超时或服务端临时错误（${message}）`);

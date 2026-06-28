@@ -3265,14 +3265,35 @@ function isUpiRedeemRemoteActiveStatus(status = '') {
   ].includes(normalizeUpiRedeemRemoteStatusValue(status));
 }
 
+function isReusableInactiveUpiRedeemRemoteStatusValue(status = '') {
+  return [
+    'failed',
+    'timeout',
+    'rejected',
+    'approve_blocked',
+    'canceled',
+    'not_found',
+    'unused',
+    'available',
+    'new',
+    'ready',
+  ].includes(normalizeUpiRedeemRemoteStatusValue(status));
+}
+
 function isUpiRedeemCdkeySelectableForRedeem(entry = {}) {
   if (!entry || entry.enabled === false) {
     return false;
   }
   const remoteStatus = normalizeUpiRedeemRemoteStatusValue(entry.remoteStatus);
   const remoteMessageStatus = normalizeUpiRedeemRemoteStatusValue(entry.remoteMessage);
-  const canceledRemote = remoteStatus === 'canceled' || remoteMessageStatus === 'canceled';
-  if (entry.subscriptionActive === true || (entry.subscriptionActive === false && !canceledRemote)) {
+  if (entry.subscriptionActive === true) {
+    return false;
+  }
+  if (
+    entry.subscriptionActive === false
+    && !isReusableInactiveUpiRedeemRemoteStatusValue(remoteStatus)
+    && !isReusableInactiveUpiRedeemRemoteStatusValue(remoteMessageStatus)
+  ) {
     return false;
   }
   if (
@@ -3281,6 +3302,8 @@ function isUpiRedeemCdkeySelectableForRedeem(entry = {}) {
       (remoteStatus === 'pending_dispatch' || remoteMessageStatus === 'pending_dispatch')
       && Boolean(String(entry.email || entry.accessToken || entry.access_token || entry.upiRedeemAccessToken || '').trim())
     )
+    || remoteStatus === 'invalid'
+    || remoteMessageStatus === 'invalid'
     || isUpiRedeemRemoteActiveStatus(remoteStatus)
     || isUpiRedeemRemoteActiveStatus(entry.remoteMessage)
     || entry.retrying === true

@@ -599,18 +599,42 @@
         || isActiveRemoteStatus(entry?.remoteMessage);
     }
 
+    function isReusableInactiveSubscriptionRemoteStatus(status = '') {
+      return [
+        'failed',
+        'timeout',
+        'rejected',
+        'approve_blocked',
+        'canceled',
+        'not_found',
+        'unused',
+        'available',
+        'new',
+        'ready',
+      ].includes(normalizeUpiRedeemRemoteStatus(status));
+    }
+
     function isCdkeySelectableForRedeem(entry = {}) {
       if (entry?.enabled === false) {
         return false;
       }
       const remoteStatus = normalizeUpiRedeemRemoteStatus(entry?.remoteStatus);
       const remoteMessageStatus = normalizeUpiRedeemRemoteStatus(entry?.remoteMessage);
-      const canceledRemote = remoteStatus === 'canceled' || remoteMessageStatus === 'canceled';
-      if (entry?.subscriptionActive === true || (entry?.subscriptionActive === false && !canceledRemote)) {
+      if (entry?.subscriptionActive === true) {
+        return false;
+      }
+      if (
+        entry?.subscriptionActive === false
+        && !isReusableInactiveSubscriptionRemoteStatus(remoteStatus)
+        && !isReusableInactiveSubscriptionRemoteStatus(remoteMessageStatus)
+      ) {
         return false;
       }
       if (isSuccessfulRemoteStatus(entry?.remoteStatus)
         || isCdkeyRedeemInFlight(entry)) {
+        return false;
+      }
+      if (remoteStatus === 'invalid' || remoteMessageStatus === 'invalid') {
         return false;
       }
       if (

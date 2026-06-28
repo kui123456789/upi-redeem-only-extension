@@ -657,7 +657,7 @@ async function handle405ResendError(step, remainingTimeout = 30000) {
 // Signup Entry Helpers
 // ============================================================
 
-const SIGNUP_ENTRY_TRIGGER_PATTERN = /免费注册|立即注册|注册|创建(?:账号|帐号|账户|帐户)|sign\s*up|register|create\s*account|create\s+account|get\s*started/i;
+const SIGNUP_ENTRY_TRIGGER_PATTERN = /免费注册|立即注册|注册|创建(?:账号|帐号|账户|帐户)|sign\s*up|register|create\s*account|create\s+account|get\s*started|(?:無料で)?サインアップ|新規登録|アカウント(?:を)?作成/i;
 const SIGNUP_EMAIL_INPUT_SELECTOR = [
   'input[type="email"]',
   'input[autocomplete="email"]',
@@ -668,9 +668,13 @@ const SIGNUP_EMAIL_INPUT_SELECTOR = [
   'input[placeholder*="email" i]',
   'input[placeholder*="电子邮件"]',
   'input[placeholder*="邮箱"]',
+  'input[placeholder*="メール"]',
+  'input[placeholder*="電子メール"]',
   'input[aria-label*="email" i]',
   'input[aria-label*="电子邮件"]',
   'input[aria-label*="邮箱"]',
+  'input[aria-label*="メール"]',
+  'input[aria-label*="電子メール"]',
 ].join(', ');
 const SIGNUP_PHONE_INPUT_SELECTOR = [
   'input[type="tel"]:not([maxlength="6"])',
@@ -687,9 +691,11 @@ const SIGNUP_SWITCH_TO_EMAIL_PATTERN = new RegExp([
   String.raw`continue\s+with\s+email(?:\s+address)?`,
   String.raw`use\s+(?:an?\s+)?email(?:\s+address)?(?:\s+instead)?`,
   String.raw`sign\s*(?:in|up)\s+with\s+email`,
+  String.raw`(?:メール|メールアドレス|電子メール)(?:で|を)?(?:続行|続ける|使用|ログイン|サインイン|サインアップ)`,
+  String.raw`(?:続行|続ける|使用|ログイン|サインイン|サインアップ)(?:する)?(?:\s*)?(?:メール|メールアドレス|電子メール)`,
 ].join('|'), 'i');
-const SIGNUP_SWITCH_ACTION_PATTERN = /\u7ee7\u7eed\u4f7f\u7528|\u6539\u7528|continue|use|sign\s*(?:in|up)/i;
-const SIGNUP_EMAIL_ACTION_PATTERN = /\u7535\u5b50\u90ae\u4ef6|\u90ae\u7bb1|email/i;
+const SIGNUP_SWITCH_ACTION_PATTERN = /\u7ee7\u7eed\u4f7f\u7528|\u6539\u7528|continue|use|sign\s*(?:in|up)|続行|続ける|使用|ログイン|サインイン|サインアップ/i;
+const SIGNUP_EMAIL_ACTION_PATTERN = /\u7535\u5b50\u90ae\u4ef6|\u90ae\u7bb1|email|メール|メールアドレス|電子メール/i;
 const SIGNUP_PHONE_ACTION_PATTERN = /手机|手机号|电话号码|phone|telephone|mobile/i;
 const SIGNUP_SWITCH_TO_PHONE_PATTERN = new RegExp([
   String.raw`\u7ee7\u7eed\u4f7f\u7528(?:\u624b\u673a|\u624b\u673a\u53f7|\u7535\u8bdd\u53f7\u7801)(?:\u53f7\u7801)?\u767b\u5f55`,
@@ -701,8 +707,8 @@ const SIGNUP_SWITCH_TO_PHONE_PATTERN = new RegExp([
   String.raw`use\s+(?:a\s+)?phone(?:\s+number)?(?:\s+instead)?`,
   String.raw`sign\s*(?:in|up)\s+with\s+(?:a\s+)?phone`,
 ].join('|'), 'i');
-const SIGNUP_MORE_OPTIONS_PATTERN = /更多选项|其它方式|其他方式|more\s+options|show\s+more|other\s+(?:options|ways)/i;
-const SIGNUP_WORK_EMAIL_PATTERN = /\u5de5\u4f5c|business|work\s+email/i;
+const SIGNUP_MORE_OPTIONS_PATTERN = /更多选项|其它方式|其他方式|more\s+options|show\s+more|other\s+(?:options|ways)|その他(?:の)?オプション|他(?:の)?方法|もっと見る/i;
+const SIGNUP_WORK_EMAIL_PATTERN = /\u5de5\u4f5c|business|work\s+email|仕事用|ビジネス/i;
 
 function getSignupEmailInput() {
   const input = document.querySelector(SIGNUP_EMAIL_INPUT_SELECTOR);
@@ -724,7 +730,7 @@ function getSignupEmailInput() {
       || autocompleteTokens.includes('email')
       || autocompleteTokens.includes('username')
       || /email|username/i.test(`${name} ${id}`)
-      || /email|电子邮件|邮箱/i.test(combinedText);
+      || /email|电子邮件|邮箱|メール|メールアドレス|電子メール/i.test(combinedText);
   });
 
   return fallback || null;
@@ -800,7 +806,7 @@ function getSignupEmailContinueButton({ allowDisabled = false } = {}) {
   );
   return Array.from(candidates).find((el) => {
     if (!isVisibleElement(el) || (!allowDisabled && !isActionEnabled(el))) return false;
-    return /continue|next|submit|继续|下一步/i.test(getActionText(el));
+    return /continue|next|submit|继续|下一步|続行|次へ|送信/i.test(getActionText(el));
   }) || null;
 }
 
@@ -834,7 +840,7 @@ function findSignupEntryTrigger(options = {}) {
   const pageText = typeof getPageTextSnapshot === 'function'
     ? getPageTextSnapshot()
     : '';
-  const looksLikeLoggedOutHome = /登录|登入|log\s*in|sign\s*in/i.test(pageText);
+  const looksLikeLoggedOutHome = /登录|登入|log\s*in|sign\s*in|ログイン|サインイン/i.test(pageText);
   return collapsedViewport || looksLikeLoggedOutHome ? hiddenSignupTrigger : null;
 }
 
@@ -5329,6 +5335,10 @@ async function prepareSignupVerificationFlow(payload = {}, timeout = 30000) {
   const prepareSource = String(payload?.prepareSource || '').trim() || 'step4_execute';
   const prepareLogLabel = String(payload?.prepareLogLabel || '').trim()
     || (prepareSource === 'step3_finalize' ? '步骤 3 收尾' : '步骤 4 执行');
+  const effectiveTimeout = Math.max(
+    5000,
+    Math.floor(Number(payload?.timeoutMs ?? timeout) || timeout)
+  );
   const start = Date.now();
   let recoveryRound = 0;
   const maxRecoveryRounds = 3;
@@ -5377,7 +5387,7 @@ async function prepareSignupVerificationFlow(payload = {}, timeout = 30000) {
     return true;
   };
 
-  while (Date.now() - start < timeout && recoveryRound < maxRecoveryRounds) {
+  while (Date.now() - start < effectiveTimeout && recoveryRound < maxRecoveryRounds) {
     throwIfStopped();
 
     const roundNo = recoveryRound + 1;

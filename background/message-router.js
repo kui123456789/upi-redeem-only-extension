@@ -501,6 +501,70 @@
       ].includes(normalizeUpiRedeemRemoteStatusForRetry(status));
     }
 
+    function isReusableInactiveUpiRedeemRemoteStatusForRetry(status = '') {
+      return [
+        'failed',
+        'timeout',
+        'rejected',
+        'approve_blocked',
+        'canceled',
+        'not_found',
+        'unused',
+        'available',
+        'new',
+        'ready',
+      ].includes(normalizeUpiRedeemRemoteStatusForRetry(status));
+    }
+
+    function getUpiRedeemStateValueForRetry(state = {}, key = '') {
+      const normalizedKey = normalizeString(key);
+      if (!normalizedKey) return undefined;
+      if (state?.[normalizedKey] !== undefined) return state[normalizedKey];
+      const legacyKey = normalizedKey.replace(/^upiRedeem/, 'pixRedeem');
+      return legacyKey === normalizedKey ? undefined : state?.[legacyKey];
+    }
+
+    function parseUpiRedeemCdkeyPoolTextForRetry(value = '') {
+      const seen = new Set();
+      return String(value || '')
+        .replace(/\r/g, '')
+        .split('\n')
+        .map((line) => normalizeString(line))
+        .filter((line) => {
+          if (!line || seen.has(line)) return false;
+          seen.add(line);
+          return true;
+        });
+    }
+
+    function isSelectableUpiRedeemCdkeyUsageEntryForRetry(entry = {}) {
+      if (!entry || entry.enabled === false) return false;
+      const remoteStatus = normalizeUpiRedeemRemoteStatusForRetry(entry.remoteStatus);
+      const remoteMessageStatus = normalizeUpiRedeemRemoteStatusForRetry(entry.remoteMessage);
+      if (entry.subscriptionActive === true) return false;
+      if (
+        entry.subscriptionActive === false
+        && !isReusableInactiveUpiRedeemRemoteStatusForRetry(remoteStatus)
+        && !isReusableInactiveUpiRedeemRemoteStatusForRetry(remoteMessageStatus)
+      ) return false;
+      if (remoteStatus === 'success' || remoteMessageStatus === 'success') return false;
+      if (remoteStatus === 'invalid' || remoteMessageStatus === 'invalid') return false;
+      if (
+        (remoteStatus === 'pending_dispatch' || remoteMessageStatus === 'pending_dispatch')
+        && (normalizeRouterEmail(entry.email || entry.accountEmail || entry.credentialEmail || entry.targetEmail) || normalizeString(entry.accessToken || entry.access_token || entry.upiRedeemAccessToken))
+      ) return false;
+      if (isActiveUpiRedeemRemoteStatusForRetry(remoteStatus) || isActiveUpiRedeemRemoteStatusForRetry(remoteMessageStatus) || entry.retrying === true) return false;
+      return true;
+    }
+
+    function countAvailableUpiRedeemCdkeysForRetry(state = {}) {
+      const usage = getUpiRedeemStateValueForRetry(state, 'upiRedeemCdkeyUsage') || {};
+      const normalizedUsage = usage && typeof usage === 'object' && !Array.isArray(usage) ? usage : {};
+      return parseUpiRedeemCdkeyPoolTextForRetry(getUpiRedeemStateValueForRetry(state, 'upiRedeemCdkeyPoolText'))
+        .filter((cdkey) => isSelectableUpiRedeemCdkeyUsageEntryForRetry(normalizedUsage?.[cdkey] || {}))
+        .length;
+    }
+
     function isApproveBlockedRemoteText(value = '') {
       return /(^|[^a-z0-9])approve-blocked([^a-z0-9]|$)/i.test(
         normalizeString(value).toLowerCase().replace(/[\s_]+/g, '-')
@@ -1073,13 +1137,6 @@
         || membershipSync?.updates?.[UPI_CREDENTIAL_MEMBERSHIP_RESULTS_KEY]
         || state?.[UPI_CREDENTIAL_MEMBERSHIP_RESULTS_KEY]
         || null;
-      if (membershipSync?.updated !== true) {
-        return {
-          ...summary,
-          skipped: 1,
-          reason: '卡密状态刷新未产生新的 Free/Plus 分组变化，跳过失败账号兑换轮次。',
-        };
-      }
       const runtimeSettings = {
         ...(state || {}),
         ...(refreshResult?.updates || {}),
@@ -1087,6 +1144,13 @@
         ...(payload || {}),
         upiRedeemFailedAccountRetryLimit: additionalRoundCount,
       };
+      if (countAvailableUpiRedeemCdkeysForRetry(runtimeSettings) <= 0) {
+        return {
+          ...summary,
+          skipped: 1,
+          reason: '刷新后没有可用 UPI 卡密，跳过自动续兑。',
+        };
+      }
       delete runtimeSettings.upiRedeemCdkeyUsage;
       delete runtimeSettings.pixRedeemCdkeyUsage;
       const retryResult = await retryFailedUpiRedeemCdkey({

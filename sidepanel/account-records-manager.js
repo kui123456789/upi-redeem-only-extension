@@ -468,9 +468,9 @@
 
     function isActiveUpiRedeemRemoteStatus(status = '') {
       return [
-	        'pending',
-	        'pending_token',
-	        'pending_dispatch',
+        'pending',
+        'pending_token',
+        'pending_dispatch',
 	        'dispatched',
         'dispatching',
         'running',
@@ -483,14 +483,35 @@
       ].includes(normalizeUpiRedeemRemoteStatus(status));
     }
 
+    function isReusableInactiveUpiRedeemRemoteStatus(status = '') {
+      return [
+        'failed',
+        'timeout',
+        'rejected',
+        'approve_blocked',
+        'canceled',
+        'not_found',
+        'unused',
+        'available',
+        'new',
+        'ready',
+      ].includes(normalizeUpiRedeemRemoteStatus(status));
+    }
+
     function isSelectableUpiRedeemCdkeyUsageEntry(entry = {}) {
       if (!entry || entry.enabled === false) {
         return false;
       }
       const remoteStatus = normalizeUpiRedeemRemoteStatus(entry.remoteStatus);
       const remoteMessageStatus = normalizeUpiRedeemRemoteStatus(entry.remoteMessage);
-      const canceledRemote = remoteStatus === 'canceled' || remoteMessageStatus === 'canceled';
-      if (entry.subscriptionActive === true || (entry.subscriptionActive === false && !canceledRemote)) {
+      if (entry.subscriptionActive === true) {
+        return false;
+      }
+      if (
+        entry.subscriptionActive === false
+        && !isReusableInactiveUpiRedeemRemoteStatus(remoteStatus)
+        && !isReusableInactiveUpiRedeemRemoteStatus(remoteMessageStatus)
+      ) {
         return false;
       }
       if (
@@ -499,6 +520,8 @@
           (remoteStatus === 'pending_dispatch' || remoteMessageStatus === 'pending_dispatch')
           && Boolean(normalizeUpiCredentialMembershipEmail(entry.email) || normalizeUpiCredentialMembershipText(entry.accessToken))
         )
+        || remoteStatus === 'invalid'
+        || remoteMessageStatus === 'invalid'
         || isActiveUpiRedeemRemoteStatus(remoteStatus)
         || isActiveUpiRedeemRemoteStatus(entry.remoteMessage)
         || entry.retrying === true
@@ -1161,13 +1184,13 @@
               : blockedReason,
           };
         }
-        if (redeemStatus === 'failed' && trialStatus === 'eligible') {
+        if (redeemStatus === 'failed') {
           const redeemFailureLimit = getUpiCredentialMembershipFailureLimit(row);
           const failureLabel = `${Math.max(1, redeemFailureCount)}/${redeemFailureLimit}`;
           return {
             className: redeemFailureCount >= redeemFailureLimit ? 'failed' : 'pending',
             label: `兑换轮 ${failureLabel}`,
-            detail: `${row.redeemReason || row.reason || '历史卡密兑换失败'}；账号有试用资格。`,
+            detail: `${row.redeemReason || row.reason || '历史卡密兑换失败'}；${trialStatus === 'eligible' ? '账号有试用资格。' : '账号保留在 Free。'}`,
           };
         }
         if (!normalizeUpiCredentialMembershipText(row.accessToken)) {
@@ -1557,20 +1580,25 @@
       const membershipBusy = results.running || results.redeeming || upiCredentialMembershipCheckBusy || upiCredentialMembershipRedeemBusy;
       const autoRunBusy = isAutoRunRecordDisplayRunning(state.getLatestState());
       const mutatingBusy = membershipBusy || autoRunBusy;
-      const freeRows = rows.filter((row) => String(row.status || '').trim().toLowerCase() === 'free');
-      const failedRows = rows.filter((row) => String(row.status || '').trim().toLowerCase() === 'failed');
       const freeSectionRows = rows.filter((row) => {
         const status = String(row.status || '').trim().toLowerCase();
         return status === 'free' || status === 'failed';
       });
       const paidRows = rows.filter((row) => String(row.status || '').trim().toLowerCase() === 'paid');
+      const allFreeRows = freeSectionRows.filter((row) => String(row.status || '').trim().toLowerCase() === 'free');
+      const failedRows = freeSectionRows.filter((row) => {
+        const status = String(row.status || '').trim().toLowerCase();
+        const redeemStatus = String(row.redeemStatus || '').trim().toLowerCase();
+        return status === 'failed' || redeemStatus === 'failed';
+      });
+      const freeRows = allFreeRows.filter((row) => String(row.redeemStatus || '').trim().toLowerCase() !== 'failed');
       const paidCount = paidRows.length;
       const freeCount = freeRows.length;
       const failedCount = failedRows.length;
       const freeSectionCount = freeSectionRows.length;
       const missingAtCount = freeSectionRows.filter((row) => row.enabled !== false && !normalizeUpiCredentialMembershipText(row.accessToken)).length;
       const identifyPlusCount = freeSectionRows.filter((row) => row.enabled !== false && normalizeUpiCredentialMembershipText(row.accessToken)).length;
-      const redeemableFreeCount = freeRows.filter(isRedeemableFreeUpiCredentialMembershipRow).length;
+      const redeemableFreeCount = allFreeRows.filter(isRedeemableFreeUpiCredentialMembershipRow).length;
       const availableCdkeyCount = getAvailableUpiRedeemCdkeyCount();
       const redeemNowCount = Math.min(redeemableFreeCount, availableCdkeyCount);
       const verifyPlusCount = paidRows.filter((row) => row.enabled !== false && normalizeUpiCredentialMembershipText(row.accessToken)).length;
