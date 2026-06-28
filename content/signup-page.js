@@ -1382,15 +1382,15 @@ async function waitForSignupEntryState(options = {}) {
           log(`步骤 ${step}：正在点击官网注册入口（第 ${clickAttempts}/${maxSignupEntryClickAttempts} 次）："${getActionText(snapshot.signupTrigger).slice(0, 80)}"`);
         }
         log(retryAttempt > 0
-          ? `步骤 ${step}：上次点击后仍未进入邮箱输入页，等待 3 秒后重试点击官网注册入口（重试 ${retryAttempt}/${maxSignupEntryClickRetries}）...`
-          : `步骤 ${step}：已找到官网注册入口，等待 3 秒后点击...`);
-        await sleep(3000);
+          ? `步骤 ${step}：上次点击后仍未进入邮箱输入页，准备重试点击官网注册入口（重试 ${retryAttempt}/${maxSignupEntryClickRetries}）...`
+          : `步骤 ${step}：已找到官网注册入口，准备点击...`);
+        await sleep(300);
         throwIfStopped();
         const clickTarget = findSignupEntryTrigger({ allowHiddenFallback: false }) || snapshot.signupTrigger;
         if (!isVisibleElement(clickTarget)) {
           log(`步骤 ${step}：注册入口仍处于不可见状态，继续按入口重试节奏尝试恢复点击...`, 'warn');
         }
-        await humanPause(350, 900);
+        await humanPause(150, 450);
         await performOperationWithDelay({ stepKey: 'signup-entry', kind: 'click', label: 'open-signup-entry' }, async () => {
           simulateClick(clickTarget);
         });
@@ -2745,15 +2745,15 @@ async function waitForSignupPhoneEntryState(options = {}) {
         clickAttempts += 1;
         const retryAttempt = clickAttempts - 1;
         log(retryAttempt > 0
-          ? `步骤 ${step}：上次点击后仍未进入手机号输入页，等待 3 秒后重试点击官网注册入口（重试 ${retryAttempt}/${maxSignupEntryClickRetries}）...`
-          : `步骤 ${step}：已找到官网注册入口，等待 3 秒后点击...`);
-        await sleep(3000);
+          ? `步骤 ${step}：上次点击后仍未进入手机号输入页，准备重试点击官网注册入口（重试 ${retryAttempt}/${maxSignupEntryClickRetries}）...`
+          : `步骤 ${step}：已找到官网注册入口，准备点击...`);
+        await sleep(300);
         throwIfStopped();
         const clickTarget = findSignupEntryTrigger({ allowHiddenFallback: false }) || snapshot.signupTrigger;
         if (!isVisibleElement(clickTarget)) {
           log(`步骤 ${step}：注册入口仍处于不可见状态，继续按入口重试节奏尝试恢复点击...`, 'warn');
         }
-        await humanPause(350, 900);
+        await humanPause(150, 450);
         await performOperationWithDelay({ stepKey: 'signup-phone-entry', kind: 'click', label: 'open-signup-entry' }, async () => {
           simulateClick(clickTarget);
         });
@@ -5117,14 +5117,14 @@ async function finalizeStep6VerificationReady(options = {}) {
     authPayload = {},
   } = options;
   const start = Date.now();
-  const maxRounds = 3;
-  const settleDelayMs = 3000;
+  const settleDelayMs = 800;
+  const maxRounds = Math.max(3, Math.ceil(timeout / settleDelayMs));
   let round = 0;
 
   while (Date.now() - start < timeout && round < maxRounds) {
     throwIfStopped();
     round += 1;
-    logOAuthLogin(authPayload, visibleStep, `确认页面是否稳定停留在登录验证码阶段（第 ${round}/${maxRounds} 轮，先等待 3 秒）...`, 'info');
+    logOAuthLogin(authPayload, visibleStep, `确认页面是否稳定停留在登录验证码阶段（第 ${round}/${maxRounds} 轮，短暂确认）...`, 'info');
     await sleep(settleDelayMs);
 
     const rawSnapshot = inspectLoginAuthState();
@@ -5452,8 +5452,8 @@ async function prepareSignupVerificationFlow(payload = {}, timeout = 30000) {
     throwIfStopped();
 
     const roundNo = recoveryRound + 1;
-    log(`${prepareLogLabel}：等待页面进入验证码阶段（第 ${roundNo}/${maxRecoveryRounds} 轮，先等待 5 秒）...`, 'info');
-    const snapshot = await waitForSignupVerificationTransition(5000);
+    log(`${prepareLogLabel}：正在等待页面进入验证码阶段（第 ${roundNo}/${maxRecoveryRounds} 轮，短轮询）...`, 'info');
+    const snapshot = await waitForSignupVerificationTransition(2500);
 
     if (snapshot.state === 'step5') {
       log(`${prepareLogLabel}：页面已进入验证码后的下一阶段，本步骤按已完成处理。`, 'ok');
@@ -6328,7 +6328,7 @@ async function submitSetGptPasswordVerificationCode(payload = {}) {
     await waitForSplitVerificationInputsFilled(splitInputs, code, 2500);
     const submitButton = await waitForVerificationSubmitButton(splitInputs[0], 4000).catch(() => null);
     if (submitButton) {
-      await humanPause(450, 1200);
+      await humanPause(150, 450);
       await performOperationWithDelay({ stepKey: 'set-gpt-password', kind: 'submit', label: 'submit-set-gpt-password-code' }, async () => {
         simulateClick(submitButton);
       });
@@ -6339,7 +6339,7 @@ async function submitSetGptPasswordVerificationCode(payload = {}) {
     });
     const submitButton = await waitForVerificationSubmitButton(verificationTarget.element, 5000).catch(() => null);
     if (submitButton) {
-      await humanPause(450, 1200);
+      await humanPause(150, 450);
       await performOperationWithDelay({ stepKey: 'set-gpt-password', kind: 'submit', label: 'submit-set-gpt-password-code' }, async () => {
         simulateClick(submitButton);
       });
@@ -6485,7 +6485,7 @@ async function setGptPasswordOnResetPage(payload = {}) {
   const performOperationWithDelay = typeof getOperationDelayRunner === 'function'
     ? getOperationDelayRunner()
     : async (_metadata, operation) => operation();
-  await humanPause(550, 1400);
+  await humanPause(150, 450);
   await performOperationWithDelay({ stepKey: 'set-gpt-password', kind: 'fill', label: 'set-gpt-password-new-password' }, async () => {
     fillInput(passwordInput, password);
     fillInput(confirmInput, password);
@@ -6497,7 +6497,7 @@ async function setGptPasswordOnResetPage(payload = {}) {
     throw new Error(`步骤 ${visibleStep}：设置密码页未找到可点击的 Continue 按钮。URL: ${location.href}`);
   }
 
-  await humanPause(450, 1200);
+  await humanPause(150, 450);
   await performOperationWithDelay({ stepKey: 'set-gpt-password', kind: 'submit', label: 'submit-set-gpt-password' }, async () => {
     simulateClick(submitButton);
   });
@@ -6657,10 +6657,10 @@ async function fillVerificationCode(step, payload) {
       logVerificationCode(step, payload, `步骤 ${step}：分格验证码输入框已稳定显示 ${code}。`, 'info');
     }
 
-    await sleep(800);
+    await sleep(250);
     const splitSubmitBtn = await waitForVerificationSubmitButton(splitInputs[0], 2000).catch(() => null);
     if (splitSubmitBtn) {
-      await humanPause(450, 1200);
+      await humanPause(150, 450);
       await performOperationWithDelay({ stepKey: 'fetch-signup-code', kind: 'submit', label: 'submit-code' }, async () => {
         simulateClick(splitSubmitBtn);
       });
@@ -6699,11 +6699,11 @@ async function fillVerificationCode(step, payload) {
   logVerificationCode(step, payload, `步骤 ${step}：验证码已填写`);
 
   // Submit
-  await sleep(800);
+  await sleep(250);
   const submitBtn = await waitForVerificationSubmitButton(codeInput, 5000).catch(() => null);
 
   if (submitBtn) {
-    await humanPause(450, 1200);
+    await humanPause(150, 450);
     await performOperationWithDelay({ stepKey: step === 8 ? 'oauth-login' : 'fetch-signup-code', kind: 'submit', label: 'submit-code' }, async () => {
       simulateClick(submitBtn);
     });

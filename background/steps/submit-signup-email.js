@@ -185,7 +185,7 @@
       }
 
       await addLog(
-        logMessage || '步骤 2：注册页标签已切换，正在等待页面加载完成并额外稳定 3 秒...',
+        logMessage || '步骤 2：注册页标签已切换，正在等待页面加载完成并短暂稳定...',
         'info',
         { step: 2, stepKey: 'signup-entry' }
       );
@@ -193,8 +193,8 @@
       return waitForTabStableComplete(tabId, {
         timeoutMs: 45000,
         retryDelayMs: 300,
-        stableMs: 3000,
-        initialDelayMs: 300,
+        stableMs: 800,
+        initialDelayMs: 150,
       });
     }
 
@@ -253,7 +253,7 @@
         await keepSignupTabWindowInBackgroundForStep2(signupTabId);
         await waitForStep2SignupTabToSettle(
           signupTabId,
-          '步骤 2：已切换到注册页标签，正在等待页面加载完成并额外稳定 3 秒...'
+          '步骤 2：已切换到注册页标签，正在等待页面加载完成并短暂稳定...'
         );
         await ensureContentScriptReadyOnTab('signup-page', signupTabId, {
           inject: SIGNUP_PAGE_INJECT_FILES,
@@ -278,7 +278,7 @@
       await chrome.tabs.reload(tabId, { bypassCache: false });
       await waitForStep2SignupTabToSettle(
         tabId,
-        `步骤 2：刷新后正在等待注册页重新加载并额外稳定 3 秒（${attempt}/${maxAttempts}）...`
+        `步骤 2：刷新后正在等待注册页重新加载并短暂稳定（${attempt}/${maxAttempts}）...`
       );
       await ensureContentScriptReadyOnTab('signup-page', tabId, {
         inject: SIGNUP_PAGE_INJECT_FILES,

@@ -2,12 +2,12 @@
   const OPERATION_DELAY_MS = 2000;
   const SETTING_RESTORE_FALLBACK_MS = 50;
   const EXCLUDED_STEP_KEYS = new Set(['confirm-oauth', 'platform-verify']);
-  let operationDelayEnabled = true;
+  let operationDelayEnabled = false;
   let operationDelaySettingReady = null;
   let operationDelaySettingRevision = 0;
 
   function normalizeOperationDelayEnabled(value) {
-    return typeof value === 'boolean' ? value : true;
+    return typeof value === 'boolean' ? value : false;
   }
 
   function getOperationDelayEnabled() {
@@ -17,12 +17,12 @@
   async function refreshOperationDelaySetting() {
     const restoreRevision = ++operationDelaySettingRevision;
     const ready = (async () => {
-      let nextEnabled = true;
+      let nextEnabled = false;
       try {
         const data = await root.chrome?.storage?.local?.get?.(['operationDelayEnabled']);
         nextEnabled = normalizeOperationDelayEnabled(data?.operationDelayEnabled);
       } catch {
-        nextEnabled = true;
+        nextEnabled = false;
       }
       if (operationDelaySettingRevision === restoreRevision) {
         operationDelayEnabled = nextEnabled;
@@ -93,6 +93,6 @@
     }
   });
 
-  refreshOperationDelaySetting().catch(() => { operationDelayEnabled = true; });
+  refreshOperationDelaySetting().catch(() => { operationDelayEnabled = false; });
   root.CodexOperationDelay = { OPERATION_DELAY_MS, normalizeOperationDelayEnabled, refreshOperationDelaySetting, getOperationDelayEnabled, shouldDelayOperation, performOperationWithDelay };
 })(typeof self !== 'undefined' ? self : globalThis);

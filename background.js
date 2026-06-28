@@ -1022,7 +1022,7 @@ const PERSISTED_SETTING_DEFAULTS = {
   autoRunFallbackThreadIntervalMinutes: 0,
   oauthFlowTimeoutEnabled: true,
   autoRunDelayEnabled: false,
-  operationDelayEnabled: true,
+  operationDelayEnabled: false,
   autoRunDelayMinutes: 30,
   autoStepDelaySeconds: null,
   step6CookieCleanupEnabled: false,
@@ -3581,7 +3581,7 @@ function normalizePersistentSettingValue(key, value) {
     case 'hotmailAliasEnabled':
       return Boolean(value);
     case 'operationDelayEnabled':
-      return typeof value === 'boolean' ? value : true;
+      return typeof value === 'boolean' ? value : false;
     case 'upiCredentialMembershipCheckTotpApiBaseUrl':
       return String(value || PERSISTED_SETTING_DEFAULTS.upiCredentialMembershipCheckTotpApiBaseUrl)
         .trim()

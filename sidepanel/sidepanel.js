@@ -838,7 +838,7 @@ let authRemovedRemovedTextPoolExpanded = false;
 let chatGptApiRemovedTextPoolExpanded = false;
 let localCpaJsonAuthDirExpanded = false;
 let phoneSignupReuseUiWasLocked = false;
-let lastConfirmedOperationDelayEnabled = true;
+let lastConfirmedOperationDelayEnabled = false;
 let removedSmsMainCountrySelectionOrder = [];
 let removedPhoneProviderOrderSelection = [];
 let removedSmsMainCountryMenuSearchKeyword = '';
@@ -2977,7 +2977,7 @@ function scheduleAccountRunHistoryRefresh(delayMs = 150) {
 }
 
 function normalizeOperationDelayEnabled(value) {
-  return typeof value === 'boolean' ? value : true;
+  return typeof value === 'boolean' ? value : false;
 }
 
 function appendOperationDelayLog(enabled, level = 'info', message = '') {
@@ -2991,14 +2991,14 @@ function appendOperationDelayLog(enabled, level = 'info', message = '') {
 }
 
 function applyOperationDelayState(state = latestState, options = {}) {
-  const enabled = options.restoreFailed ? true : normalizeOperationDelayEnabled(state?.operationDelayEnabled);
+  const enabled = options.restoreFailed ? false : normalizeOperationDelayEnabled(state?.operationDelayEnabled);
   lastConfirmedOperationDelayEnabled = enabled;
   if (inputOperationDelayEnabled) inputOperationDelayEnabled.checked = enabled;
   if (typeof syncLatestState === 'function') {
     syncLatestState({ operationDelayEnabled: enabled });
   }
   if (options.restoreFailed) {
-    appendOperationDelayLog(true, 'warn', '操作间延迟设置读取失败，已回退为默认开启。');
+    appendOperationDelayLog(false, 'warn', '操作间延迟设置读取失败，已回退为默认关闭。');
   }
 }
 
