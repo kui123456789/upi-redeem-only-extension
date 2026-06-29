@@ -2,6 +2,12 @@
 
 这是 CDK 兑换专用版 Chrome 扩展。当前版本保留 UPI 主流程：邮箱注册、邮箱验证码、设置 GPT 密码、第 7 步开通 2FA、读取 AT、Free/Plus 分组、CDK 兑换、Plus 识别/验证、导入导出。
 
+## 新手使用教程
+
+第一次使用请先看：[图文使用教程（Word）](教程.docx)。
+
+教程包含安装扩展、配置 UPI Key、导入 CDK/邮箱、开始自动注册、Free/Plus 导出与兑换说明。
+
 完整配置说明见 [docs/CONFIG-USAGE.md](docs/CONFIG-USAGE.md)。
 
 ## 保留能力
