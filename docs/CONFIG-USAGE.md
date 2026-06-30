@@ -1,6 +1,6 @@
 # CDK Redeem Only 配置使用说明
 
-本文档说明当前 `CDK Redeem Only V0.2.7` 的配置和常用操作。项目仓库与更新检查已统一为：
+本文档说明当前 `CDK Redeem Only V0.2.8` 的配置和常用操作。项目仓库与更新检查已统一为：
 
 ```text
 https://github.com/kui123456789/cdk-redeem-only-extension
